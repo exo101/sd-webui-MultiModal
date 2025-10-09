@@ -10,7 +10,9 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 
 - Stable Diffusion WebUI Forge 环境  
   旧整合包已不适用日益更新的AI应用与50系显卡，我为此更新了新整合包环境，补充落后的webui生态
+  
   新整合包修复了ADetailer修脸插件，wd1.4标签器等bug
+
   ControlNet模块不支持FLUX ControlNet模型
   在此之前去尝试过让Forge 环境支持FLUX ControlNet，努力无果，无法与XL ControlNet张量同时兼容在一个插件内
   本人对 ControlNet的设计代码不是很了解，头一次尝试用ai辅助写的插件，包括哩布哩布平台也没有去做FLUX ControlNet模块

@@ -67,9 +67,10 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 
 #### 图像分割
 - 集成 Segment Anything Model (SAM)
-- 精确的图像分割功能<img width="1782" height="896" alt="7" src="https://github.com/user-attachments/assets/9d842a2e-bcfe-40d6-8fb0-17960626d960" />
-
-- 支持点选和自动分割方式<img width="1798" height="679" alt="8" src="https://github.com/user-attachments/assets/b8630278-f801-4f43-b039-70a895ffda1d" />
+- 精确的图像分割功能
+- 支持点选和自动分割方式
+<img width="1812" height="917" alt="10" src="https://github.com/user-attachments/assets/c0ca0f59-be6e-408c-bb4c-a117d718e588" />
+<img width="1816" height="909" alt="9" src="https://github.com/user-attachments/assets/08b633ba-7ed8-4886-a6f3-e22a3bd7cb8e" />
 
 - 可下载分割结果
 

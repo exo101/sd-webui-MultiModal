@@ -1,0 +1,24 @@
+1，消除物体，局部修改：Remove the flower basket
+                                            
+
+2. 更改配色方案：Changed the character's clothes to white as the primary color, and gold and red as the secondary colors
+                              The figure's jacket is light blue, the shirt and pants are white, the pattern is gold, and the boots are black.
+
+
+3，替换前景与替换背景：In the foreground, rivers and flowers are added, while the buildings in the background remain unchanged
+                                           The background increases, moored ships, huge waves, storms, lightning, dark clouds, the foreground remains unchanged
+
+4，更改场景氛围：The scene changes to the atmosphere of barren and cracked rocks, withered plants, and the buildings and composition remain the same
+
+5，单体建筑改角度：Changed the building to a top-down view
+
+6，单图生成 三视图 ：Draw the girl out of three views, front side, back, back side
+
+7，单图生成表情包：Draw the girl with six expressions, happy laughter, anger, tears, shy blush, shocked
+
+8，修改人物姿态，特征不变：Let the man hold his chin with the palm of his hand, a thinking expression
+
+9，根据人物单帧分镜，拓展出更多不同机位的分镜：Let these two people face each other sideways
+
+
+

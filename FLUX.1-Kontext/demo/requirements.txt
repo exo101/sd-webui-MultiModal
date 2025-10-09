@@ -1,0 +1,34 @@
+# Core ML libraries
+torch>=2.3.1
+torchvision>=0.18.1  
+torchaudio>=2.3.1
+diffusers>=0.30.0
+transformers>=4.44.0
+accelerate>=0.33.0
+
+# GGUF and quantization support
+# Note: diffusers with GGUF support should be installed from git in deployment script
+
+# HuggingFace ecosystem
+huggingface_hub>=0.24.0
+safetensors>=0.4.0
+sentencepiece>=0.2.0
+
+# Web interface
+gradio>=4.0.0
+spaces
+
+# Image processing
+pillow>=10.0.0
+opencv-python
+numpy>=1.24.0
+
+# Compatibility and utilities
+protobuf>=3.19.0
+requests>=2.31.0
+scipy
+matplotlib
+tqdm
+
+# Optional: for better performance
+# xformers  # Uncomment if using CUDA

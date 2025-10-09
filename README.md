@@ -175,8 +175,11 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 需要以下依赖：
 ```
 diffusers==0.35.1
+
 Torch 2.7.0 (CUDA 12.8)+ xFormers 0.0.30
+
 transformers==4.53.1
+
 huggingface-hub==0.34.4
 ```
 
@@ -190,6 +193,7 @@ huggingface-hub==0.34.4
 在计算机开始菜单搜索栏输入CMD执行以下命令：
 ```
 ollama run qwen2.5vl:3b
+
 ollama run qwen3:1.7b
 ```
 参数越大响应速度越慢质量越高，模型选择建议：8GB显存选择1.7B或3B模型获得更快响应速度，16GB显存可选择latest或7B模型

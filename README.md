@@ -102,6 +102,7 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 - 支持多种语音风格
 - 可调节语速、音调等参数
 - 支持中文和多语言合成
+- <img width="1786" height="805" alt="23" src="https://github.com/user-attachments/assets/1318c3fa-c979-4c93-8003-639e5f43f7f6" />
 - <img width="1788" height="428" alt="17" src="https://github.com/user-attachments/assets/52ed7801-36f3-4145-9386-f2ae7285ea11" />
 [output_1760002640.wav](https://github.com/user-attachments/files/22794279/output_1760002640.wav)
 

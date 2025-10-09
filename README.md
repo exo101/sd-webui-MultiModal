@@ -18,6 +18,10 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
   本人对 ControlNet的设计代码不是很了解，头一次尝试用ai辅助写的插件，包括哩布哩布平台也没有去做FLUX ControlNet模块
   估计是不太好弄，只能等大佬解决了
 
+最新更新的视频生成模型wan2.2，Qwen-Image等14B或20B参数量的模型应用环境倒是支持的，但是部署起来及其消耗显存，对于diffusion库的加载方式
+配置要求优化确实不如comfyui，不过生图模型还是够用的，因为WebUI Forge使用的也是类似的comfyui优化策略，对于comfyui复杂的节点连线式操作界面，对新手确实不太好学习
+WebUI Forge更加易操作，好理解，适合入门，熟悉之后再接触comfyui更为合适
+
 #### 大陆国内用户
 通过网盘分享的文件：更新环境库的webui Forge整合包  
 链接: https://pan.baidu.com/s/1FL7WVbcdvHfMtGUs-QOTVg 提取码: jwmu

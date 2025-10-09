@@ -92,18 +92,34 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 - 支持自定义推理步数和引导尺度
 - 需要清晰正面人脸的视频作为输入
 - 支持多种音频格式
+<img width="1831" height="925" alt="18" src="https://github.com/user-attachments/assets/4b380e69-3814-4078-ac3e-9f228d83bcde" />
+https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
+
+
 
 ### 6. Index-TTS语音合成
 - 集成 Index-TTS 实现高质量语音合成
 - 支持多种语音风格
 - 可调节语速、音调等参数
 - 支持中文和多语言合成
+- <img width="1788" height="428" alt="17" src="https://github.com/user-attachments/assets/52ed7801-36f3-4145-9386-f2ae7285ea11" />
+[output_1760002640.wav](https://github.com/user-attachments/files/22794279/output_1760002640.wav)
+
+
 
 ### 7. FLUX.1-Kontext图像编辑
 - 上下文感知的图像编辑功能
 - 支持基于文本的图像修改
 - 保持图像上下文一致性
 - GGUF量化模型优化使用门槛12g显存可用
+- 单图编辑
+- <img width="729" height="485" alt="22" src="https://github.com/user-attachments/assets/564199b4-bad1-4cfb-9629-88632482c6fa" />
+<img width="864" height="1200" alt="generated_image_1756579222_img1_var1" src="https://github.com/user-attachments/assets/05072161-82d4-4809-8f43-9f7a65dff35c" />
+<img width="864" height="1200" alt="generated_image_1756609097_img1_var1" src="https://github.com/user-attachments/assets/4304dd2d-63d0-47fc-a7b8-4e93f07501e6" />
+
+双图编辑
+<img width="1813" height="571" alt="21" src="https://github.com/user-attachments/assets/4df0079b-ff8d-4290-ae16-7e367eb90881" />
+<img width="1024" height="1024" alt="dual_context_image_1756582213_var1" src="https://github.com/user-attachments/assets/1bf91812-70a9-4662-aed1-ac6839a274ab" />
 
 ## 文件夹结构说明<img width="660" height="387" alt="14" src="https://github.com/user-attachments/assets/32c734e4-e84f-4909-a020-3fee6abe35ad" />
 

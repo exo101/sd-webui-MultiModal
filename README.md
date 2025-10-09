@@ -96,11 +96,11 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 - 上下文感知的图像编辑功能
 - 支持基于文本的图像修改
 - 保持图像上下文一致性
+- GGUF量化模型优化使用门槛12g显存可用
 
 ## 文件夹结构说明
 
-```
-sd-webui-MultiModal/
+```sd-webui-MultiModal/
 ├── scripts/                           # 主功能模块脚本目录
 ├── XYKC_AI/                           # AI模型API接口目录
 │   └── XYKC_AI_PyScripts/             # Python脚本接口
@@ -116,17 +116,48 @@ sd-webui-MultiModal/
 │       └── ...                        # 其他TTS相关模型文件
 ├── LatentSync/                        # 数字人视频生成独立模块
 │   ├── checkpoints/                   # 主模型检查点目录
+│   │   ├── latentsync_unet.pt         # LatentSync主模型文件
+│   │   ├── sd-vae-ft-mse/             # VAE模型目录
+│   │   │   └── diffusion_pytorch_model.safetensors  # VAE权重文件
+│   │   ├── stable_syncnet.pt          # SyncNet模型文件
+│   │   └── whisper/                   # Whisper模型目录
 │   └── latentsync/                   # 核心代码目录
 │       └── checkpoints/              # 辅助模型检查点目录
 └── FLUX.1-Kontext/                    # FLUX.1图像编辑独立模块
     ├── models/                        # 图像编辑模型目录
     │   └── FLUX.1-Kontext-dev/        # FLUX.1主模型目录
+    │       ├── flux1-kontext-dev-Q6_K.gguf  # GGUF格式主模型文件
+    │       ├── transformer/           # Transformer模型组件
+    │       │   ├── config.json        # Transformer配置文件
+    │       │   └── ...                # 其他Transformer相关文件
+    │       ├── vae/                   # VAE模型组件
+    │       │   ├── config.json        # VAE配置文件
+    │       │   └── diffusion_pytorch_model.safetensors  # VAE权重文件
+    │       ├── text_encoder/          # 文本编码器
+    │       │   ├── config.json        # 文本编码器配置文件
+    │       │   └── model.safetensors  # 文本编码器模型文件
+    │       ├── text_encoder_2/        # 第二文本编码器
+    │       │   ├── config.json        # 第二文本编码器配置文件
+    │       │   ├── model.safetensors  # 第二文本编码器模型文件
+    │       │   ├── model-00001-of-00002.safetensors  # 分片模型文件1
+    │       │   ├── model-00002-of-00002.safetensors  # 分片模型文件2
+    │       │   └── model.safetensors.index.json     # 模型索引文件
+    │       ├── tokenizer/             # 分词器
+    │       │   ├── merges.txt         # 合并规则文件
+    │       │   ├── special_tokens_map.json  # 特殊标记映射文件
+    │       │   ├── tokenizer_config.json    # 分词器配置文件
+    │       │   └── vocab.json         # 词汇表文件
+    │       ├── tokenizer_2/           # 第二分词器
+    │       │   ├── special_tokens_map.json  # 特殊标记映射文件
+    │       │   ├── spiece.model       # SentencePiece模型文件
+    │       │   ├── tokenizer.json     # 分词器文件
+    │       │   └── tokenizer_config.json    # 分词器配置文件
+    │       ├── scheduler/             # 调度器
+    │       │   └── scheduler_config.json    # 调度器配置文件
+    │       └── model_index.json       # 模型配置索引文件
     └── lora/                          # LoRA微调模型目录
-
-models/                                # WebUI主模型目录
-├── sam_vit_h_4b8939.pth               # SAM模型文件（用于图像分割）最大模型，精度最高，但需要更多显存
-└── sam_vit_l_0b3195.pth               # SAM模型文件（用于图像分割）中等模型，精度和资源消耗的平衡
-```
+        ├── Kontext-电商重打光_v1.safetensors      # 电商打光LoRA模型
+        └── Kontext游戏资源配色与升级编辑_1.0.safetensors # 游戏资源编辑LoRA模型
 
 ## 安装说明
 

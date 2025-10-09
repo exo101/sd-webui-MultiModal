@@ -40,6 +40,9 @@ transformers==4.53.1
 huggingface-hub==0.34.4
 ```
 
+1. 克隆本仓库到 extensions 目录：
+   sd-webui-forge-aki-v4.0/extensions
+   
 ## 核心功能
 
 - 📚 **资源汇总**: 集中管理各类资源和公告信息
@@ -284,16 +287,14 @@ https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev/tree/main
 注释（无需下载主模型，已用GGUF量化模型代替主模型）  
 https://huggingface.co/bullerwins/FLUX.1-Kontext-dev-GGUF/tree/main
 
-### 最后安装步骤
 
-1. 克隆本仓库到 extensions 目录：
-   ```bash
-   cd sd-webui-forge-aki-v4.0/extensions
-   git clone https://github.com/yourusername/MultiModal-Forge.git
-   ```
-2. 根据需要下载相应的模型文件
+### 汇总插件包通过网盘分享的文件：sd-webui-MultiModal
+链接: https://pan.baidu.com/s/10i9qMVi_3i_AM9bnFQJ0qA 提取码: 9rt7 
 
-3. 重启 WebUI
+
+ 根据需要下载相应的模型文件
+
+ 重启 WebUI
 
 ## 使用须知
 

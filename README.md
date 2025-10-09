@@ -1,7 +1,9 @@
+# MultiModal-Forge 插件
 
 一个为 Stable Diffusion WebUI Forge 设计的多功能集成插件，集成了图像识别、语言交互、语音克隆，视频处理、图像编辑，清理，分割，抠图等多种AI功能。
-个人主页：https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click
-WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
+
+个人主页：https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click  
+WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37  
 多模态插件使用介绍：https://www.bilibili.com/video/BV16Ta3zFEpn?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
 
 ## 核心功能
@@ -24,6 +26,7 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 - 显示插件使用说明和更新日志
 
 ### 2. 图像识别与语言交互
+
 #### 核心特性
 - 支持多种视觉模型（Qwen-VL、LLaMA-Vision等）
 - 支持多种语言模型（Qwen、DeepSeek等）
@@ -93,18 +96,17 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 - 上下文感知的图像编辑功能
 - 支持基于文本的图像修改
 - 保持图像上下文一致性
-- 
+
 ## 文件夹结构说明
+
+```
 sd-webui-MultiModal/
 ├── scripts/                           # 主功能模块脚本目录
-
 ├── XYKC_AI/                           # AI模型API接口目录
 │   └── XYKC_AI_PyScripts/             # Python脚本接口
-
 ├── cleaner/                           # 图像清理独立模块
 │   └── models/                        # 图像清理模型目录
 │       └── big-lama.safetensors       # 图像清理主模型文件
-
 ├── index-tts/                         # Index-TTS语音合成独立模块
 │   └── checkpoints/                   # TTS模型检查点目录
 │       ├── gpt.pth                    # GPT模型文件
@@ -112,84 +114,114 @@ sd-webui-MultiModal/
 │       ├── bigvgan_v2_22khz_80band_256x/ # 声码器模型目录
 │       ├── w2v-bert-2.0/              # Wav2Vec-BERT模型目录
 │       └── ...                        # 其他TTS相关模型文件
-
 ├── LatentSync/                        # 数字人视频生成独立模块
 │   ├── checkpoints/                   # 主模型检查点目录
 │   └── latentsync/                   # 核心代码目录
 │       └── checkpoints/              # 辅助模型检查点目录
-
-├── FLUX.1-Kontext/                    # FLUX.1图像编辑独立模块
-│   ├── models/                        # 图像编辑模型目录
-│   │   └── FLUX.1-Kontext-dev/        # FLUX.1主模型目录
-│   └── lora/                          # LoRA微调模型目录
-│      
-                                
+└── FLUX.1-Kontext/                    # FLUX.1图像编辑独立模块
+    ├── models/                        # 图像编辑模型目录
+    │   └── FLUX.1-Kontext-dev/        # FLUX.1主模型目录
+    └── lora/                          # LoRA微调模型目录
 
 models/                                # WebUI主模型目录
 ├── sam_vit_h_4b8939.pth               # SAM模型文件（用于图像分割）最大模型，精度最高，但需要更多显存
 └── sam_vit_l_0b3195.pth               # SAM模型文件（用于图像分割）中等模型，精度和资源消耗的平衡
+```
 
 ## 安装说明
 
 ### 前置要求
-- Stable Diffusion WebUI Forge 环境 旧整合包已不适用日益更新的AI应用与50系显卡，我为此更新了新整合包环境
-- 大陆国内用户通过网盘分享的文件：更新环境库的webui Forge整合包
+
+- Stable Diffusion WebUI Forge 环境  
+  旧整合包已不适用日益更新的AI应用与50系显卡，我为此更新了新整合包环境
+
+#### 大陆国内用户
+通过网盘分享的文件：更新环境库的webui Forge整合包  
 链接: https://pan.baidu.com/s/1FL7WVbcdvHfMtGUs-QOTVg 提取码: jwmu
 
-海外用户如果使用此插件需更新Forge 环境  （由于体积较大无法方便上传只能如此了）
+#### 海外用户
+如果使用此插件需更新Forge环境（由于体积较大无法方便上传只能如此了）  
+需要以下依赖：
+```
 diffusers==0.35.1
 Torch 2.7.0 (CUDA 12.8)+ xFormers 0.0.30
 transformers==4.53.1
 huggingface-hub==0.34.4
+```
 
 每个项目都可以独立运行既可按需下载，也可全部下载
 
-使用图像识别与语音交互功能安装Ollama应用程序：https://ollama.com/
-安装(qwen2.5vl)视觉模型与(qwen3)语言模型
-在计算机开始菜单搜索栏输入CMD
+### 功能模块安装指南
+
+#### 图像识别与语音交互功能
+安装Ollama应用程序：https://ollama.com/  
+安装(qwen2.5vl)视觉模型与(qwen3)语言模型  
+在计算机开始菜单搜索栏输入CMD执行以下命令：
+```
 ollama run qwen2.5vl:3b
 ollama run qwen3:1.7b
+```
 参数越大响应速度越慢质量越高，模型选择建议：8GB显存选择1.7B或3B模型获得更快响应速度，16GB显存可选择latest或7B模型
-<img width="1106" height="359" alt="QQ20251009-113027" src="https://github.com/user-attachments/assets/f32a8838-093f-4337-944e-<img width="924" height="677" alt="QQ20251009-113812" src="https://github.com/user-attachments/assets/2973f603-fd27-408d-9411-57a4b556750d" />
-3c772a16bc1e" />
 
+#### 图像清理功能
+需下载模型big-lama.safetensors  
 
-使用图像清理功能需下载模型big-lama.safetensors
-大陆国内用户通过网盘分享的文件：cleaner
+**大陆国内用户**通过网盘分享的文件：cleaner  
 链接: https://pan.baidu.com/s/1P8XlDjPvjFnfu4MumPE9sg 提取码: twqc 
-海外用户
+
+**海外用户**  
 https://huggingface.co/kaitte/big-lama/blob/main/big-lama.safetensors
 
-使用图像分割功能需下载模型sam_vit_h_4b8939.pth ，sam_vit_l_0b3195.pth
-大陆国内用户通过网盘分享的文件：图像分割模型
+#### 图像分割功能
+需下载模型sam_vit_h_4b8939.pth ，sam_vit_l_0b3195.pth  
+
+**大陆国内用户**通过网盘分享的文件：图像分割模型  
 链接: https://pan.baidu.com/s/1xiioFavOcrxp3DvXE_mdIQ 提取码: iah5 
-海外用户
+
+**海外用户**  
 https://huggingface.co/HCMUE-Research/SAM-vit-h/tree/main  
 https://huggingface.co/datasets/Gourieff/ReActor/tree/main/models/sams
 
-使用语音合成功能需下载模型
-大陆国内用户通过网盘分享的文件：index-tts.7z
+#### 语音合成功能
+需下载模型  
+
+**大陆国内用户**通过网盘分享的文件：index-tts.7z  
 链接: https://pan.baidu.com/s/1i9LYtdWcOZpzKbSsBR04jg 提取码: r79k 
-海外用户
+
+**海外用户**  
 https://huggingface.co/IndexTeam/IndexTTS-2/tree/main
 
-使用数字人视频生成功能需下载模型
-大陆国内用户通过网盘分享的文件：LatentSync.7z
+#### 数字人视频生成功能
+需下载模型  
+
+**大陆国内用户**通过网盘分享的文件：LatentSync.7z  
 链接: https://pan.baidu.com/s/18RQoQvH_zqmVX4RtAIAenw 提取码: u55x 
-海外用户
+
+**海外用户**  
 https://huggingface.co/ByteDance/LatentSync-1.5/tree/main
 
-使用Kontext图像编辑功能需下载模型
-大陆国内用户通过网盘分享的文件：FLUX.1-Kontext
+#### Kontext图像编辑功能
+需下载模型  
+
+**大陆国内用户**通过网盘分享的文件：FLUX.1-Kontext  
 链接: https://pan.baidu.com/s/1LiT2OEXdDTA5DeV9SEKfEA 提取码: 73ac 
-海外用户
-https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev/tree/main
-注释（无需下载主模型，已用GGUF量化模型代替主模型
+
+**海外用户**  
+https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev/tree/main  
+注释（无需下载主模型，已用GGUF量化模型代替主模型）  
 https://huggingface.co/bullerwins/FLUX.1-Kontext-dev-GGUF/tree/main
 
+### 最后安装步骤
 
-### 最后
 1. 克隆本仓库到 extensions 目录：
    ```bash
    cd sd-webui-forge-aki-v4.0/extensions
    git clone https://github.com/yourusername/MultiModal-Forge.git
+   ```
+2. 根据需要下载相应的模型文件
+
+3. 重启 WebUI
+
+## 使用须知
+
+使用此插件者请合法使用AI，不得发表不正当言论，作假新闻，二次销售，之后的一切行为与插件开发者无关。

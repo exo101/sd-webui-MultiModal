@@ -34,14 +34,13 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 - 提供快捷提示词模板
 - 支持单张和批量图像处理
 - 根据显存大小推荐合适的模型（8GB显存推荐1.7B/3B模型，16GB显存可选latest/7B模型）
-- <img width="1851" height="953" alt="3" src="https://github.com/user-attachments/assets/98d15bd3-1802-4a45-aa2a-1e5f5b562db6" />
-<img width="1781" height="787" alt="4" src="https://github.com/user-attachments/assets/3595650f-0cf4-4f43-93f2-0e27a58fdec5" />
-
-
 
 #### 模型类型
 - 图像识别模型：可处理图片输入，支持单张和批量操作
 - 语言交互模型：仅支持文本对话，不处理图片
+<img wi<img width="1829" height="965" alt="2" src="https://github.com/user-attachments/assets/29f9ddd2-271a-432f-b4cc-fdd3f5371f8b" />
+dth="1851" height="953" alt="3" src="https://github.com/user-attachments/assets/785bb5ef-b2cd-4dce-9ae9-0536b74cc63a" />
+<img width="1816" height="789" alt="13" src="https://github.com/user-attachments/assets/3ea76c6e-c458-45a8-9422-108ece38d618" />
 
 #### 快捷描述功能
 提供多种预设提示词模板：
@@ -54,36 +53,36 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 - 艺术评论分析
 - 产品列表描述
 
-#### 使用说明
-1. 选择模型类型（图像识别/语言交互）
-2. 选择相应的视觉或语言模型
-3. 选择上传方式（单张图片/批量图片）
-4. 上传图片或输入文本进行交互
-
 ### 3. 图像处理工具集
 
 #### 智能抠图
-- 基于 rembg 实现高质量背景移除
+- 基于 rembg 实现高质量背景移除<img width="1782" height="896" alt="7" src="https://github.com/user-attachments/assets/63e9293d-09b2-494a-8ea9-8eaa46aef287" />
+
 - 支持透明背景和自定义背景色
-- 批量处理功能
+- 批量处理功能<img width="1798" height="679" alt="8" src="https://github.com/user-attachments/assets/9450ffa8-f8ac-4ca0-bccd-7e709f873369" />
+
 - 实时预览效果
 
 #### 图像分割
 - 集成 Segment Anything Model (SAM)
-- 精确的图像分割功能
-- 支持点选和框选分割方式
+- 精确的图像分割功能<img width="1782" height="896" alt="7" src="https://github.com/user-attachments/assets/9d842a2e-bcfe-40d6-8fb0-17960626d960" />
+
+- 支持点选和自动分割方式<img width="1798" height="679" alt="8" src="https://github.com/user-attachments/assets/b8630278-f801-4f43-b039-70a895ffda1d" />
+
 - 可下载分割结果
 
 #### 图像清理
 - 图像去噪和修复功能
-- 简单易用的界面
+- 简单易用的界面<img width="1835" height="741" alt="11" src="https://github.com/user-attachments/assets/4ac7c40d-971c-4364-8cc1-73a872fcec79" />
+
 - 支持多种清理模式
 
 ### 4. 视频关键帧提取
 - 多种提取模式（关键帧/等间隔/场景变化）
 - 可调节提取质量
 - 支持多种视频格式
-- 可预览提取的帧
+- 可预览提取的帧<img width="1809" height="677" alt="12" src="https://github.com/user-attachments/assets/23b3cb3d-c763-4432-894f-fdc84b8c7b9f" />
+
 
 ### 5. 数字人视频生成
 - 基于 LatentSync 的音频驱动视频生成

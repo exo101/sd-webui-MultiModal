@@ -40,7 +40,8 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 - 语言交互模型：仅支持文本对话，不处理图片
 <img wi<img width="1829" height="965" alt="2" src="https://github.com/user-attachments/assets/29f9ddd2-271a-432f-b4cc-fdd3f5371f8b" />
 dth="1851" height="953" alt="3" src="https://github.com/user-attachments/assets/785bb5ef-b2cd-4dce-9ae9-0536b74cc63a" />
-<img width="1816" height="789" alt="13" src="https://github.com/user-attachments/assets/3ea76c6e-c458-45a8-9422-108ece38d618" />
+<img width="1816" height="789" alt="13" src="https://github.com/user-attachments/assets/cddb8cfa-06e9-47c3-916c-0b3c4e48b0a3" />
+
 
 #### 快捷描述功能
 提供多种预设提示词模板：

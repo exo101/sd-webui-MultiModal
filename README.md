@@ -10,6 +10,7 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 
 - Stable Diffusion WebUI Forge 环境  
   旧整合包已不适用日益更新的AI应用与50系显卡，我为此更新了新整合包环境，补充落后的webui生态
+  整合包模型路径参数设置：https://github.com/exo101/sd-webui-forge-aki-v4.0/tree/main
   
   新整合包修复了ADetailer修脸插件，wd1.4标签器等bug
 

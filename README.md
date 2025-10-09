@@ -6,6 +6,33 @@
 WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37  
 多模态插件使用介绍：https://www.bilibili.com/video/BV16Ta3zFEpn?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
 
+### 前置要求
+
+- Stable Diffusion WebUI Forge 环境  
+  旧整合包已不适用日益更新的AI应用与50系显卡，我为此更新了新整合包环境，补充落后的webui生态
+  新整合包修复了ADetailer修脸插件，wd1.4标签器等bug
+  ControlNet模块不支持FLUX ControlNet模型
+  在此之前去尝试过让Forge 环境支持FLUX ControlNet，努力无果，无法与XL ControlNet张量同时兼容在一个插件内
+  本人对 ControlNet的设计代码不是很了解，头一次尝试用ai辅助写的插件，包括哩布哩布平台也没有去做FLUX ControlNet模块
+  估计是不太好弄，只能等大佬解决了
+
+#### 大陆国内用户
+通过网盘分享的文件：更新环境库的webui Forge整合包  
+链接: https://pan.baidu.com/s/1FL7WVbcdvHfMtGUs-QOTVg 提取码: jwmu
+
+#### 海外用户
+如果使用此插件需更新Forge环境（由于体积较大无法方便上传只能如此了）  
+需要以下依赖：
+```
+diffusers==0.35.1
+
+Torch 2.7.0 (CUDA 12.8)+ xFormers 0.0.30
+
+transformers==4.53.1
+
+huggingface-hub==0.34.4
+```
+
 ## 核心功能
 
 - 📚 **资源汇总**: 集中管理各类资源和公告信息
@@ -186,27 +213,7 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 
 ## 安装说明
 
-### 前置要求
 
-- Stable Diffusion WebUI Forge 环境  
-  旧整合包已不适用日益更新的AI应用与50系显卡，我为此更新了新整合包环境
-
-#### 大陆国内用户
-通过网盘分享的文件：更新环境库的webui Forge整合包  
-链接: https://pan.baidu.com/s/1FL7WVbcdvHfMtGUs-QOTVg 提取码: jwmu
-
-#### 海外用户
-如果使用此插件需更新Forge环境（由于体积较大无法方便上传只能如此了）  
-需要以下依赖：
-```
-diffusers==0.35.1
-
-Torch 2.7.0 (CUDA 12.8)+ xFormers 0.0.30
-
-transformers==4.53.1
-
-huggingface-hub==0.34.4
-```
 
 每个项目都可以独立运行既可按需下载，也可全部下载
 

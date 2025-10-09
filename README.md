@@ -192,7 +192,6 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
     │       │   └── model.safetensors  # 文本编码器模型文件
     │       ├── text_encoder_2/        # 第二文本编码器
     │       │   ├── config.json        # 第二文本编码器配置文件
-    │       │   ├── model.safetensors  # 第二文本编码器模型文件
     │       │   ├── model-00001-of-00002.safetensors  # 分片模型文件1
     │       │   ├── model-00002-of-00002.safetensors  # 分片模型文件2
     │       │   └── model.safetensors.index.json     # 模型索引文件

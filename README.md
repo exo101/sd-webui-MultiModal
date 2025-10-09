@@ -23,7 +23,8 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 ### 1. 资源汇总
 - 集中展示重要公告和资源信息
 - 提供快速访问各类功能的入口
-- 显示插件使用说明和更新日志
+- 显示插件使用说明和更新日志<img width="1245" height="650" alt="1" src="https://github.com/user-attachments/assets/f9b99645-a76a-43ce-aa27-1d5774e9cfa3" />
+
 
 ### 2. 图像识别与语言交互
 

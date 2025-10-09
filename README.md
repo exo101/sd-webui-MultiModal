@@ -1,5 +1,8 @@
 
-一个为 Stable Diffusion WebUI Forge 设计的多功能集成插件，集成了图像识别、语言交互、视频处理、图像编辑等多种AI功能。
+一个为 Stable Diffusion WebUI Forge 设计的多功能集成插件，集成了图像识别、语言交互、语音克隆，视频处理、图像编辑，清理，分割，抠图等多种AI功能。
+个人主页：https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click
+WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
+多模态插件使用介绍：https://www.bilibili.com/video/BV16Ta3zFEpn?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
 
 ## 核心功能
 
@@ -147,6 +150,9 @@ huggingface-hub==0.34.4
 ollama run qwen2.5vl:3b
 ollama run qwen3:1.7b
 参数越大响应速度越慢质量越高，模型选择建议：8GB显存选择1.7B或3B模型获得更快响应速度，16GB显存可选择latest或7B模型
+<img width="1106" height="359" alt="QQ20251009-113027" src="https://github.com/user-attachments/assets/f32a8838-093f-4337-944e-<img width="924" height="677" alt="QQ20251009-113812" src="https://github.com/user-attachments/assets/2973f603-fd27-408d-9411-57a4b556750d" />
+3c772a16bc1e" />
+
 
 使用图像清理功能需下载模型big-lama.safetensors
 大陆国内用户通过网盘分享的文件：cleaner

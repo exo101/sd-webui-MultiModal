@@ -165,7 +165,7 @@ def create_index_tts_ui():
                     
                     # 添加预设音频组件
                     with gr.Accordion("预设音色参考音频", open=True):
-                        preset_audio_dir = os.path.join("extensions", "sd-webui-XYKC", "index-tts", "预设")
+                        preset_audio_dir = os.path.join(index_tts_path, "预设")
                         if os.path.exists(preset_audio_dir):
                             preset_files = [f for f in os.listdir(preset_audio_dir) if f.lower().endswith(('.wav', '.mp3', '.flac'))]
                             preset_audio_paths = [os.path.join(preset_audio_dir, f) for f in preset_files]

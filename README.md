@@ -34,6 +34,10 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 - 提供快捷提示词模板
 - 支持单张和批量图像处理
 - 根据显存大小推荐合适的模型（8GB显存推荐1.7B/3B模型，16GB显存可选latest/7B模型）
+- <img width="1851" height="953" alt="3" src="https://github.com/user-attachments/assets/98d15bd3-1802-4a45-aa2a-1e5f5b562db6" />
+<img width="1781" height="787" alt="4" src="https://github.com/user-attachments/assets/3595650f-0cf4-4f43-93f2-0e27a58fdec5" />
+
+
 
 #### 模型类型
 - 图像识别模型：可处理图片输入，支持单张和批量操作

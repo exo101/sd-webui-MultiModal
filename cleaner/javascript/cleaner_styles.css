@@ -1,0 +1,33 @@
+#xykc_cleanup_img2maskimg,
+#cleanup_img2maskimg {
+    position: relative;
+    overflow: visible;
+}
+
+#xykc_cleanup_img2maskimg .gradio-sketchpad,
+#cleanup_img2maskimg .gradio-sketchpad {
+    position: relative;
+}
+
+#xykc_cleanup_img2maskimg .gradio-sketchpad .brush-tools,
+#cleanup_img2maskimg .gradio-sketchpad .brush-tools {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    background-color: rgba(0, 0, 0, 0.8) !important;
+    padding: 12px !important;
+    box-sizing: border-box !important;
+    z-index: 9999 !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+#xykc_cleanup_img2maskimg .gradio-sketchpad canvas,
+#cleanup_img2maskimg .gradio-sketchpad canvas {
+    margin-top: 60px !important;
+}
+
+.cleaner-sketchpad-container {
+    position: relative;
+    margin-bottom: 20px;
+}

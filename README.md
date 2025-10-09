@@ -38,9 +38,10 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 #### 模型类型
 - 图像识别模型：可处理图片输入，支持单张和批量操作
 - 语言交互模型：仅支持文本对话，不处理图片
-<img wi<img width="1829" height="965" alt="2" src="https://github.com/user-attachments/assets/29f9ddd2-271a-432f-b4cc-fdd3f5371f8b" />
-dth="1851" height="953" alt="3" src="https://github.com/user-attachments/assets/785bb5ef-b2cd-4dce-9ae9-0536b74cc63a" />
-<img width="1816" height="789" alt="13" src="https://github.com/user-attachments/assets/cddb8cfa-06e9-47c3-916c-0b3c4e48b0a3" />
+<img width="1851" height="953" alt="3" src="https://github.com/user-attachments/assets/aaaedc60-8b8a-4d13-85e1-64599e71d5b1" />
+<img width="1829" height="965" alt="2" src="https://github.com/user-attachments/assets/606bfe39-5b26-4c4a-a400-6aa496a75cb4" />
+<img width="1816" height="789" alt="13" src="https://github.com/user-attachments/assets/16ff1933-5ff9-46c4-b533-90fca5e15c44" />
+
 
 
 #### 快捷描述功能

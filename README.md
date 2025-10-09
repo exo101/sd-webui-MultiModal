@@ -105,7 +105,8 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 - 保持图像上下文一致性
 - GGUF量化模型优化使用门槛12g显存可用
 
-## 文件夹结构说明
+## 文件夹结构说明<img width="660" height="387" alt="14" src="https://github.com/user-attachments/assets/32c734e4-e84f-4909-a020-3fee6abe35ad" />
+
 
 ```sd-webui-MultiModal/
 ├── scripts/                           # 主功能模块脚本目录

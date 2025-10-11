@@ -316,10 +316,12 @@ sd-webui-MultiModal/
         ├── Kontext-电商重打光_v1.safetensors      # 电商打光LoRA模型
         └── Kontext游戏资源配色与升级编辑_1.0.safetensors # 游戏资源编辑LoRA模型
 
+
+
+
+
+```
 ## 安装说明
-
-
-
 每个项目都可以独立运行既可按需下载，也可全部下载
 
 ### 功能模块安装指南
@@ -328,7 +330,6 @@ sd-webui-MultiModal/
 安装Ollama应用程序：https://ollama.com/  
 安装(qwen2.5vl)视觉模型与(qwen3)语言模型  
 在计算机开始菜单搜索栏输入CMD执行以下命令：
-```
 ollama run qwen2.5vl:3b
 ollama run qwen3:1.7b
 参数越大响应速度越慢质量越高，模型选择建议：8GB显存选择1.7B或3B模型获得更快响应速度，16GB显存可选择latest或7B模型

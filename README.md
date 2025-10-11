@@ -15,51 +15,21 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 - 克隆本仓库到 extensions 目录：
    sd-webui-forge-aki-v4.0/extensions
 
-## 2025/10/12 更新多模态SD插件12版本：增加第八个功能标签页 qwen-image与 qwen-image-edit plus
-<img width="1825" height="765" alt="88" src="https://github.com/user-attachments/assets/03327093-bb00-4a5f-ad11-a3ed31aaa90b" />
-
-qwen-image基本文字生成，中文理解，参数大的特点，qwen-image-edit plus具备编辑图像，实现多种编辑效果的模型
-之前一直部署不上webui是因为没有好的优化方法和策略，最近参考了comfyui的nunchaku优化方法，生成时间与配置压力大幅度减少
-为大家带来更加便利的的使用方式
-生成成功时会记录配置与参数设置信息，可参考我的设置信息
-<img width="870" height="528" alt="99" src="https://github.com/user-attachments/assets/6f31751b-3161-43b5-8fa8-5b76f17b775f" />
-模型分为，4步r32模型，4步r128模型，8步r32模型，8步r128模型，有融合lightning的版本，有基础版本
-
-
-qwen-image加速模型详情页介绍
-
-https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
-
-以ji'corge 设计的多功能集成插件，集成了图像识别、语言交互、语音克隆，视频处理、图像编辑，清理，分割，抠图等多种AI功能。
-
-个人主页：https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click  
-WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37  
-多模态插件使用介绍：https://www.bilibili.com/video/BV16Ta3zFEpn?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
-
-### 前置要求
-
-- Stable Diffusion WebUI Forge 环境  
-  旧整合包已不适用日益更新的AI应用与50系显卡，我为此更新了新整合包环境，补充落后的webui生态
-  https://github.com/exo101/sd-webui-forge-aki-v4.0/tree/main
-
-- 克隆本仓库到 extensions 目录：
-   sd-webui-forge-aki-v4.0/extensions
 
 ### 2025/10/12 更新多模态SD插件12版本：增加第八个功能标签页 qwen-image与 qwen-image-edit plus
  - <img width="1825" height="765" alt="88" src="https://github.com/user-attachments/assets/03327093-bb00-4a5f-ad11-a3ed31aaa90b" />
 
    qwen-image基本文字生成，中文理解，参数大的特点，qwen-image-edit plus具备编辑图像，实现多种编辑效果的模型
    之前一直部署不上webui是因为没有好的优化方法和策略，最近参考了comfyui的nunchaku优化方法，生成时间与配置压力大幅度减少
-    为大家带来更加便利的的使用方式，生成成功时会记录配置与参数设置信息，可参考我的设置信息
+    为大家带来更加便利的的使用方式，生成成功时会记录配置与参数设置信息
    
- - <img width="870" height="528" alt="99" src="https://github.com/user-attachments/assets/6f31751b-3161-43b5-8fa8-5b76f17b775f" />
-  
-     模型分为，4步r32模型，4步r128模型，8步r32模型，8步r128模型，融合lightning的版本，基础版本
+     模型分为，4步r32模型，4步r128模型，8步r32模型，8步r128模型，融合lightning的版本，基础版本，数值越高质量越高，生成时间越长
 
+ - qwen-image为例，加速模型详情页介绍https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
+   <img width="861" height="435" alt="122" src="https://github.com/user-attachments/assets/650e86f6-a822-424d-ae60-9fed1f1426aa" />
 
- - qwen-image加速模型详情页介绍https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
+ -  <img width="1805" height="768" alt="234" src="https://github.com/user-attachments/assets/75f541a3-df44-4470-8f80-eab213a2208b" />
 
-   
 
  - 以编辑模型为例，qwen-image-edit 详情页介绍https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
 

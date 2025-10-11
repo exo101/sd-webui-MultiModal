@@ -276,7 +276,7 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 
 ## 文件夹结构说明<img width="660" height="387" alt="14" src="https://github.com/user-attachments/assets/32c734e4-e84f-4909-a020-3fee6abe35ad" />
 
-
+```
 sd-webui-MultiModal/
 ├── scripts/                           # 主功能模块脚本目录
 ├── XYKC_AI/                           # AI模型API接口目录
@@ -305,31 +305,12 @@ sd-webui-MultiModal/
     │   └── FLUX.1-Kontext-dev/        # FLUX.1主模型目录
     │       ├── flux1-kontext-dev-Q6_K.gguf  # GGUF格式主模型文件
     │       ├── transformer/           # Transformer模型组件
-    │       │   ├── config.json        # Transformer配置文件
-    │       │   └── ...                # 其他Transformer相关文件
     │       ├── vae/                   # VAE模型组件
-    │       │   ├── config.json        # VAE配置文件
-    │       │   └── diffusion_pytorch_model.safetensors  # VAE权重文件
     │       ├── text_encoder/          # 文本编码器
-    │       │   ├── config.json        # 文本编码器配置文件
-    │       │   └── model.safetensors  # 文本编码器模型文件
     │       ├── text_encoder_2/        # 第二文本编码器
-    │       │   ├── config.json        # 第二文本编码器配置文件
-    │       │   ├── model-00001-of-00002.safetensors  # 分片模型文件1
-    │       │   ├── model-00002-of-00002.safetensors  # 分片模型文件2
-    │       │   └── model.safetensors.index.json     # 模型索引文件
     │       ├── tokenizer/             # 分词器
-    │       │   ├── merges.txt         # 合并规则文件
-    │       │   ├── special_tokens_map.json  # 特殊标记映射文件
-    │       │   ├── tokenizer_config.json    # 分词器配置文件
-    │       │   └── vocab.json         # 词汇表文件
     │       ├── tokenizer_2/           # 第二分词器
-    │       │   ├── special_tokens_map.json  # 特殊标记映射文件
-    │       │   ├── spiece.model       # SentencePiece模型文件
-    │       │   ├── tokenizer.json     # 分词器文件
-    │       │   └── tokenizer_config.json    # 分词器配置文件
     │       ├── scheduler/             # 调度器
-    │       │   └── scheduler_config.json    # 调度器配置文件
     │       └── model_index.json       # 模型配置索引文件
     └── lora/                          # LoRA微调模型目录
         ├── Kontext-电商重打光_v1.safetensors      # 电商打光LoRA模型

@@ -239,6 +239,11 @@ ollama run qwen3:1.7b
 ```
 参数越大响应速度越慢质量越高，模型选择建议：8GB显存选择1.7B或3B模型获得更快响应速度，16GB显存可选择latest或7B模型
 
+使用语音合成或视频处理功能需下载ffmpeg
+开始菜单搜索环境变量
+添加C<img width="1693" height="734" alt="QQ20251011-134442" src="https://github.com/user-attachments/assets/651fa968-f16d-4084-b6af-db12ac26632d" />
+:\ffmpeg\bin到环境变量
+
 #### 图像清理功能
 需下载模型big-lama.safetensors  
 

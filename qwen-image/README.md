@@ -56,9 +56,6 @@ qwen-image/
 - `svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors`: 8步推理的图像编辑模型
 - `svdq-fp4_r128-qwen-image-edit-2509.safetensors`: 标准图像编辑模型
 
-### nunchaku/
-Nunchaku 库，是阿里巴巴专门为 Qwen-Image 模型优化的推理库，提供更高的推理效率和更低的显存占用。
-
 ### outputs/
 图像生成输出目录，所有通过 Qwen-Image 生成的图像都会保存在此目录中。
 

@@ -234,9 +234,7 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 在计算机开始菜单搜索栏输入CMD执行以下命令：
 ```
 ollama run qwen2.5vl:3b
-
 ollama run qwen3:1.7b
-```
 参数越大响应速度越慢质量越高，模型选择建议：8GB显存选择1.7B或3B模型获得更快响应速度，16GB显存可选择latest或7B模型
 
 使用语音合成或视频处理功能需下载ffmpeg

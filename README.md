@@ -45,42 +45,38 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 - 克隆本仓库到 extensions 目录：
    sd-webui-forge-aki-v4.0/extensions
 
-## 2025/10/12 更新多模态SD插件12版本：增加第八个功能标签页 qwen-image与 qwen-image-edit plus
-<img width="1825" height="765" alt="88" src="https://github.com/user-attachments/assets/03327093-bb00-4a5f-ad11-a3ed31aaa90b" />
+### 2025/10/12 更新多模态SD插件12版本：增加第八个功能标签页 qwen-image与 qwen-image-edit plus
+ - <img width="1825" height="765" alt="88" src="https://github.com/user-attachments/assets/03327093-bb00-4a5f-ad11-a3ed31aaa90b" />
 
-qwen-image基本文字生成，中文理解，参数大的特点，qwen-image-edit plus具备编辑图像，实现多种编辑效果的模型
-之前一直部署不上webui是因为没有好的优化方法和策略，最近参考了comfyui的nunchaku优化方法，生成时间与配置压力大幅度减少
-为大家带来更加便利的的使用方式
-生成成功时会记录配置与参数设置信息，可参考我的设置信息
-<img width="870" height="528" alt="99" src="https://github.com/user-attachments/assets/6f31751b-3161-43b5-8fa8-5b76f17b775f" />
-模型分为，4步r32模型，4步r128模型，8步r32模型，8步r128模型，有融合lightning的版本，有基础版本
-
-
-qwen-image加速模型详情页介绍
-
-https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
-
-以编辑模型为例
-
-qwen-image-edit 详情页介绍
-https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
-
-<img width="1815" height="854" alt="333" src="https://github.com/user-attachments/assets/37e5f859-263d-478d-ab63-b9d41a682217" />
+   qwen-image基本文字生成，中文理解，参数大的特点，qwen-image-edit plus具备编辑图像，实现多种编辑效果的模型
+   之前一直部署不上webui是因为没有好的优化方法和策略，最近参考了comfyui的nunchaku优化方法，生成时间与配置压力大幅度减少
+    为大家带来更加便利的的使用方式，生成成功时会记录配置与参数设置信息，可参考我的设置信息
+   
+ - <img width="870" height="528" alt="99" src="https://github.com/user-attachments/assets/6f31751b-3161-43b5-8fa8-5b76f17b775f" />
+  
+     模型分为，4步r32模型，4步r128模型，8步r32模型，8步r128模型，融合lightning的版本，基础版本
 
 
-不融合lightning的 svdq-fp4_r128-qwen-image-edit-2509.safetensors质量最高，生成时间最长
-
-
-<img width="866" height="375" alt="111" src="https://github.com/user-attachments/assets/f0601d64-fec4-4efd-b841-e44b3277e246" />
-
-融合lightning的8步模型 svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors 质量较好，生成时间中等
-<img width="859" height="359" alt="222" src="https://github.com/user-attachments/assets/b6935a43-1868-4b0b-b8a5-cd0cd3bf4ff2" />
-
-
-在高配置的电脑上体现不出明显的时间差距，迭代步数越高时间越长，质量越高，最高不超过40，
-
+ - qwen-image加速模型详情页介绍https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
 
    
+
+ - 以编辑模型为例，qwen-image-edit 详情页介绍https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
+
+    <img width="1815" height="854" alt="333" src="https://github.com/user-attachments/assets/37e5f859-263d-478d-ab63-b9d41a682217" />
+
+ -  不融合lightning的 svdq-fp4_r128-qwen-image-edit-2509.safetensors质量最高，生成时间最长
+
+   <img width="866" height="375" alt="111" src="https://github.com/user-attachments/assets/f0601d64-fec4-4efd-b841-e44b3277e246" />
+   
+ - 融合lightning的8步模型 svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors 质量较好，生成时间中等
+
+   <img width="859" height="359" alt="222" src="https://github.com/user-attachments/assets/b6935a43-1868-4b0b-b8a5-cd0cd3bf4ff2" />
+   
+-   在高配置的电脑上体现不出明显的时间差距，迭代步数越高时间越长，质量越高，最高不超过40，
+
+
+  
 ## 核心功能
 
 - 📚 **资源汇总**: 集中管理各类资源和公告信息

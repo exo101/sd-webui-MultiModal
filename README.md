@@ -239,8 +239,10 @@ ollama run qwen3:1.7b
 
 使用语音合成或视频处理功能需下载ffmpeg
 开始菜单搜索环境变量
-添加C<img width="1693" height="734" alt="QQ20251011-134442" src="https://github.com/user-attachments/assets/651fa968-f16d-4084-b6af-db12ac26632d" />
-:\ffmpeg\bin到环境变量
+添加C:\ffmpeg\bin到环境变量
+
+<img width="1693" height="734" alt="QQ20251011-134442" src="https://github.com/user-attachments/assets/651fa968-f16d-4084-b6af-db12ac26632d" />
+
 
 #### 图像清理功能
 需下载模型big-lama.safetensors  

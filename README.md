@@ -48,8 +48,6 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
    
      <img width="768" height="1376" alt="qwen_image_edit_1760208775892" src="https://github.com/user-attachments/assets/f1e20434-1598-4cf3-b6a3-a3bc64fc9f8b" />
 
-  ## 文件夹结构 
-     <img width="908" height="291" alt="1214" src="https://github.com/user-attachments/assets/dd26b273-cb2e-4fdc-8c6e-836d7f8074df" />
   # Qwen-Image 模块说明
 
 本目录包含 Qwen-Image 模型及相关组件，用于在 Stable Diffusion WebUI Forge 中实现文本到图像生成和图像编辑功能。

@@ -20,7 +20,7 @@
 - 🔊 **TTS语音合成**: 集成 Index-TTS 实现高质量文本转语音
 - 🌟 **FLUX.1 图像编辑**: 集成 FLUX.1-Kontext 进行上下文感知的图像编辑
 - 🌟 **Qwen-Image复杂文本渲染和qwen-image-edit-2509精确图像编辑 
-- 
+  
 个人主页：https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click  
 WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37  
 多模态插件使用介绍：https://www.bilibili.com/video/BV16Ta3zFEpn?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
@@ -97,7 +97,6 @@ qwen-image/
 │   ├── README.md                   # 模型说明文件
 │   ├── LICENSE                     # 许可证文件
 │   └── .gitattributes              # Git 属性文件
-├── nunchaku/                       # Nunchaku 库（Qwen-Image 优化库）
 ├── outputs/                        # 生成图像输出目录
 ├── qwen_image_scripts.py           # Qwen-Image 功能核心脚本
 └── README.md                       # 本说明文件
@@ -125,8 +124,6 @@ qwen-image/
 - `svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors`: 8步推理的图像编辑模型
 - `svdq-fp4_r128-qwen-image-edit-2509.safetensors`: 标准图像编辑模型
 
-### nunchaku/
-Nunchaku 库，是阿里巴巴专门为 Qwen-Image 模型优化的推理库，提供更高的推理效率和更低的显存占用。
 
 ### outputs/
 图像生成输出目录，所有通过 Qwen-Image 生成的图像都会保存在此目录中。

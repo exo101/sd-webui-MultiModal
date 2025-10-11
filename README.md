@@ -42,8 +42,6 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
    之前一直部署不上webui是因为没有好的优化方法和策略，最近参考了comfyui的nunchaku优化方法，生成时间与配置压力大幅度减少
     为大家带来更加便利的的使用方式，生成成功时会记录配置与参数设置信息
    
-     模型分为，4步r32模型，4步r128模型，8步r32模型，8步r128模型，融合lightning的版本，基础版本，数值越高质量越高，生成时间越长
-
  - qwen-image为例，加速模型详情页介绍https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
    <img width="861" height="435" alt="122" src="https://github.com/user-attachments/assets/650e86f6-a822-424d-ae60-9fed1f1426aa" />
 
@@ -101,6 +99,7 @@ qwen-image/
 ├── qwen_image_scripts.py           # Qwen-Image 功能核心脚本
 └── README.md                       # 本说明文件
 ```
+<img width="780" height="504" alt="55555" src="https://github.com/user-attachments/assets/ce2cac1f-e7eb-4354-a7c0-cf99f6cb406d" />
 
 ## 各目录及文件说明
 

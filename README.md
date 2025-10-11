@@ -72,6 +72,7 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 模型下载说明：从基础模型中下载除了transformer（主模型）以外的，所有辅助模型组件，vae，text_encoder，scheduler，等配置文件
 
 https://www.modelscope.cn/models/Qwen/Qwen-Image/files
+
 qwen-image加速主模型下载详情页介绍 https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
 
 qwen-image-edit加速主模型下载详情页介绍https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary

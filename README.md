@@ -42,10 +42,10 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
    之前一直部署不上webui是因为没有好的优化方法和策略，最近参考了comfyui的nunchaku优化方法，生成时间与配置压力大幅度减少
     为大家带来更加便利的的使用方式，生成成功时会记录配置与参数设置信息
    
- - qwen-image为例，加速模型详情页介绍https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
+ - qwen-image为例
    <img width="861" height="435" alt="122" src="https://github.com/user-attachments/assets/650e86f6-a822-424d-ae60-9fed1f1426aa" />
 
- - 以编辑模型为例，qwen-image-edit 详情页介绍https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
+ - 以编辑模型为例
 
     <img width="1815" height="854" alt="333" src="https://github.com/user-attachments/assets/37e5f859-263d-478d-ab63-b9d41a682217" />
 
@@ -68,6 +68,17 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
   # Qwen-Image 模块说明
 
 本目录包含 Qwen-Image 模型及相关组件，用于在 Stable Diffusion WebUI Forge 中实现文本到图像生成和图像编辑功能。
+
+模型下载说明：从基础模型中下载除了transformer（主模型）以外的，所有辅助模型组件，vae，text_encoder，scheduler，等配置文件
+
+qwen-image加速主模型下载详情页介绍 https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
+
+qwen-image-edit加速主模型下载详情页介绍https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
+
+为什么在webui中下载这样下载呢？而不是comfyui的那样的方式，这是个原理性问题，因为diffusion库只认完整的模型组件和预训练模型，为什么不从
+官方下载transformer（主模型）呢？因为官方的主模型实在太大了，4090显卡也很吃力，所以才要下载这个加速的主模型
+
+<img width="700" height="805" alt="1233" src="https://github.com/user-attachments/assets/93bc645f-cfb5-45a4-a9ba-e4acd213c783" />
 
 ## 目录结构
 
@@ -99,6 +110,8 @@ qwen-image/
 ├── qwen_image_scripts.py           # Qwen-Image 功能核心脚本
 └── README.md                       # 本说明文件
 ```
+<img width="666" height="276" alt="234324" src="https://github.com/user-attachments/assets/56492f90-cd13-4e7c-8826-3e8ea1c003a2" />
+
 <img width="780" height="504" alt="55555" src="https://github.com/user-attachments/assets/ce2cac1f-e7eb-4354-a7c0-cf99f6cb406d" />
 
 ## 各目录及文件说明

@@ -28,9 +28,6 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
  - qwen-image为例，加速模型详情页介绍https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
    <img width="861" height="435" alt="122" src="https://github.com/user-attachments/assets/650e86f6-a822-424d-ae60-9fed1f1426aa" />
 
- -  <img width="1805" height="768" alt="234" src="https://github.com/user-attachments/assets/75f541a3-df44-4470-8f80-eab213a2208b" />
-
-
  - 以编辑模型为例，qwen-image-edit 详情页介绍https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
 
     <img width="1815" height="854" alt="333" src="https://github.com/user-attachments/assets/37e5f859-263d-478d-ab63-b9d41a682217" />

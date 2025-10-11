@@ -19,7 +19,8 @@
 - 🤖 **数字人视频生成**: 基于 LatentSync 实现音频驱动的数字人视频生成
 - 🔊 **TTS语音合成**: 集成 Index-TTS 实现高质量文本转语音
 - 🌟 **FLUX.1 图像编辑**: 集成 FLUX.1-Kontext 进行上下文感知的图像编辑
-
+- 🌟 **Qwen-Image复杂文本渲染和qwen-image-edit-2509精确图像编辑 
+- 
 个人主页：https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click  
 WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37  
 多模态插件使用介绍：https://www.bilibili.com/video/BV16Ta3zFEpn?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37

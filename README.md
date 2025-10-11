@@ -34,16 +34,119 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 
  -  不融合lightning的 svdq-fp4_r128-qwen-image-edit-2509.safetensors质量最高，生成时间最长
 
-   <img width="866" height="375" alt="111" src="https://github.com/user-attachments/assets/f0601d64-fec4-4efd-b841-e44b3277e246" />
+    <img width="866" height="375" alt="111" src="https://github.com/user-attachments/assets/f0601d64-fec4-4efd-b841-e44b3277e246" />
    
  - 融合lightning的8步模型 svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors 质量较好，生成时间中等
 
-   <img width="859" height="359" alt="222" src="https://github.com/user-attachments/assets/b6935a43-1868-4b0b-b8a5-cd0cd3bf4ff2" />
+    <img width="859" height="359" alt="222" src="https://github.com/user-attachments/assets/b6935a43-1868-4b0b-b8a5-cd0cd3bf4ff2" />
    
--   在高配置的电脑上体现不出明显的时间差距，迭代步数越高时间越长，质量越高，最高不超过40，
+ -   在高配置的电脑上体现不出明显的时间差距，迭代步数越高时间越长，质量越高，最高不超过40，
+    
+     编辑模型最多支持上传三张图像，但多图编辑能力弱于单图编辑能力
+    
+     <img width="1842" height="947" alt="4444" src="https://github.com/user-attachments/assets/e2329e50-db48-4f1a-9cec-c293933f4993" />
+   
+     <img width="768" height="1376" alt="qwen_image_edit_1760208775892" src="https://github.com/user-attachments/assets/f1e20434-1598-4cf3-b6a3-a3bc64fc9f8b" />
 
+  ## 文件夹结构 
+     <img width="908" height="291" alt="1214" src="https://github.com/user-attachments/assets/dd26b273-cb2e-4fdc-8c6e-836d7f8074df" />
+  # Qwen-Image 模块说明
 
-  
+本目录包含 Qwen-Image 模型及相关组件，用于在 Stable Diffusion WebUI Forge 中实现文本到图像生成和图像编辑功能。
+
+## 目录结构
+
+```
+qwen-image/
+├── demo/                           # 示例脚本目录
+│   ├── qwen-image-edit-2509.py     # 图像编辑示例脚本
+│   └── qwen-image-lightning.py     # 文本到图像生成示例脚本
+├── models/                         # 模型文件目录
+│   ├── qwenimage/                  # 文本到图像生成模型
+│   │   ├── svdq-fp4_r128-qwen-image-lightningv1.0-4steps.safetensors
+│   │   ├── svdq-fp4_r128-qwen-image-lightningv1.1-8steps.safetensors
+│   │   └── svdq-fp4_r128-qwen-image.safetensors
+│   ├── qwen-image-edit/            # 图像编辑模型
+│   │   ├── svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-4steps.safetensors
+│   │   ├── svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors
+│   │   └── svdq-fp4_r128-qwen-image-edit-2509.safetensors
+│   ├── processor/                  # 处理器组件
+│   ├── scheduler/                  # 调度器组件
+│   ├── text_encoder/               # 文本编码器组件
+│   ├── tokenizer/                  # 分词器组件
+│   ├── transformer/                # Transformer 组件
+│   ├── vae/                        # VAE 组件
+│   ├── model_index.json            # 模型索引文件
+│   ├── README.md                   # 模型说明文件
+│   ├── LICENSE                     # 许可证文件
+│   └── .gitattributes              # Git 属性文件
+├── nunchaku/                       # Nunchaku 库（Qwen-Image 优化库）
+├── outputs/                        # 生成图像输出目录
+├── qwen_image_scripts.py           # Qwen-Image 功能核心脚本
+└── README.md                       # 本说明文件
+```
+
+## 各目录及文件说明
+
+### demo/
+包含 Qwen-Image 模型的使用示例脚本：
+- `qwen-image-lightning.py`: 展示如何使用 Qwen-Image Lightning 模型进行文本到图像生成
+- `qwen-image-edit-2509.py`: 展示如何使用 Qwen-Image Edit 模型进行图像编辑
+
+### models/
+模型文件及相关组件目录。
+
+#### models/qwenimage/
+文本到图像生成模型文件：
+- `svdq-fp4_r128-qwen-image-lightningv1.0-4steps.safetensors`: 4步推理的 Lightning 模型 v1.0
+- `svdq-fp4_r128-qwen-image-lightningv1.1-8steps.safetensors`: 8步推理的 Lightning 模型 v1.1
+- `svdq-fp4_r128-qwen-image.safetensors`: 标准 Qwen-Image 模型
+
+#### models/qwen-image-edit/
+图像编辑模型文件：
+- `svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-4steps.safetensors`: 4步推理的图像编辑模型
+- `svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors`: 8步推理的图像编辑模型
+- `svdq-fp4_r128-qwen-image-edit-2509.safetensors`: 标准图像编辑模型
+
+### nunchaku/
+Nunchaku 库，是阿里巴巴专门为 Qwen-Image 模型优化的推理库，提供更高的推理效率和更低的显存占用。
+
+### outputs/
+图像生成输出目录，所有通过 Qwen-Image 生成的图像都会保存在此目录中。
+
+### qwen_image_scripts.py
+Qwen-Image 功能的核心脚本，包含：
+- 文本到图像生成功能
+- 图像编辑功能
+- 模型加载和推理逻辑
+- 与 WebUI 的接口函数
+
+## 模型特点
+
+### 推理步数
+模型根据推理步数分为两类：
+- 4步模型：适合快速生成，质量稍低但速度更快
+- 8步模型：生成质量更高，但需要更多推理时间
+
+### Rank 等级
+模型文件名中的 `r128` 表示 Rank 等级为 128，提供更好的生成质量。
+
+### 模型版本
+不同版本的模型在文件名中有明确标识，如 `lightningv1.0`、`lightningv1.1`、`lightningv2.0` 等。
+
+## 使用说明
+
+1. 通过 WebUI 界面选择相应的模型文件进行文本到图像生成或图像编辑
+2. 根据需要选择合适的推理步数（4步或8步）
+3. 生成的图像将自动保存在 `outputs/` 目录中
+4. 生成信息（如配置参数、生成时间等）也会一并记录
+
+## 系统要求
+
+- 显卡：推荐 NVIDIA RTX 4070  或更高配置
+- 显存：至少 12GB
+- 内存：推荐 64GB 
+     
 ## 核心功能
 
 - 📚 **资源汇总**: 集中管理各类资源和公告信息
@@ -142,7 +245,7 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 - 支持中文和多语言合成
 - <img width="1786" height="805" alt="23" src="https://github.com/user-attachments/assets/1318c3fa-c979-4c93-8003-639e5f43f7f6" />
 - <img width="1788" height="428" alt="17" src="https://github.com/user-attachments/assets/52ed7801-36f3-4145-9386-f2ae7285ea11" />
-[output_1760002640.wav](https://github.com/user-attachments/files/22794279/output_1760002640.wav)
+   [output_1760002640.wav](https://github.com/user-attachments/files/22794279/output_1760002640.wav)
 
 
 
@@ -163,7 +266,7 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 ## 文件夹结构说明<img width="660" height="387" alt="14" src="https://github.com/user-attachments/assets/32c734e4-e84f-4909-a020-3fee6abe35ad" />
 
 
-```sd-webui-MultiModal/
+sd-webui-MultiModal/
 ├── scripts/                           # 主功能模块脚本目录
 ├── XYKC_AI/                           # AI模型API接口目录
 │   └── XYKC_AI_PyScripts/             # Python脚本接口

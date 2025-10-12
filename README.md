@@ -69,22 +69,22 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 
     -模型下载说明：从基础模型中下载除了transformer（主模型）以外的，所有辅助模型组件，vae，text_encoder，scheduler，等配置文件
 
-     https://www.modelscope.cn/models/Qwen/Qwen-Image/files
+ https://www.modelscope.cn/models/Qwen/Qwen-Image/files
 
      qwen-image加速主模型下载详情页介绍
-     https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
+https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
 
      qwen-image-edit加速主模型下载详情页介绍
-     https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
+https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
 
      为什么在webui中要这样下载呢？而不是comfyui的那样的方式，这是个原理性问题，因为diffusion库只认完整的模型组件和预训练模型，为什么不从
      官方下载transformer（主模型）呢？因为官方的主模型实在太大了，4090显卡也很吃力，所以才要下载这个加速的主模型
 
-     <img width="700" height="805" alt="1233" src="https://github.com/user-attachments/assets/93bc645f-cfb5-45a4-a9ba-e4acd213c783" />
+<img width="700" height="805" alt="1233" src="https://github.com/user-attachments/assets/93bc645f-cfb5-45a4-a9ba-e4acd213c783" />
 
      在WebUI Forge环境中安装nunchaku加速依赖，也就是打开D:\sd-webui-forge-aki-v4.0\python目录输入cmd
      
-      python -m pip install "D:\下载\nunchaku-1.0.0+torch2.7-cp311-cp311-win_amd64.whl" 
+python -m pip install "D:\下载\nunchaku-1.0.0+torch2.7-cp311-cp311-win_amd64.whl" 
       
  <img width="804" height="689" alt="65656" src="https://github.com/user-attachments/assets/cac2ff7c-88bf-4036-a8cd-02927e0e36c6" />
  <img width="706" height="691" alt="234234" src="https://github.com/user-attachments/assets/fcba81c7-2534-4427-a258-4472e4699347" />

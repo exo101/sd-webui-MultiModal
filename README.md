@@ -25,7 +25,8 @@
 WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37  
 多模态插件使用介绍：https://www.bilibili.com/video/BV16Ta3zFEpn?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
 
-### 前置要求
+<details>
+<summary>前置要求</summary>
 
 - Stable Diffusion WebUI Forge 环境  
   旧整合包已不适用日益更新的AI应用与50系显卡，我为此更新了新整合包环境，补充落后的webui生态
@@ -33,9 +34,11 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 
 - 克隆本仓库到 extensions 目录：
    sd-webui-forge-aki-v4.0/extensions
+</details>
 
+<details>
+<summary>2025/10/12 更新多模态SD插件12版本：增加第八个功能标签页 qwen-image与 qwen-image-edit plus</summary>
 
-### 2025/10/12 更新多模态SD插件12版本：增加第八个功能标签页 qwen-image与 qwen-image-edit plus
  - <img width="1825" height="765" alt="88" src="https://github.com/user-attachments/assets/03327093-bb00-4a5f-ad11-a3ed31aaa90b" />
 
    qwen-image基本文字生成，中文理解，参数大的特点，qwen-image-edit plus具备编辑图像，实现多种编辑效果的模型
@@ -65,7 +68,10 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
    
      <img width="768" height="1376" alt="qwen_image_edit_1760208775892" src="https://github.com/user-attachments/assets/f1e20434-1598-4cf3-b6a3-a3bc64fc9f8b" />
 
-### Qwen-Image 下载说明
+</details>
+
+<details>
+<summary>Qwen-Image 下载说明</summary>
 
     -模型下载说明：从基础模型中下载除了transformer（主模型）以外的，所有辅助模型组件，vae，text_encoder，scheduler，等配置文件
 
@@ -90,8 +96,12 @@ python -m pip install "D:\下载\nunchaku-1.0.0+torch2.7-cp311-cp311-win_amd64.w
  <img width="706" height="691" alt="234234" src="https://github.com/user-attachments/assets/fcba81c7-2534-4427-a258-4472e4699347" />
  <img width="1094" height="414" alt="456536" src="https://github.com/user-attachments/assets/b50e172f-ae44-42cd-9c55-00f7af8235c3" />
 
-     
+</details>
+
 ## 目录结构
+
+<details>
+<summary>展开查看目录结构</summary>
 
 ```
 qwen-image/
@@ -125,38 +135,64 @@ qwen-image/
 
 <img width="780" height="504" alt="55555" src="https://github.com/user-attachments/assets/ce2cac1f-e7eb-4354-a7c0-cf99f6cb406d" />
 
+</details>
+
 ## 各目录及文件说明
 
-### demo/
+<details>
+<summary>demo/</summary>
+
 包含 Qwen-Image 模型的使用示例脚本：
 - `qwen-image-lightning.py`: 展示如何使用 Qwen-Image Lightning 模型进行文本到图像生成
 - `qwen-image-edit-2509.py`: 展示如何使用 Qwen-Image Edit 模型进行图像编辑
 
-### models/
+</details>
+
+<details>
+<summary>models/</summary>
+
 模型文件及相关组件目录。
 
-#### models/qwenimage/
+<details>
+<summary>models/qwenimage/</summary>
+
 文本到图像生成模型文件：
 - `svdq-fp4_r128-qwen-image-lightningv1.0-4steps.safetensors`: 4步推理的 Lightning 模型 v1.0
 - `svdq-fp4_r128-qwen-image-lightningv1.1-8steps.safetensors`: 8步推理的 Lightning 模型 v1.1
 - `svdq-fp4_r128-qwen-image.safetensors`: 标准 Qwen-Image 模型
 
-#### models/qwen-image-edit/
+</details>
+
+<details>
+<summary>models/qwen-image-edit/</summary>
+
 图像编辑模型文件：
 - `svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-4steps.safetensors`: 4步推理的图像编辑模型
 - `svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors`: 8步推理的图像编辑模型
 - `svdq-fp4_r128-qwen-image-edit-2509.safetensors`: 标准图像编辑模型
 
+</details>
 
-### outputs/
+</details>
+
+<details>
+<summary>outputs/</summary>
+
 图像生成输出目录，所有通过 Qwen-Image 生成的图像都会保存在此目录中。
 
-### 模型版本
+</details>
+
+<details>
+<summary>模型版本</summary>
+
 不同版本的模型在文件名中有明确标识，如 `lightningv1.0`、`lightningv1.1`、`lightningv2.0` 等。
  
 生成信息（如配置参数、生成时间等）也会一并记录
 
-### 2025-10-09 多模态插件11版本
+</details>
+
+<details>
+<summary>2025-10-09 多模态插件11版本</summary>
 
 ## 功能模块详细介绍
 
@@ -270,49 +306,21 @@ sd-webui-MultiModal/
 ├── XYKC_AI/                           # AI模型API接口目录
 │   └── XYKC_AI_PyScripts/             # Python脚本接口
 ├── cleaner/                           # 图像清理独立模块
-│   └── models/                        # 图像清理模型目录
-│       └── big-lama.safetensors       # 图像清理主模型文件
 ├── index-tts/                         # Index-TTS语音合成独立模块
-│   └── checkpoints/                   # TTS模型检查点目录
-│       ├── gpt.pth                    # GPT模型文件
-│       ├── s2mel.pth                  # S2MEL模型文件
-│       ├── bigvgan_v2_22khz_80band_256x/ # 声码器模型目录
-│       ├── w2v-bert-2.0/              # Wav2Vec-BERT模型目录
-│       └── ...                        # 其他TTS相关模型文件
 ├── LatentSync/                        # 数字人视频生成独立模块
-│   ├── checkpoints/                   # 主模型检查点目录
-│   │   ├── latentsync_unet.pt         # LatentSync主模型文件
-│   │   ├── sd-vae-ft-mse/             # VAE模型目录
-│   │   │   └── diffusion_pytorch_model.safetensors  # VAE权重文件
-│   │   ├── stable_syncnet.pt          # SyncNet模型文件
-│   │   └── whisper/                   # Whisper模型目录
-│   └── latentsync/                   # 核心代码目录
-│       └── checkpoints/              # 辅助模型检查点目录
 └── FLUX.1-Kontext/                    # FLUX.1图像编辑独立模块
-    ├── models/                        # 图像编辑模型目录
-    │   └── FLUX.1-Kontext-dev/        # FLUX.1主模型目录
-    │       ├── flux1-kontext-dev-Q6_K.gguf  # GGUF格式主模型文件
-    │       ├── transformer/           # Transformer模型组件
-    │       ├── vae/                   # VAE模型组件
-    │       ├── text_encoder/          # 文本编码器
-    │       ├── text_encoder_2/        # 第二文本编码器
-    │       ├── tokenizer/             # 分词器
-    │       ├── tokenizer_2/           # 第二分词器
-    │       ├── scheduler/             # 调度器
-    │       └── model_index.json       # 模型配置索引文件
-    └── lora/                          # LoRA微调模型目录
-        ├── Kontext-电商重打光_v1.safetensors      # 电商打光LoRA模型
-        └── Kontext游戏资源配色与升级编辑_1.0.safetensors # 游戏资源编辑LoRA模型
 
-
-
-
-
+models/                                # WebUI主模型目录
+├── sam_vit_h_4b8939.pth               # SAM模型文件（用于图像分割）最大模型，精度最高，但需要更多显存
+└── sam_vit_l_0b3195.pth               # SAM模型文件（用于图像分割）中等模型，精度和资源消耗的平衡
 ```
+</details>
+
 ## 安装说明
 每个项目都可以独立运行既可按需下载，也可全部下载
 
-### 功能模块安装指南
+<details>
+<summary>功能模块安装指南</summary>
 
 #### 图像识别与语音交互功能
 安装Ollama应用程序：https://ollama.com/  
@@ -377,6 +385,10 @@ https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev/tree/main
 注释（无需下载主模型，已用GGUF量化模型代替主模型）  
 https://huggingface.co/bullerwins/FLUX.1-Kontext-dev-GGUF/tree/main
 
+</details>
+
+<details>
+<summary>汇总插件包</summary>
 
 ### 汇总插件包通过网盘分享的文件：sd-webui-MultiModal
 链接: https://pan.baidu.com/s/10i9qMVi_3i_AM9bnFQJ0qA 提取码: 9rt7 
@@ -385,6 +397,8 @@ https://huggingface.co/bullerwins/FLUX.1-Kontext-dev-GGUF/tree/main
  根据需要下载相应的模型文件
 
  重启 WebUI
+
+</details>
 
 ## 使用须知
 

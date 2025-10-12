@@ -37,6 +37,9 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 
 ### 2025/10/12 更新多模态SD插件12版本：增加第八个功能标签页 qwen-image与 qwen-image-edit plus
  - <img width="1825" height="765" alt="88" src="https://github.com/user-attachments/assets/03327093-bb00-4a5f-ad11-a3ed31aaa90b" />
+ 
+ qwen模型演示教程
+ https://www.bilibili.com/video/BV1zn4TzKEdW/?spm_id_from=333.1387.homepage.video_card.click&vd_source=343e49b703fb5b4137cd6c1987846f37
 
    qwen-image基本文字生成，中文理解，参数大的特点，qwen-image-edit plus具备编辑图像，实现多种编辑效果的模型
    之前一直部署不上webui是因为没有好的优化方法和策略，最近参考了comfyui的nunchaku优化方法，生成时间与配置压力大幅度减少

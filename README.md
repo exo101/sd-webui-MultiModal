@@ -65,8 +65,14 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
    
      <img width="768" height="1376" alt="qwen_image_edit_1760208775892" src="https://github.com/user-attachments/assets/f1e20434-1598-4cf3-b6a3-a3bc64fc9f8b" />
 
-### Qwen-Image 下载说明
 
+
+### Qwen-Image 下载说明
+      Qwen-Image汇总模型链接：通过网盘分享的文件：qwen-image
+链接: https://pan.baidu.com/s/1c01HUIC5Bq-6sO-cxjN33g 提取码: 87pm
+
+ 无网盘的用户
+ 
     -模型下载说明：从基础模型中下载除了transformer（主模型）以外的，所有辅助模型组件，vae，text_encoder，scheduler，等配置文件
 
  https://www.modelscope.cn/models/Qwen/Qwen-Image/files

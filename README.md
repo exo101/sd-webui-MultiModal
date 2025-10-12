@@ -25,8 +25,7 @@
 WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37  
 多模态插件使用介绍：https://www.bilibili.com/video/BV16Ta3zFEpn?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
 
-<details>
-<summary>前置要求</summary>
+### 前置要求
 
 - Stable Diffusion WebUI Forge 环境  
   旧整合包已不适用日益更新的AI应用与50系显卡，我为此更新了新整合包环境，补充落后的webui生态
@@ -34,9 +33,9 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 
 - 克隆本仓库到 extensions 目录：
    sd-webui-forge-aki-v4.0/extensions
-</details>
 
 ### 2025/10/12 更新多模态SD插件12版本：增加第八个功能标签页 qwen-image与 qwen-image-edit plus
+
  - <img width="1825" height="765" alt="88" src="https://github.com/user-attachments/assets/03327093-bb00-4a5f-ad11-a3ed31aaa90b" />
 
    qwen-image基本文字生成，中文理解，参数大的特点，qwen-image-edit plus具备编辑图像，实现多种编辑效果的模型
@@ -47,42 +46,60 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
    <img width="861" height="435" alt="122" src="https://github.com/user-attachments/assets/650e86f6-a822-424d-ae60-9fed1f1426aa" />
 
  - 以编辑模型为例
+
     <img width="1815" height="854" alt="333" src="https://github.com/user-attachments/assets/37e5f859-263d-478d-ab63-b9d41a682217" />
 
  -  不融合lightning的 svdq-fp4_r128-qwen-image-edit-2509.safetensors质量最高，生成时间最长
+
     <img width="866" height="375" alt="111" src="https://github.com/user-attachments/assets/f0601d64-fec4-4efd-b841-e44b3277e246" />
    
  - 融合lightning的8步模型 svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors 质量较好，生成时间中等
+
     <img width="859" height="359" alt="222" src="https://github.com/user-attachments/assets/b6935a43-1868-4b0b-b8a5-cd0cd3bf4ff2" />
    
  -   在高配置的电脑上体现不出明显的时间差距，迭代步数越高时间越长，质量越高，最高不超过40，
+    
      编辑模型最多支持上传三张图像，但多图编辑能力弱于单图编辑能力
+    
      <img width="1842" height="947" alt="4444" src="https://github.com/user-attachments/assets/e2329e50-db48-4f1a-9cec-c293933f4993" />
+   
      <img width="768" height="1376" alt="qwen_image_edit_1760208775892" src="https://github.com/user-attachments/assets/f1e20434-1598-4cf3-b6a3-a3bc64fc9f8b" />
 
 ### Qwen-Image 下载说明
-- 模型下载说明：从基础模型中下载除了transformer（主模型）以外的，所有辅助模型组件，vae，text_encoder，scheduler，等配置文件
-  https://www.modelscope.cn/models/Qwen/Qwen-Image/files
 
-  qwen-image加速主模型下载详情页介绍
-  https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
+<details>
+<summary>展开查看下载说明</summary>
 
-  qwen-image-edit加速主模型下载详情页介绍
-  https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
+    -模型下载说明：从基础模型中下载除了transformer（主模型）以外的，所有辅助模型组件，vae，text_encoder，scheduler，等配置文件
 
-  为什么在webui中要这样下载呢？而不是comfyui的那样的方式，这是个原理性问题，因为diffusion库只认完整的模型组件和预训练模型，为什么不从
-  官方下载transformer（主模型）呢？因为官方的主模型实在太大了，4090显卡也很吃力，所以才要下载这个加速的主模型
+ https://www.modelscope.cn/models/Qwen/Qwen-Image/files
 
-  <img width="700" height="805" alt="1233" src="https://github.com/user-attachments/assets/93bc645f-cfb5-45a4-a9ba-e4acd213c783" />
+     qwen-image加速主模型下载详情页介绍
+https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
 
-  在WebUI Forge环境中安装nunchaku加速依赖，也就是打开D:\sd-webui-forge-aki-v4.0\python目录输入cmd
-  python -m pip install "D:\下载\nunchaku-1.0.0+torch2.7-cp311-cp311-win_amd64.whl" 
-  <img width="804" height="689" alt="65656" src="https://github.com/user-attachments/assets/cac2ff7c-88bf-4036-a8cd-02927e0e36c6" />
-  <img width="706" height="691" alt="234234" src="https://github.com/user-attachments/assets/fcba81c7-2534-4427-a258-4472e4699347" />
-  <img width="1094" height="414" alt="456536" src="https://github.com/user-attachments/assets/b50e172f-ae44-42cd-9c55-00f7af8235c3" />
+     qwen-image-edit加速主模型下载详情页介绍
+https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
 
+     为什么在webui中要这样下载呢？而不是comfyui的那样的方式，这是个原理性问题，因为diffusion库只认完整的模型组件和预训练模型，为什么不从
+     官方下载transformer（主模型）呢？因为官方的主模型实在太大了，4090显卡也很吃力，所以才要下载这个加速的主模型
+
+<img width="700" height="805" alt="1233" src="https://github.com/user-attachments/assets/93bc645f-cfb5-45a4-a9ba-e4acd213c783" />
+
+     在WebUI Forge环境中安装nunchaku加速依赖，也就是打开D:\sd-webui-forge-aki-v4.0\python目录输入cmd
+     
+python -m pip install "D:\下载\nunchaku-1.0.0+torch2.7-cp311-cp311-win_amd64.whl" 
+      
+ <img width="804" height="689" alt="65656" src="https://github.com/user-attachments/assets/cac2ff7c-88bf-4036-a8cd-02927e0e36c6" />
+ <img width="706" height="691" alt="234234" src="https://github.com/user-attachments/assets/fcba81c7-2534-4427-a258-4472e4699347" />
+ <img width="1094" height="414" alt="456536" src="https://github.com/user-attachments/assets/b50e172f-ae44-42cd-9c55-00f7af8235c3" />
+
+</details>
 
 ## 目录结构
+
+<details>
+<summary>展开查看目录结构</summary>
+
 ```
 qwen-image/
 ├── demo/                           # 示例脚本目录
@@ -111,7 +128,67 @@ qwen-image/
 ├── qwen_image_scripts.py           # Qwen-Image 功能核心脚本
 └── README.md                       # 本说明文件
 ```
+<img width="666" height="276" alt="234324" src="https://github.com/user-attachments/assets/56492f90-cd13-4e7c-8826-3e8ea1c003a2" />
 
+<img width="780" height="504" alt="55555" src="https://github.com/user-attachments/assets/ce2cac1f-e7eb-4354-a7c0-cf99f6cb406d" />
+
+</details>
+
+## 各目录及文件说明
+
+<details>
+<summary>demo/</summary>
+
+包含 Qwen-Image 模型的使用示例脚本：
+- `qwen-image-lightning.py`: 展示如何使用 Qwen-Image Lightning 模型进行文本到图像生成
+- `qwen-image-edit-2509.py`: 展示如何使用 Qwen-Image Edit 模型进行图像编辑
+
+</details>
+
+<details>
+<summary>models/</summary>
+
+模型文件及相关组件目录。
+
+<details>
+<summary>models/qwenimage/</summary>
+
+文本到图像生成模型文件：
+- `svdq-fp4_r128-qwen-image-lightningv1.0-4steps.safetensors`: 4步推理的 Lightning 模型 v1.0
+- `svdq-fp4_r128-qwen-image-lightningv1.1-8steps.safetensors`: 8步推理的 Lightning 模型 v1.1
+- `svdq-fp4_r128-qwen-image.safetensors`: 标准 Qwen-Image 模型
+
+</details>
+
+<details>
+<summary>models/qwen-image-edit/</summary>
+
+图像编辑模型文件：
+- `svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-4steps.safetensors`: 4步推理的图像编辑模型
+- `svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors`: 8步推理的图像编辑模型
+- `svdq-fp4_r128-qwen-image-edit-2509.safetensors`: 标准图像编辑模型
+
+</details>
+
+</details>
+
+<details>
+<summary>outputs/</summary>
+
+图像生成输出目录，所有通过 Qwen-Image 生成的图像都会保存在此目录中。
+
+</details>
+
+<details>
+<summary>模型版本</summary>
+
+不同版本的模型在文件名中有明确标识，如 `lightningv1.0`、`lightningv1.1`、`lightningv2.0` 等。
+ 
+生成信息（如配置参数、生成时间等）也会一并记录
+
+</details>
+
+<details>
 <summary>2025-10-09 多模态插件11版本</summary>
 
 ## 功能模块详细介绍

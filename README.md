@@ -125,32 +125,6 @@ qwen-image/
 
 <img width="780" height="504" alt="55555" src="https://github.com/user-attachments/assets/ce2cac1f-e7eb-4354-a7c0-cf99f6cb406d" />
 
-## 各目录及文件说明
-
-### demo/
-包含 Qwen-Image 模型的使用示例脚本：
-- `qwen-image-lightning.py`: 展示如何使用 Qwen-Image Lightning 模型进行文本到图像生成
-- `qwen-image-edit-2509.py`: 展示如何使用 Qwen-Image Edit 模型进行图像编辑
-
-### models/
-模型文件及相关组件目录。
-
-#### models/qwenimage/
-文本到图像生成模型文件：
-- `svdq-fp4_r128-qwen-image-lightningv1.0-4steps.safetensors`: 4步推理的 Lightning 模型 v1.0
-- `svdq-fp4_r128-qwen-image-lightningv1.1-8steps.safetensors`: 8步推理的 Lightning 模型 v1.1
-- `svdq-fp4_r128-qwen-image.safetensors`: 标准 Qwen-Image 模型
-
-#### models/qwen-image-edit/
-图像编辑模型文件：
-- `svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-4steps.safetensors`: 4步推理的图像编辑模型
-- `svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors`: 8步推理的图像编辑模型
-- `svdq-fp4_r128-qwen-image-edit-2509.safetensors`: 标准图像编辑模型
-
-
-### outputs/
-图像生成输出目录，所有通过 Qwen-Image 生成的图像都会保存在此目录中。
-
 ### 模型版本
 不同版本的模型在文件名中有明确标识，如 `lightningv1.0`、`lightningv1.1`、`lightningv2.0` 等。
  

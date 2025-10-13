@@ -19,7 +19,23 @@
 - 🤖 **数字人视频生成**: 基于 LatentSync 实现音频驱动的数字人视频生成
 - 🔊 **TTS语音合成**: 集成 Index-TTS 实现高质量文本转语音
 - 🌟 **FLUX.1 图像编辑**: 集成 FLUX.1-Kontext 进行上下文感知的图像编辑
-- 🌟 **Qwen-Image复杂文本渲染和qwen-image-edit-2509精确图像编辑 
+- 🌟 **Qwen-Image复杂文本渲染和qwen-image-edit-2509精确图像编辑
+- 
+  插件支持：
+- qwen-image-edit
+- qwen-image
+- qwenVL
+- Index-TTS2
+- LatentSync
+- Ollama,deepseek
+- Segment Anything
+- FLUX.1-Kontext
+- FLUX
+- 1.5
+- XL
+- LoRA
+- XL ControlNet
+- 不支持FLUX ControlNet
   
 个人主页：[https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click ](https://space.bilibili.com/403361177?spm_id_from=333.40164.0.0) 
 

@@ -247,7 +247,7 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 
 ## 文件夹结构说明<img width="660" height="387" alt="14" src="https://github.com/user-attachments/assets/32c734e4-e84f-4909-a020-3fee6abe35ad" />
 
-```为了更清晰地展示项目结构，以下为各模块目录结构说明：
+为了更清晰地展示项目结构，以下为各模块目录结构说明：
 
 ### 主功能模块
 
@@ -310,7 +310,6 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 | 电商打光LoRA模型 | `FLUX.1-Kontext/lora/Kontext-电商重打光_v1.safetensors` | 电商打光LoRA模型 |
 | 游戏资源编辑LoRA模型 | `FLUX.1-Kontext/lora/Kontext游戏资源配色与升级编辑_1.0.safetensors` | 游戏资源编辑LoRA模型 |
 
-```
 ## 安装说明
 每个项目都可以独立运行既可按需下载，也可全部下载
 

@@ -251,64 +251,64 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 
 ### 主功能模块
 
-| 模块名称 | 目录路径 | 说明 |
-|---------|---------|------|
-| 脚本目录 | `scripts/` | 主功能模块脚本目录 |
-| AI模型API接口 | `XYKC_AI/` | AI模型API接口目录 |
-| Python脚本接口 | `XYKC_AI/XYKC_AI_PyScripts/` | Python脚本接口 |
+| 模块名称 | 目录路径 |
+|---------|---------|
+| 脚本目录 | `scripts/` |
+| AI模型API接口 | `XYKC_AI/` |
+| Python脚本接口 | `XYKC_AI/XYKC_AI_PyScripts/` |
 
 ### 图像处理模块
 
-| 模块名称 | 目录路径 | 说明 |
-|---------|---------|------|
-| 图像清理模块 | `cleaner/` | 图像清理独立模块 |
-| 图像清理模型 | `cleaner/models/` | 图像清理模型目录 |
-| 图像清理主模型文件 | `cleaner/models/big-lama.safetensors` | 图像清理主模型文件 |
+| 模块名称 | 目录路径 |
+|---------|---------|
+| 图像清理模块 | `cleaner/` |
+| 图像清理模型 | `cleaner/models/` |
+| 图像清理主模型文件 | `cleaner/models/big-lama.safetensors` |
 
 ### 语音合成模块
 
-| 模块名称 | 目录路径 | 说明 |
-|---------|---------|------|
-| Index-TTS模块 | `index-tts/` | Index-TTS语音合成独立模块 |
-| TTS检查点 | `index-tts/checkpoints/` | TTS模型检查点目录 |
-| GPT模型 | `index-tts/checkpoints/gpt.pth` | GPT模型文件 |
-| S2MEL模型 | `index-tts/checkpoints/s2mel.pth` | S2MEL模型文件 |
-| 声码器模型 | `index-tts/checkpoints/bigvgan_v2_22khz_80band_256x/` | 声码器模型目录 |
-| Wav2Vec-BERT模型 | `index-tts/checkpoints/w2v-bert-2.0/` | Wav2Vec-BERT模型目录 |
+| 模块名称 | 目录路径 |
+|---------|---------|
+| Index-TTS模块 | `index-tts/` |
+| TTS检查点 | `index-tts/checkpoints/` |
+| GPT模型 | `index-tts/checkpoints/gpt.pth` |
+| S2MEL模型 | `index-tts/checkpoints/s2mel.pth` |
+| 声码器模型 | `index-tts/checkpoints/bigvgan_v2_22khz_80band_256x/` |
+| Wav2Vec-BERT模型 | `index-tts/checkpoints/w2v-bert-2.0/` |
 
 ### 数字人视频生成模块
 
-| 模块名称 | 目录路径 | 说明 |
-|---------|---------|------|
-| 数字人视频生成模块 | `LatentSync/` | 数字人视频生成独立模块 |
-| 主模型检查点 | `LatentSync/checkpoints/` | 主模型检查点目录 |
-| LatentSync主模型 | `LatentSync/checkpoints/latentsync_unet.pt` | LatentSync主模型文件 |
-| VAE模型目录 | `LatentSync/checkpoints/sd-vae-ft-mse/` | VAE模型目录 |
-| VAE权重文件 | `LatentSync/checkpoints/sd-vae-ft-mse/diffusion_pytorch_model.safetensors` | VAE权重文件 |
-| SyncNet模型 | `LatentSync/checkpoints/stable_syncnet.pt` | SyncNet模型文件 |
-| Whisper模型目录 | `LatentSync/checkpoints/whisper/` | Whisper模型目录 |
-| 核心代码目录 | `LatentSync/latentsync/` | 核心代码目录 |
-| 辅助模型检查点 | `LatentSync/latentsync/checkpoints/` | 辅助模型检查点目录 |
+| 模块名称 | 目录路径 |
+|---------|---------|
+| 数字人视频生成模块 | `LatentSync/` |
+| 主模型检查点 | `LatentSync/checkpoints/` |
+| LatentSync主模型 | `LatentSync/checkpoints/latentsync_unet.pt` |
+| VAE模型目录 | `LatentSync/checkpoints/sd-vae-ft-mse/` |
+| VAE权重文件 | `LatentSync/checkpoints/sd-vae-ft-mse/diffusion_pytorch_model.safetensors` |
+| SyncNet模型 | `LatentSync/checkpoints/stable_syncnet.pt` |
+| Whisper模型目录 | `LatentSync/checkpoints/whisper/` |
+| 核心代码目录 | `LatentSync/latentsync/` |
+| 辅助模型检查点 | `LatentSync/latentsync/checkpoints/` |
 
 ### 图像编辑模块
 
-| 模块名称 | 目录路径 | 说明 |
-|---------|---------|------|
-| FLUX.1图像编辑模块 | `FLUX.1-Kontext/` | FLUX.1图像编辑独立模块 |
-| 图像编辑模型 | `FLUX.1-Kontext/models/` | 图像编辑模型目录 |
-| FLUX.1主模型目录 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/` | FLUX.1主模型目录 |
-| GGUF主模型文件 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/flux1-kontext-dev-Q6_K.gguf` | GGUF格式主模型文件 |
-| Transformer组件 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/transformer/` | Transformer模型组件 |
-| VAE组件 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/vae/` | VAE模型组件 |
-| 文本编码器 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/text_encoder/` | 文本编码器 |
-| 第二文本编码器 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/text_encoder_2/` | 第二文本编码器 |
-| 分词器 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/tokenizer/` | 分词器 |
-| 第二分词器 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/tokenizer_2/` | 第二分词器 |
-| 调度器 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/scheduler/` | 调度器 |
-| 模型索引文件 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/model_index.json` | 模型配置索引文件 |
-| LoRA微调模型 | `FLUX.1-Kontext/lora/` | LoRA微调模型目录 |
-| 电商打光LoRA模型 | `FLUX.1-Kontext/lora/Kontext-电商重打光_v1.safetensors` | 电商打光LoRA模型 |
-| 游戏资源编辑LoRA模型 | `FLUX.1-Kontext/lora/Kontext游戏资源配色与升级编辑_1.0.safetensors` | 游戏资源编辑LoRA模型 |
+| 模块名称 | 目录路径 |
+|---------|---------|
+| FLUX.1图像编辑模块 | `FLUX.1-Kontext/` |
+| 图像编辑模型 | `FLUX.1-Kontext/models/` |
+| FLUX.1主模型目录 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/` |
+| GGUF主模型文件 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/flux1-kontext-dev-Q6_K.gguf` |
+| Transformer组件 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/transformer/` |
+| VAE组件 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/vae/` |
+| 文本编码器 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/text_encoder/` |
+| 第二文本编码器 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/text_encoder_2/` |
+| 分词器 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/tokenizer/` |
+| 第二分词器 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/tokenizer_2/` |
+| 调度器 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/scheduler/` |
+| 模型索引文件 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/model_index.json` |
+| LoRA微调模型 | `FLUX.1-Kontext/lora/` |
+| 电商打光LoRA模型 | `FLUX.1-Kontext/lora/Kontext-电商重打光_v1.safetensors` |
+| 游戏资源编辑LoRA模型 | `FLUX.1-Kontext/lora/Kontext游戏资源配色与升级编辑_1.0.safetensors` |
 
 ## 安装说明
 每个项目都可以独立运行既可按需下载，也可全部下载

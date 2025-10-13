@@ -235,70 +235,31 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 <img width="1813" height="571" alt="21" src="https://github.com/user-attachments/assets/4df0079b-ff8d-4290-ae16-7e367eb90881" />
 <img width="1024" height="1024" alt="dual_context_image_1756582213_var1" src="https://github.com/user-attachments/assets/1bf91812-70a9-4662-aed1-ac6839a274ab" />
 
-## 文件夹结构说明<img width="660" height="387" alt="14" src="https://github.com/user-attachments/assets/32c734e4-e84f-4909-a020-3fee6abe35ad" />
 
-为了更清晰地展示项目结构，以下为各模块目录结构说明：
+## 文件夹结构说明
+<img width="660" height="387" alt="14" src="https://github.com/user-attachments/assets/32c734e4-e84f-4909-a020-3fee6abe35ad" />
 
-### 主功能模块
+为了更清晰地展示项目结构，以下为表格形式的思维导图目录结构说明：
 
-| 模块名称 | 目录路径 |
-|---------|---------|
-| 脚本目录 | `scripts/` |
-| AI模型API接口 | `XYKC_AI/` |
-| Python脚本接口 | `XYKC_AI/XYKC_AI_PyScripts/` |
-
-### 图像处理模块
-
-| 模块名称 | 目录路径 |
-|---------|---------|
-| 图像清理模块 | `cleaner/` |
-| 图像清理模型 | `cleaner/models/` |
-| 图像清理主模型文件 | `cleaner/models/big-lama.safetensors` |
-
-### 语音合成模块
-
-| 模块名称 | 目录路径 |
-|---------|---------|
-| Index-TTS模块 | `index-tts/` |
-| TTS检查点 | `index-tts/checkpoints/` |
-| GPT模型 | `index-tts/checkpoints/gpt.pth` |
-| S2MEL模型 | `index-tts/checkpoints/s2mel.pth` |
-| 声码器模型 | `index-tts/checkpoints/bigvgan_v2_22khz_80band_256x/` |
-| Wav2Vec-BERT模型 | `index-tts/checkpoints/w2v-bert-2.0/` |
-
-### 数字人视频生成模块
-
-| 模块名称 | 目录路径 |
-|---------|---------|
-| 数字人视频生成模块 | `LatentSync/` |
-| 主模型检查点 | `LatentSync/checkpoints/` |
-| LatentSync主模型 | `LatentSync/checkpoints/latentsync_unet.pt` |
-| VAE模型目录 | `LatentSync/checkpoints/sd-vae-ft-mse/` |
-| VAE权重文件 | `LatentSync/checkpoints/sd-vae-ft-mse/diffusion_pytorch_model.safetensors` |
-| SyncNet模型 | `LatentSync/checkpoints/stable_syncnet.pt` |
-| Whisper模型目录 | `LatentSync/checkpoints/whisper/` |
-| 核心代码目录 | `LatentSync/latentsync/` |
-| 辅助模型检查点 | `LatentSync/latentsync/checkpoints/` |
-
-### 图像编辑模块
-
-| 模块名称 | 目录路径 |
-|---------|---------|
-| FLUX.1图像编辑模块 | `FLUX.1-Kontext/` |
-| 图像编辑模型 | `FLUX.1-Kontext/models/` |
-| FLUX.1主模型目录 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/` |
-| GGUF主模型文件 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/flux1-kontext-dev-Q6_K.gguf` |
-| Transformer组件 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/transformer/` |
-| VAE组件 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/vae/` |
-| 文本编码器 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/text_encoder/` |
-| 第二文本编码器 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/text_encoder_2/` |
-| 分词器 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/tokenizer/` |
-| 第二分词器 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/tokenizer_2/` |
-| 调度器 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/scheduler/` |
-| 模型索引文件 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/model_index.json` |
-| LoRA微调模型 | `FLUX.1-Kontext/lora/` |
-| 电商打光LoRA模型 | `FLUX.1-Kontext/lora/Kontext-电商重打光_v1.safetensors` |
-| 游戏资源编辑LoRA模型 | `FLUX.1-Kontext/lora/Kontext游戏资源配色与升级编辑_1.0.safetensors` |
+| 主目录 | 子目录 | 说明 |
+|-------|-------|------|
+| `sd-webui-MultiModal\` | `scripts\` | 主功能模块脚本目录 |
+| `sd-webui-MultiModal\` | `XYKC_AI\` | AI模型API接口目录 |
+| `sd-webui-MultiModal\XYKC_AI\` | `XYKC_AI_PyScripts\` | Python脚本接口 |
+| `sd-webui-MultiModal\` | `cleaner\` | 图像清理独立模块 |
+| `sd-webui-MultiModal\cleaner\` | `models\` | 图像清理模型目录 |
+| `sd-webui-MultiModal\` | `index-tts\` | Index-TTS语音合成独立模块 |
+| `sd-webui-MultiModal\index-tts\` | `checkpoints\` | TTS模型检查点目录 |
+| `sd-webui-MultiModal\` | `LatentSync\` | 数字人视频生成独立模块 |
+| `sd-webui-MultiModal\LatentSync\` | `checkpoints\` | 主模型检查点目录 |
+| `sd-webui-MultiModal\LatentSync\checkpoints\` | `sd-vae-ft-mse\` | VAE模型目录 |
+| `sd-webui-MultiModal\LatentSync\checkpoints\` | `whisper\` | Whisper模型目录 |
+| `sd-webui-MultiModal\LatentSync\` | `latentsync\` | 核心代码目录 |
+| `sd-webui-MultiModal\LatentSync\latentsync\` | `checkpoints\` | 辅助模型检查点目录 |
+| `sd-webui-MultiModal\` | `FLUX.1-Kontext\` | FLUX.1图像编辑独立模块 |
+| `sd-webui-MultiModal\FLUX.1-Kontext\` | `models\` | 图像编辑模型目录 |
+| `sd-webui-MultiModal\FLUX.1-Kontext\models\` | `FLUX.1-Kontext-dev\` | FLUX.1主模型目录 |
+| `sd-webui-MultiModal\FLUX.1-Kontext\` | `lora\` | LoRA微调模型目录 |
 
 ## 安装说明
 每个项目都可以独立运行既可按需下载，也可全部下载

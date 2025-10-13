@@ -70,39 +70,10 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 
 
 
-### Qwen-Image 下载说明
-      Qwen-Image汇总模型链接：通过网盘分享的文件：qwen-image
-链接: https://pan.baidu.com/s/1c01HUIC5Bq-6sO-cxjN33g 提取码: 87pm
-
- 无网盘的用户
- 
-    -模型下载说明：从基础模型中下载除了transformer（主模型）以外的，所有辅助模型组件，vae，text_encoder，scheduler，等配置文件
-
- https://www.modelscope.cn/models/Qwen/Qwen-Image/files
-
-     qwen-image加速主模型下载详情页介绍
-https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
-
-     qwen-image-edit加速主模型下载详情页介绍
-https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
-
-     为什么在webui中要这样下载呢？而不是comfyui的那样的方式，这是个原理性问题，因为diffusion库只认完整的模型组件和预训练模型，为什么不从
-     官方下载transformer（主模型）呢？因为官方的主模型实在太大了，4090显卡也很吃力，所以才要下载这个加速的主模型
-
-<img width="700" height="805" alt="1233" src="https://github.com/user-attachments/assets/93bc645f-cfb5-45a4-a9ba-e4acd213c783" />
-
-     在WebUI Forge环境中安装nunchaku加速依赖，也就是打开D:\sd-webui-forge-aki-v4.0\python目录输入cmd
-     
-python -m pip install "D:\下载\nunchaku-1.0.0+torch2.7-cp311-cp311-win_amd64.whl" 
-      
- <img width="804" height="689" alt="65656" src="https://github.com/user-attachments/assets/cac2ff7c-88bf-4036-a8cd-02927e0e36c6" />
- <img width="706" height="691" alt="234234" src="https://github.com/user-attachments/assets/fcba81c7-2534-4427-a258-4472e4699347" />
- <img width="1094" height="414" alt="456536" src="https://github.com/user-attachments/assets/b50e172f-ae44-42cd-9c55-00f7af8235c3" />
-
-     
 ## 目录结构
 
 为了更清晰地展示 qwen-image 项目结构，以下为表格形式的思维导图目录结构说明：
+
 
 | 主目录 | 子目录/文件 | 说明 |
 |-------|-----------|------|
@@ -120,9 +91,39 @@ python -m pip install "D:\下载\nunchaku-1.0.0+torch2.7-cp311-cp311-win_amd64.w
 | `sd-webui-MultiModal\qwen-image\` | `outputs\` | 生成图像输出目录 |
 | `sd-webui-MultiModal\qwen-image\` | `qwen_image_scripts.py` | Qwen-Image功能核心脚本 |
 | `sd-webui-MultiModal\qwen-image\` | `README.md` | 本说明文件 |
+
+
 <img width="666" height="276" alt="234324" src="https://github.com/user-attachments/assets/56492f90-cd13-4e7c-8826-3e8ea1c003a2" />
 
 <img width="780" height="504" alt="55555" src="https://github.com/user-attachments/assets/ce2cac1f-e7eb-4354-a7c0-cf99f6cb406d" />
+
+### Qwen-Image 下载说明
+Qwen-Image汇总模型链接：通过网盘分享的文件：qwen-image
+链接: https://pan.baidu.com/s/1c01HUIC5Bq-6sO-cxjN33g 提取码: 87pm
+
+无网盘的用户
+- 模型下载说明：从基础模型中下载除了transformer（主模型）以外的，所有辅助模型组件，vae，text_encoder，scheduler，等配置文件
+
+https://www.modelscope.cn/models/Qwen/Qwen-Image/files
+
+qwen-image加速主模型下载详情页介绍
+https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
+
+qwen-image-edit加速主模型下载详情页介绍
+https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
+
+为什么在webui中要这样下载呢？而不是comfyui的那样的方式，这是个原理性问题，因为diffusion库只认完整的模型组件和预训练模型，为什么不从
+官方下载transformer（主模型）呢？因为官方的主模型实在太大了，4090显卡也很吃力，所以才要下载这个加速的主模型
+
+<img width="700" height="805" alt="1233" src="https://github.com/user-attachments/assets/93bc645f-cfb5-45a4-a9ba-e4acd213c783" />
+
+在WebUI Forge环境中安装nunchaku加速依赖，也就是打开D:\sd-webui-forge-aki-v4.0\python目录输入cmd
+
+python -m pip install "D:\下载\nunchaku-1.0.0+torch2.7-cp311-cp311-win_amd64.whl" 
+
+<img width="804" height="689" alt="65656" src="https://github.com/user-attachments/assets/cac2ff7c-88bf-4036-a8cd-02927e0e36c6" />
+<img width="706" height="691" alt="234234" src="https://github.com/user-attachments/assets/fcba81c7-2534-4427-a258-4472e4699347" />
+<img width="1094" height="414" alt="456536" src="https://github.com/user-attachments/assets/b50e172f-ae44-42cd-9c55-00f7af8235c3" />
 
 ### 模型版本
 不同版本的模型在文件名中有明确标识，如 `lightningv1.0`、`lightningv1.1`、`lightningv2.0` 等。
@@ -235,39 +236,21 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 <img width="1813" height="571" alt="21" src="https://github.com/user-attachments/assets/4df0079b-ff8d-4290-ae16-7e367eb90881" />
 <img width="1024" height="1024" alt="dual_context_image_1756582213_var1" src="https://github.com/user-attachments/assets/1bf91812-70a9-4662-aed1-ac6839a274ab" />
 
-
 ## 文件夹结构说明
 <img width="660" height="387" alt="14" src="https://github.com/user-attachments/assets/32c734e4-e84f-4909-a020-3fee6abe35ad" />
 
 为了更清晰地展示项目结构，以下为表格形式的思维导图目录结构说明：
+
+### 主插件结构
 
 | 主目录 | 子目录 | 说明 |
 |-------|-------|------|
 | `sd-webui-MultiModal\` | `scripts\` | 主功能模块脚本目录 |
 | `sd-webui-MultiModal\` | `XYKC_AI\` | AI模型API接口目录 |
 | `sd-webui-MultiModal\XYKC_AI\` | `XYKC_AI_PyScripts\` | Python脚本接口 |
-| `sd-webui-MultiModal\` | `cleaner\` | 图像清理独立模块 |
-| `sd-webui-MultiModal\cleaner\` | `models\` | 图像清理模型目录 |
-| `sd-webui-MultiModal\` | `index-tts\` | Index-TTS语音合成独立模块 |
-| `sd-webui-MultiModal\index-tts\` | `checkpoints\` | TTS模型检查点目录 |
-| `sd-webui-MultiModal\` | `LatentSync\` | 数字人视频生成独立模块 |
-| `sd-webui-MultiModal\LatentSync\` | `checkpoints\` | 主模型检查点目录 |
-| `sd-webui-MultiModal\LatentSync\checkpoints\` | `sd-vae-ft-mse\` | VAE模型目录 |
-| `sd-webui-MultiModal\LatentSync\checkpoints\` | `whisper\` | Whisper模型目录 |
-| `sd-webui-MultiModal\LatentSync\` | `latentsync\` | 核心代码目录 |
-| `sd-webui-MultiModal\LatentSync\latentsync\` | `checkpoints\` | 辅助模型检查点目录 |
-| `sd-webui-MultiModal\` | `FLUX.1-Kontext\` | FLUX.1图像编辑独立模块 |
-| `sd-webui-MultiModal\FLUX.1-Kontext\` | `models\` | 图像编辑模型目录 |
-| `sd-webui-MultiModal\FLUX.1-Kontext\models\` | `FLUX.1-Kontext-dev\` | FLUX.1主模型目录 |
-| `sd-webui-MultiModal\FLUX.1-Kontext\` | `lora\` | LoRA微调模型目录 |
 
-## 安装说明
-每个项目都可以独立运行既可按需下载，也可全部下载
 
-### 功能模块安装指南
-
-#### 图像识别与语音交互功能
-安装Ollama应用程序：https://ollama.com/  
+#### 图像识别与语言交互
 安装(qwen2.5vl)视觉模型与(qwen3)语言模型  
 在计算机开始菜单搜索栏输入CMD执行以下命令：
 ollama run qwen2.5vl:3b
@@ -280,6 +263,13 @@ ollama run qwen3:1.7b
 
 <img width="1693" height="734" alt="QQ20251011-134442" src="https://github.com/user-attachments/assets/651fa968-f16d-4084-b6af-db12ac26632d" />
 
+### 图像处理模块
+
+| 主目录 | 子目录 | 说明 |
+|-------|-------|------|
+| `sd-webui-MultiModal\` | `cleaner\` | 图像清理独立模块 |
+| `sd-webui-MultiModal\cleaner\` | `models\` | 图像清理模型目录 |
+
 
 #### 图像清理功能
 需下载模型big-lama.safetensors  
@@ -290,15 +280,14 @@ ollama run qwen3:1.7b
 **海外用户**  
 https://huggingface.co/kaitte/big-lama/blob/main/big-lama.safetensors
 
-#### 图像分割功能
-需下载模型sam_vit_h_4b8939.pth ，sam_vit_l_0b3195.pth  
 
-**大陆国内用户**通过网盘分享的文件：图像分割模型  
-链接: https://pan.baidu.com/s/1xiioFavOcrxp3DvXE_mdIQ 提取码: iah5 
+### 语音合成模块
 
-**海外用户**  
-https://huggingface.co/HCMUE-Research/SAM-vit-h/tree/main  
-https://huggingface.co/datasets/Gourieff/ReActor/tree/main/models/sams
+| 主目录 | 子目录 | 说明 |
+|-------|-------|------|
+| `sd-webui-MultiModal\` | `index-tts\` | Index-TTS语音合成独立模块 |
+| `sd-webui-MultiModal\index-tts\` | `checkpoints\` | TTS模型检查点目录 |
+
 
 #### 语音合成功能
 需下载模型  
@@ -309,6 +298,19 @@ https://huggingface.co/datasets/Gourieff/ReActor/tree/main/models/sams
 **海外用户**  
 https://huggingface.co/IndexTeam/IndexTTS-2/tree/main
 
+
+### 数字人视频生成模块
+
+| 主目录 | 子目录 | 说明 |
+|-------|-------|------|
+| `sd-webui-MultiModal\` | `LatentSync\` | 数字人视频生成独立模块 |
+| `sd-webui-MultiModal\LatentSync\` | `checkpoints\` | 主模型检查点目录 |
+| `sd-webui-MultiModal\LatentSync\checkpoints\` | `sd-vae-ft-mse\` | VAE模型目录 |
+| `sd-webui-MultiModal\LatentSync\checkpoints\` | `whisper\` | Whisper模型目录 |
+| `sd-webui-MultiModal\LatentSync\` | `latentsync\` | 核心代码目录 |
+| `sd-webui-MultiModal\LatentSync\latentsync\` | `checkpoints\` | 辅助模型检查点目录 |
+
+
 #### 数字人视频生成功能
 需下载模型  
 
@@ -317,6 +319,17 @@ https://huggingface.co/IndexTeam/IndexTTS-2/tree/main
 
 **海外用户**  
 https://huggingface.co/ByteDance/LatentSync-1.5/tree/main
+
+
+### 图像编辑模块
+
+| 主目录 | 子目录 | 说明 |
+|-------|-------|------|
+| `sd-webui-MultiModal\` | `FLUX.1-Kontext\` | FLUX.1图像编辑独立模块 |
+| `sd-webui-MultiModal\FLUX.1-Kontext\` | `models\` | 图像编辑模型目录 |
+| `sd-webui-MultiModal\FLUX.1-Kontext\models\` | `FLUX.1-Kontext-dev\` | FLUX.1主模型目录 |
+| `sd-webui-MultiModal\FLUX.1-Kontext\` | `lora\` | LoRA微调模型目录 |
+
 
 #### Kontext图像编辑功能
 需下载模型  

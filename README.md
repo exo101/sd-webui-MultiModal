@@ -24,6 +24,7 @@
 个人主页：https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click  
 WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37  
 多模态插件使用介绍：https://www.bilibili.com/video/BV16Ta3zFEpn?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
+
 所有插件包与整合包下载链接可在视频简介下方查看
 
 ### 前置要求

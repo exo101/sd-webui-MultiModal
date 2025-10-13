@@ -102,34 +102,45 @@ python -m pip install "D:\下载\nunchaku-1.0.0+torch2.7-cp311-cp311-win_amd64.w
      
 ## 目录结构
 
-```
-qwen-image/
-├── demo/                           # 示例脚本目录
-│   ├── qwen-image-edit-2509.py     # 图像编辑示例脚本
-│   └── qwen-image-lightning.py     # 文本到图像生成示例脚本
-├── models/                         # 模型文件目录
-│   ├── qwenimage/                  # 文本到图像生成模型
-│   │   ├── svdq-fp4_r128-qwen-image-lightningv1.0-4steps.safetensors
-│   │   ├── svdq-fp4_r128-qwen-image-lightningv1.1-8steps.safetensors
-│   │   └── svdq-fp4_r128-qwen-image.safetensors
-│   ├── qwen-image-edit/            # 图像编辑模型
-│   │   ├── svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-4steps.safetensors
-│   │   ├── svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors
-│   │   └── svdq-fp4_r128-qwen-image-edit-2509.safetensors
-│   ├── processor/                  # 处理器组件
-│   ├── scheduler/                  # 调度器组件
-│   ├── text_encoder/               # 文本编码器组件
-│   ├── tokenizer/                  # 分词器组件
-│   ├── transformer/                # Transformer 组件
-│   ├── vae/                        # VAE 组件
-│   ├── model_index.json            # 模型索引文件
-│   ├── README.md                   # 模型说明文件
-│   ├── LICENSE                     # 许可证文件
-│   └── .gitattributes              # Git 属性文件
-├── outputs/                        # 生成图像输出目录
-├── qwen_image_scripts.py           # Qwen-Image 功能核心脚本
-└── README.md                       # 本说明文件
-```
+为了更清晰地展示 qwen-image 项目结构，以下为目录结构说明：
+
+### 示例脚本
+
+| 文件路径 | 说明 |
+|-------|------|
+| `sd-webui-MultiModal\qwen-image\demo\qwen-image-edit-2509.py` | 图像编辑示例脚本 |
+| `sd-webui-MultiModal\qwen-image\demo\qwen-image-lightning.py` | 文本到图像生成示例脚本 |
+
+### 模型文件
+
+| 目录/文件路径 | 说明 |
+|----------|------|
+| `sd-webui-MultiModal\qwen-image\models\qwenimage\` | 文本到图像生成模型 |
+| `sd-webui-MultiModal\qwen-image\models\qwenimage\svdq-fp4_r128-qwen-image-lightningv1.0-4steps.safetensors` | 4步推理模型 |
+| `sd-webui-MultiModal\qwen-image\models\qwenimage\svdq-fp4_r128-qwen-image-lightningv1.1-8steps.safetensors` | 8步推理模型 |
+| `sd-webui-MultiModal\qwen-image\models\qwenimage\svdq-fp4_r128-qwen-image.safetensors` | 标准模型 |
+| `sd-webui-MultiModal\qwen-image\models\qwen-image-edit\` | 图像编辑模型 |
+| `sd-webui-MultiModal\qwen-image\models\qwen-image-edit\svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-4steps.safetensors` | 图像编辑4步推理模型 |
+| `sd-webui-MultiModal\qwen-image\models\qwen-image-edit\svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors` | 图像编辑8步推理模型 |
+| `sd-webui-MultiModal\qwen-image\models\qwen-image-edit\svdq-fp4_r128-qwen-image-edit-2509.safetensors` | 标准图像编辑模型 |
+| `sd-webui-MultiModal\qwen-image\models\processor\` | 处理器组件 |
+| `sd-webui-MultiModal\qwen-image\models\scheduler\` | 调度器组件 |
+| `sd-webui-MultiModal\qwen-image\models\text_encoder\` | 文本编码器组件 |
+| `sd-webui-MultiModal\qwen-image\models\tokenizer\` | 分词器组件 |
+| `sd-webui-MultiModal\qwen-image\models\transformer\` | Transformer 组件 |
+| `sd-webui-MultiModal\qwen-image\models\vae\` | VAE 组件 |
+| `sd-webui-MultiModal\qwen-image\models\model_index.json` | 模型索引文件 |
+| `sd-webui-MultiModal\qwen-image\models\README.md` | 模型说明文件 |
+| `sd-webui-MultiModal\qwen-image\models\LICENSE` | 许可证文件 |
+| `sd-webui-MultiModal\qwen-image\models\.gitattributes` | Git 属性文件 |
+
+### 其他文件
+
+| 文件路径 | 说明 |
+|-------|------|
+| `sd-webui-MultiModal\qwen-image\outputs\` | 生成图像输出目录 |
+| `sd-webui-MultiModal\qwen-image\qwen_image_scripts.py` | Qwen-Image 功能核心脚本 |
+| `sd-webui-MultiModal\qwen-image\README.md` | 本说明文件 |
 <img width="666" height="276" alt="234324" src="https://github.com/user-attachments/assets/56492f90-cd13-4e7c-8826-3e8ea1c003a2" />
 
 <img width="780" height="504" alt="55555" src="https://github.com/user-attachments/assets/ce2cac1f-e7eb-4354-a7c0-cf99f6cb406d" />

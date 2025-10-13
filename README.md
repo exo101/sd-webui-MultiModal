@@ -24,6 +24,7 @@
 个人主页：https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click  
 WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37  
 多模态插件使用介绍：https://www.bilibili.com/video/BV16Ta3zFEpn?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
+所有插件包与整合包下载链接可在视频简介下方查看
 
 ### 前置要求
 
@@ -97,19 +98,14 @@ WebUI Forge使用介绍：https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fro
 
 <img width="780" height="504" alt="55555" src="https://github.com/user-attachments/assets/ce2cac1f-e7eb-4354-a7c0-cf99f6cb406d" />
 
-### Qwen-Image 下载说明
-Qwen-Image汇总模型链接：通过网盘分享的文件：qwen-image
-链接: https://pan.baidu.com/s/1c01HUIC5Bq-6sO-cxjN33g 提取码: 87pm
-
-无网盘的用户
 - 模型下载说明：从基础模型中下载除了transformer（主模型）以外的，所有辅助模型组件，vae，text_encoder，scheduler，等配置文件
 
 https://www.modelscope.cn/models/Qwen/Qwen-Image/files
 
-qwen-image加速主模型下载详情页介绍
+qwen-image加速主模型详情页介绍
 https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
 
-qwen-image-edit加速主模型下载详情页介绍
+qwen-image-edit加速主模型详情页介绍
 https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
 
 为什么在webui中要这样下载呢？而不是comfyui的那样的方式，这是个原理性问题，因为diffusion库只认完整的模型组件和预训练模型，为什么不从
@@ -271,32 +267,12 @@ ollama run qwen3:1.7b
 | `sd-webui-MultiModal\cleaner\` | `models\` | 图像清理模型目录 |
 
 
-#### 图像清理功能
-需下载模型big-lama.safetensors  
-
-**大陆国内用户**通过网盘分享的文件：cleaner  
-链接: https://pan.baidu.com/s/1P8XlDjPvjFnfu4MumPE9sg 提取码: twqc 
-
-**海外用户**  
-https://huggingface.co/kaitte/big-lama/blob/main/big-lama.safetensors
-
-
 ### 语音合成模块
 
 | 主目录 | 子目录 | 说明 |
 |-------|-------|------|
 | `sd-webui-MultiModal\` | `index-tts\` | Index-TTS语音合成独立模块 |
 | `sd-webui-MultiModal\index-tts\` | `checkpoints\` | TTS模型检查点目录 |
-
-
-#### 语音合成功能
-需下载模型  
-
-**大陆国内用户**通过网盘分享的文件：index-tts.7z  
-链接: https://pan.baidu.com/s/1i9LYtdWcOZpzKbSsBR04jg 提取码: r79k 
-
-**海外用户**  
-https://huggingface.co/IndexTeam/IndexTTS-2/tree/main
 
 
 ### 数字人视频生成模块
@@ -311,15 +287,6 @@ https://huggingface.co/IndexTeam/IndexTTS-2/tree/main
 | `sd-webui-MultiModal\LatentSync\latentsync\` | `checkpoints\` | 辅助模型检查点目录 |
 
 
-#### 数字人视频生成功能
-需下载模型  
-
-**大陆国内用户**通过网盘分享的文件：LatentSync.7z  
-链接: https://pan.baidu.com/s/18RQoQvH_zqmVX4RtAIAenw 提取码: u55x 
-
-**海外用户**  
-https://huggingface.co/ByteDance/LatentSync-1.5/tree/main
-
 
 ### 图像编辑模块
 
@@ -331,23 +298,6 @@ https://huggingface.co/ByteDance/LatentSync-1.5/tree/main
 | `sd-webui-MultiModal\FLUX.1-Kontext\` | `lora\` | LoRA微调模型目录 |
 
 
-#### Kontext图像编辑功能
-需下载模型  
-
-**大陆国内用户**通过网盘分享的文件：FLUX.1-Kontext  
-链接: https://pan.baidu.com/s/1LiT2OEXdDTA5DeV9SEKfEA 提取码: 73ac 
-
-**海外用户**  
-https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev/tree/main  
-注释（无需下载主模型，已用GGUF量化模型代替主模型）  
-https://huggingface.co/bullerwins/FLUX.1-Kontext-dev-GGUF/tree/main
-
-
-### 汇总插件包通过网盘分享的文件：sd-webui-MultiModal
-链接: https://pan.baidu.com/s/10i9qMVi_3i_AM9bnFQJ0qA 提取码: 9rt7 
-
-
- 根据需要下载相应的模型文件
 
  重启 WebUI
 

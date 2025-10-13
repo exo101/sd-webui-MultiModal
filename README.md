@@ -102,30 +102,24 @@ python -m pip install "D:\下载\nunchaku-1.0.0+torch2.7-cp311-cp311-win_amd64.w
      
 ## 目录结构
 
-为了更清晰地展示 qwen-image 项目结构，以下为主要目录结构说明：
+为了更清晰地展示 qwen-image 项目结构，以下为表格形式的思维导图目录结构说明：
 
-| 目录路径 | 说明 |
-|---------|------|
-| `sd-webui-MultiModal\qwen-image\` | qwen-image插件根目录 |
-| `sd-webui-MultiModal\qwen-image\demo\` | 示例脚本目录 |
-| `sd-webui-MultiModal\qwen-image\models\` | 模型文件目录 |
-| `sd-webui-MultiModal\qwen-image\models\qwenimage\` | 文本到图像生成模型目录 |
-| `sd-webui-MultiModal\qwen-image\models\qwen-image-edit\` | 图像编辑模型目录 |
-| `sd-webui-MultiModal\qwen-image\models\processor\` | 处理器组件目录 |
-| `sd-webui-MultiModal\qwen-image\models\scheduler\` | 调度器组件目录 |
-| `sd-webui-MultiModal\qwen-image\models\text_encoder\` | 文本编码器组件目录 |
-| `sd-webui-MultiModal\qwen-image\models\tokenizer\` | 分词器组件目录 |
-| `sd-webui-MultiModal\qwen-image\models\transformer\` | Transformer组件目录 |
-| `sd-webui-MultiModal\qwen-image\models\vae\` | VAE组件目录 |
-| `sd-webui-MultiModal\qwen-image\outputs\` | 生成图像输出目录 |
-
-### 其他文件
-
-| 文件路径 | 说明 |
-|-------|------|
-| `sd-webui-MultiModal\qwen-image\outputs\` | 生成图像输出目录 |
-| `sd-webui-MultiModal\qwen-image\qwen_image_scripts.py` | Qwen-Image 功能核心脚本 |
-| `sd-webui-MultiModal\qwen-image\README.md` | 本说明文件 |
+| 主目录 | 子目录/文件 | 说明 |
+|-------|-----------|------|
+| `sd-webui-MultiModal\qwen-image\` | - | qwen-image插件根目录 |
+| `sd-webui-MultiModal\qwen-image\` | `demo\` | 示例脚本目录 |
+| `sd-webui-MultiModal\qwen-image\` | `models\` | 模型文件目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `qwenimage\` | 文本到图像生成模型目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `qwen-image-edit\` | 图像编辑模型目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `processor\` | 处理器组件目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `scheduler\` | 调度器组件目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `text_encoder\` | 文本编码器组件目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `tokenizer\` | 分词器组件目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `transformer\` | Transformer组件目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `vae\` | VAE组件目录 |
+| `sd-webui-MultiModal\qwen-image\` | `outputs\` | 生成图像输出目录 |
+| `sd-webui-MultiModal\qwen-image\` | `qwen_image_scripts.py` | Qwen-Image功能核心脚本 |
+| `sd-webui-MultiModal\qwen-image\` | `README.md` | 本说明文件 |
 <img width="666" height="276" alt="234324" src="https://github.com/user-attachments/assets/56492f90-cd13-4e7c-8826-3e8ea1c003a2" />
 
 <img width="780" height="504" alt="55555" src="https://github.com/user-attachments/assets/ce2cac1f-e7eb-4354-a7c0-cf99f6cb406d" />

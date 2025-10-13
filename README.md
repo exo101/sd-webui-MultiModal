@@ -247,23 +247,39 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 
 ## 文件夹结构说明<img width="660" height="387" alt="14" src="https://github.com/user-attachments/assets/32c734e4-e84f-4909-a020-3fee6abe35ad" />
 
-```
-为了更清晰地展示项目结构，以下为各模块目录结构说明：
+```为了更清晰地展示项目结构，以下为各模块目录结构说明：
+
+### 主功能模块
 
 | 模块名称 | 目录路径 | 说明 |
 |---------|---------|------|
-| 主功能模块 | `scripts/` | 主功能模块脚本目录 |
+| 脚本目录 | `scripts/` | 主功能模块脚本目录 |
 | AI模型API接口 | `XYKC_AI/` | AI模型API接口目录 |
 | Python脚本接口 | `XYKC_AI/XYKC_AI_PyScripts/` | Python脚本接口 |
+
+### 图像处理模块
+
+| 模块名称 | 目录路径 | 说明 |
+|---------|---------|------|
 | 图像清理模块 | `cleaner/` | 图像清理独立模块 |
 | 图像清理模型 | `cleaner/models/` | 图像清理模型目录 |
 | 图像清理主模型文件 | `cleaner/models/big-lama.safetensors` | 图像清理主模型文件 |
+
+### 语音合成模块
+
+| 模块名称 | 目录路径 | 说明 |
+|---------|---------|------|
 | Index-TTS模块 | `index-tts/` | Index-TTS语音合成独立模块 |
 | TTS检查点 | `index-tts/checkpoints/` | TTS模型检查点目录 |
 | GPT模型 | `index-tts/checkpoints/gpt.pth` | GPT模型文件 |
 | S2MEL模型 | `index-tts/checkpoints/s2mel.pth` | S2MEL模型文件 |
 | 声码器模型 | `index-tts/checkpoints/bigvgan_v2_22khz_80band_256x/` | 声码器模型目录 |
 | Wav2Vec-BERT模型 | `index-tts/checkpoints/w2v-bert-2.0/` | Wav2Vec-BERT模型目录 |
+
+### 数字人视频生成模块
+
+| 模块名称 | 目录路径 | 说明 |
+|---------|---------|------|
 | 数字人视频生成模块 | `LatentSync/` | 数字人视频生成独立模块 |
 | 主模型检查点 | `LatentSync/checkpoints/` | 主模型检查点目录 |
 | LatentSync主模型 | `LatentSync/checkpoints/latentsync_unet.pt` | LatentSync主模型文件 |
@@ -273,6 +289,11 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 | Whisper模型目录 | `LatentSync/checkpoints/whisper/` | Whisper模型目录 |
 | 核心代码目录 | `LatentSync/latentsync/` | 核心代码目录 |
 | 辅助模型检查点 | `LatentSync/latentsync/checkpoints/` | 辅助模型检查点目录 |
+
+### 图像编辑模块
+
+| 模块名称 | 目录路径 | 说明 |
+|---------|---------|------|
 | FLUX.1图像编辑模块 | `FLUX.1-Kontext/` | FLUX.1图像编辑独立模块 |
 | 图像编辑模型 | `FLUX.1-Kontext/models/` | 图像编辑模型目录 |
 | FLUX.1主模型目录 | `FLUX.1-Kontext/models/FLUX.1-Kontext-dev/` | FLUX.1主模型目录 |
@@ -288,9 +309,6 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 | LoRA微调模型 | `FLUX.1-Kontext/lora/` | LoRA微调模型目录 |
 | 电商打光LoRA模型 | `FLUX.1-Kontext/lora/Kontext-电商重打光_v1.safetensors` | 电商打光LoRA模型 |
 | 游戏资源编辑LoRA模型 | `FLUX.1-Kontext/lora/Kontext游戏资源配色与升级编辑_1.0.safetensors` | 游戏资源编辑LoRA模型 |
-
-
-
 
 ```
 ## 安装说明

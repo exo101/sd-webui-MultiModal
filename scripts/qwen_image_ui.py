@@ -324,7 +324,7 @@ def edit_images(prompt, image1, image2, image3, steps, cfg_scale, negative_promp
             "lora_enable_3": lora_enable_3,  # 添加第三个LoRA启用参数
             "lora_model_3": lora_model_3 if lora_enable_3 else None,  # 添加第三个LoRA模型参数
             "lora_scale_3": lora_scale_3 if lora_enable_3 else 0.0,  # 添加第三个LoRA权重参数
-            "output_dir": str(outputs_dir)
+            "output_dir": str(qwen_image_outputs_dir)
         }
         
         # 创建临时参数文件
@@ -469,74 +469,6 @@ def create_qwen_image_ui():
                                 min_width=150
                             )
                         
-                        # 添加LoRA相关组件
-                        with gr.Accordion("LoRA 设置", open=False):
-                            with gr.Row():
-                                text_to_image_lora_enable = gr.Checkbox(
-                                    label="启用 LoRA",
-                                    value=False
-                                )
-                                text_to_image_lora_scale = gr.Number(
-                                    value=0.5,
-                                    label="权重",
-                                    precision=2,
-                                    minimum=0.0,
-                                    maximum=1.0,
-                                    step=0.1,
-                                    min_width=80
-                                )
-                            text_to_image_lora_model = gr.Dropdown(
-                                choices=qwenimage_lora_choices,
-                                label="LoRA 模型选择",
-                                value=qwenimage_lora_choices[0][1] if qwenimage_lora_choices else None,
-                                interactive=True
-                            )
-                            
-                            # 添加第二个LoRA相关组件
-                            with gr.Row():
-                                text_to_image_lora_enable_2 = gr.Checkbox(
-                                    label="启用第二个 LoRA",
-                                    value=False
-                                )
-                                text_to_image_lora_scale_2 = gr.Number(
-                                    value=0.5,
-                                    label="权重",
-                                    precision=2,
-                                    minimum=0.0,
-                                    maximum=1.0,
-                                    step=0.1,
-                                    min_width=80
-                                )
-                            text_to_image_lora_model_2 = gr.Dropdown(
-                                choices=qwenimage_lora_choices,
-                                label="第二个 LoRA 模型选择",
-                                value=None,
-                                interactive=True
-                            )
-                            
-                            # 添加第三个LoRA相关组件
-                            with gr.Row():
-                                text_to_image_lora_enable_3 = gr.Checkbox(
-                                    label="启用第三个 LoRA",
-                                    value=False
-                                )
-                                text_to_image_lora_scale_3 = gr.Number(
-                                    value=0.5,
-                                    label="权重",
-                                    precision=2,
-                                    minimum=0.0,
-                                    maximum=1.0,
-                                    step=0.1,
-                                    min_width=80
-                                )
-                            text_to_image_lora_model_3 = gr.Dropdown(
-                                choices=qwenimage_lora_choices,
-                                label="第三个 LoRA 模型选择",
-                                value=None,
-                                interactive=True
-                            )
-                            
-                        
                         # 生成按钮
                         text_to_image_button = gr.Button("生成图像")
                     
@@ -612,75 +544,6 @@ def create_qwen_image_ui():
                                 min_width=150
                             )
                         
-                        
-                        # 添加LoRA相关组件
-                        with gr.Accordion("LoRA 设置", open=False):
-                            with gr.Row():
-                                edit_lora_enable = gr.Checkbox(
-                                    label="启用 LoRA",
-                                    value=False
-                                )
-                                edit_lora_scale = gr.Number(
-                                    value=0.5,
-                                    label="权重",
-                                    precision=2,
-                                    minimum=0.0,
-                                    maximum=1.0,
-                                    step=0.1,
-                                    min_width=80
-                                )
-                            edit_lora_model = gr.Dropdown(
-                                choices=qwenimage_lora_choices,
-                                label="LoRA 模型选择",
-                                value=qwenimage_lora_choices[0][1] if qwenimage_lora_choices else None,
-                                interactive=True
-                            )
-                            
-                            # 添加第二个LoRA相关组件
-                            with gr.Row():
-                                edit_lora_enable_2 = gr.Checkbox(
-                                    label="启用第二个 LoRA",
-                                    value=False
-                                )
-                                edit_lora_scale_2 = gr.Number(
-                                    value=0.5,
-                                    label="权重",
-                                    precision=2,
-                                    minimum=0.0,
-                                    maximum=1.0,
-                                    step=0.1,
-                                    min_width=80
-                                )
-                            edit_lora_model_2 = gr.Dropdown(
-                                choices=qwenimage_lora_choices,
-                                label="第二个 LoRA 模型选择",
-                                value=None,
-                                interactive=True
-                            )
-                            
-                            # 添加第三个LoRA相关组件
-                            with gr.Row():
-                                edit_lora_enable_3 = gr.Checkbox(
-                                    label="启用第三个 LoRA",
-                                    value=False
-                                )
-                                edit_lora_scale_3 = gr.Number(
-                                    value=0.5,
-                                    label="权重",
-                                    precision=2,
-                                    minimum=0.0,
-                                    maximum=1.0,
-                                    step=0.1,
-                                    min_width=80
-                                )
-                            edit_lora_model_3 = gr.Dropdown(
-                                choices=qwenimage_lora_choices,
-                                label="第三个 LoRA 模型选择",
-                                value=None,
-                                interactive=True
-                            )
-                            
-                        
                         # 编辑按钮
                         edit_button = gr.Button("编辑图像")
                     
@@ -704,15 +567,6 @@ def create_qwen_image_ui():
                 text_to_image_steps,
                 text_to_image_cfg,
                 text_to_image_model,
-                text_to_image_lora_enable,
-                text_to_image_lora_model,
-                text_to_image_lora_scale,
-                text_to_image_lora_enable_2,
-                text_to_image_lora_model_2,
-                text_to_image_lora_scale_2,
-                text_to_image_lora_enable_3,
-                text_to_image_lora_model_3,
-                text_to_image_lora_scale_3,
                 text_to_image_scheduler,
                 text_to_image_negative_prompt
             ],
@@ -730,15 +584,6 @@ def create_qwen_image_ui():
                 edit_cfg,
                 edit_negative_prompt,
                 edit_model,
-                edit_lora_enable,
-                edit_lora_model,
-                edit_lora_scale,
-                edit_lora_enable_2,
-                edit_lora_model_2,
-                edit_lora_scale_2,
-                edit_lora_enable_3,
-                edit_lora_model_3,
-                edit_lora_scale_3,
                 edit_scheduler
             ],
             outputs=[edit_output, edit_status, edit_info]
@@ -752,15 +597,6 @@ def create_qwen_image_ui():
             "text_to_image_steps": text_to_image_steps,
             "text_to_image_model": text_to_image_model,
             "text_to_image_cfg": text_to_image_cfg,
-            "text_to_image_lora_enable": text_to_image_lora_enable,
-            "text_to_image_lora_model": text_to_image_lora_model,
-            "text_to_image_lora_scale": text_to_image_lora_scale,
-            "text_to_image_lora_enable_2": text_to_image_lora_enable_2,
-            "text_to_image_lora_model_2": text_to_image_lora_model_2,
-            "text_to_image_lora_scale_2": text_to_image_lora_scale_2,
-            "text_to_image_lora_enable_3": text_to_image_lora_enable_3,
-            "text_to_image_lora_model_3": text_to_image_lora_model_3,
-            "text_to_image_lora_scale_3": text_to_image_lora_scale_3,
             "text_to_image_scheduler": text_to_image_scheduler,
             "text_to_image_negative_prompt": text_to_image_negative_prompt,
             "text_to_image_button": text_to_image_button,
@@ -775,15 +611,6 @@ def create_qwen_image_ui():
             "edit_model": edit_model,
             "edit_cfg": edit_cfg,
             "edit_negative_prompt": edit_negative_prompt,
-            "edit_lora_enable": edit_lora_enable,
-            "edit_lora_model": edit_lora_model,
-            "edit_lora_scale": edit_lora_scale,
-            "edit_lora_enable_2": edit_lora_enable_2,
-            "edit_lora_model_2": edit_lora_model_2,
-            "edit_lora_scale_2": edit_lora_scale_2,
-            "edit_lora_enable_3": edit_lora_enable_3,
-            "edit_lora_model_3": edit_lora_model_3,
-            "edit_lora_scale_3": edit_lora_scale_3,
             "edit_scheduler": edit_scheduler,
             "edit_button": edit_button,
             "edit_output": edit_output,
@@ -800,43 +627,6 @@ def create_qwen_image_ui():
         # 返回空字典而不是None，避免破坏UI
         return {}
 
-# 添加CSS样式以增强负面提示词输入框的可见性
-custom_css = """
-.negative_prompt input, .negative_prompt textarea {
-    background-color: #111827 !important;
-    color: #ffffff !important;
-    font-weight: normal !important;
-    font-size: 14px !important;
-    border: 1px solid #4b5563 !important;
-    border-radius: 4px !important;
-    padding: 8px !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) inset !important;
-}
-
-.negative_prompt label {
-    color: #f9fafb !important;
-    font-weight: 500 !important;
-    margin-bottom: 4px !important;
-}
-"""
-
-custom_js = """
-<script>
-function copyToClipboard(elementId, message) {
-    const text = document.getElementById(elementId).innerText;
-    navigator.clipboard.writeText(text).then(() => {
-        const originalText = document.getElementById(elementId).innerText;
-        document.getElementById(elementId).innerText = "已复制到剪贴板!";
-        setTimeout(() => {
-            document.getElementById(elementId).innerText = originalText;
-        }, 2000);
-    });
-}
-</script>
-"""
-
-# 应用自定义CSS和JS
-gr.Blocks(css=custom_css, head=custom_js)
-
 # 定义模块可用性变量
 QWEN_IMAGE_MODULE_AVAILABLE = QWEN_IMAGE_AVAILABLE
+

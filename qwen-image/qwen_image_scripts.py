@@ -7,6 +7,9 @@ from pathlib import Path
 import torch
 import math
 from diffusers import FlowMatchEulerDiscreteScheduler
+from diffusers import EulerAncestralDiscreteScheduler
+from diffusers import FlowMatchHeunDiscreteScheduler
+from diffusers import DPMSolverMultistepScheduler
 import time
 import psutil
 import gc
@@ -65,6 +68,9 @@ def run_text_to_image(args_file):
         
         print("依赖库导入成功")
         
+        # 获取用户选择的采样方法
+        scheduler_type = args.get("scheduler", "euler")
+        
         # Scheduler 配置
         scheduler_config = {
             "base_image_seq_len": 256,
@@ -82,66 +88,267 @@ def run_text_to_image(args_file):
             "use_exponential_sigmas": False,
             "use_karras_sigmas": False,
         }
-        scheduler = FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
         
-        print("Scheduler配置完成")
+        # 根据用户选择创建相应的调度器
+        if scheduler_type == "euler":
+            scheduler = FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
+        elif scheduler_type == "euler_ancestral":
+            scheduler = EulerAncestralDiscreteScheduler.from_config(scheduler_config)
+        elif scheduler_type == "heun":
+            scheduler = FlowMatchHeunDiscreteScheduler.from_config(scheduler_config)
+        elif scheduler_type == "dpmpp_2m":
+            # DPM++ 2M 调度器配置稍有不同
+            dpm_config = scheduler_config.copy()
+            dpm_config.update({
+                "algorithm_type": "dpmsolver++",
+                "solver_order": 2,
+            })
+            scheduler = DPMSolverMultistepScheduler.from_config(dpm_config)
+        else:
+            # 默认使用 Euler 调度器
+            scheduler = FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
+        
+        print(f"Scheduler配置完成: {scheduler_type}")
         
         # 获取模型路径
         models_dir = Path(__file__).parent / "models"
         qwenimage_models_dir = models_dir / "qwenimage"
         steps = args["steps"]
-        rank = args["rank"]
         
         # 获取用户选择的模型文件
         model_file = args.get("model_file")
+        print(f"用户选择的模型文件: {model_file}")
         if model_file:
             # 使用用户选择的模型文件
             model_path = qwenimage_models_dir / model_file
         else:
-            # 如果没有指定模型文件，则使用旧的逻辑
-            # 选择最接近的步数模型
-            if steps <= 2:
-                selected_steps = 4  # 对于小于等于2的步数，使用4步模型
-            elif steps <= 6:
-                selected_steps = 4  # 对于3-6的步数，使用4步模型
-            else:
-                selected_steps = 8  # 对于大于6的步数，使用8步模型
-                
-            # 确保rank是有效的值(32或128)
-            selected_rank = 32 if rank <= 64 else 128  # 如果rank小于等于64使用32，否则使用128
-            
-            # 查找匹配的模型文件
+            # 如果没有指定模型文件，则使用默认模型
             model_path = None
+            # 查找默认模型文件
+            print(f"在目录 {qwenimage_models_dir} 中查找模型文件")
             for file_path in qwenimage_models_dir.glob("*.safetensors"):
-                if f"r{selected_rank}" in file_path.name and str(selected_steps) in file_path.name:
-                    model_path = file_path
-                    break
+                print(f"找到模型文件: {file_path}")
+                model_path = file_path
+                break
             
             if model_path is None:
-                print(f"未找到匹配的模型文件: 步数={selected_steps}, rank={selected_rank}")
+                print("未找到任何模型文件")
                 return
         
         print(f"用户选择步数: {steps}")
-        print(f"用户选择rank: {rank}")
         print(f"模型路径: {model_path}")
         
-        if not model_path.exists():
+        # 检查模型文件是否存在
+        if not model_path or not model_path.exists():
             print(f"模型文件不存在: {model_path}")
             return
         
         # 加载模型
         print("开始加载模型...")
-        transformer = LightningTransformer.from_pretrained(str(model_path))
+        transformer = None
+        pipe = None
         
-        # 使用本地组件创建pipeline
-        pipe = QwenImagePipeline.from_pretrained(
-            models_dir,
-            transformer=transformer,
-            scheduler=scheduler,
-            torch_dtype=torch.bfloat16
-        )
+        # 尝试不同的模型加载方式
+        load_methods = [
+            {
+                "name": "量化模型加载方式",
+                "import_path": "nunchaku.models.transformers.transformer_qwenimage",
+                "class_name": "NunchakuQwenImageTransformer2DModel",
+                "pipeline_path": str(models_dir),
+                "is_quantized": True
+            },
+            {
+                "name": "FP8量化模型加载方式",
+                "import_path": "nunchaku.models.transformers.transformer_qwenimage",
+                "class_name": "NunchakuQwenImageTransformer2DModel",
+                "pipeline_path": str(models_dir),
+                "is_quantized": True
+            },
+            {
+                "name": "非量化模型加载方式",
+                "import_path": "nunchaku",
+                "class_name": "NunchakuQwenImageTransformer2DModel",
+                "pipeline_path": "Qwen/Qwen-Image",
+                "is_quantized": False
+            }
+        ]
+        
+        transformer = None
+        pipe = None
+        
+        # 首先尝试使用模型文件直接创建pipeline（适用于合并的模型文件）
+        try:
+            print("尝试直接从模型文件创建pipeline...")
+            from nunchaku.pipelines import QwenImagePipeline
+            # 尝试直接从模型文件加载完整pipeline
+            pipe = QwenImagePipeline.from_pretrained(
+                str(model_path),
+                scheduler=scheduler,
+                torch_dtype=torch.bfloat16
+            )
+            print("直接从模型文件创建pipeline成功")
+        except Exception as e:
+            print(f"直接从模型文件创建pipeline失败: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            # 如果直接加载失败，则使用原来的加载方法
+            for method in load_methods:
+                try:
+                    print(f"尝试使用{method['name']}...")
+                    # 导入相应的类
+                    module = __import__(method["import_path"], fromlist=[method["class_name"]])
+                    TransformerClass = getattr(module, method["class_name"])
+                    
+                    # 检查模型路径
+                    print(f"正在从 {model_path} 加载transformer...")
+                    if model_path is None:
+                        raise ValueError("模型路径为None")
+                    
+                    # 检查模型文件是否存在且可读
+                    if not model_path.exists():
+                        raise FileNotFoundError(f"模型文件不存在: {model_path}")
+                    
+                    # 尝试加载transformer
+                    transformer = TransformerClass.from_pretrained(str(model_path))
+                    print("Transformer加载成功")
+                    
+                    # 创建pipeline
+                    print(f"正在从 {method['pipeline_path']} 创建pipeline...")
+                    pipe = QwenImagePipeline.from_pretrained(
+                        method["pipeline_path"],
+                        transformer=transformer,
+                        scheduler=scheduler,
+                        torch_dtype=torch.bfloat16
+                    )
+                    print(f"{method['name']}成功")
+                    break  # 成功则退出循环
+                    
+                except Exception as e:
+                    print(f"{method['name']}失败: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    # 确保在下一次尝试前清理可能损坏的对象
+                    transformer = None
+                    pipe = None
+                    continue
+        
+        # 检查transformer和pipe是否成功创建
+        if transformer is None and pipe is None:
+            print("模型加载失败：无法创建transformer或pipeline")
+            return
+            
+        if pipe is None:
+            print("模型加载失败：无法创建pipeline")
+            return
+        
+        # 检查模型文件是否存在（已在前面检查过，这里不需要重复检查）
+        # if not model_path.exists():
+        #     print(f"模型文件不存在: {model_path}")
+        #     return
         
         print("模型加载完成")
+        
+        # 处理LoRA - 使用Nunchaku的正确方法
+        lora_enable = args.get("lora_enable", False)
+        lora_list = []
+        if lora_enable:
+            lora_model = args.get("lora_model")
+            lora_scale = args.get("lora_scale", 0.5)
+            if lora_model:
+                # 处理可能包含子目录的LoRA路径
+                lora_path = Path(__file__).parent / "loras" / lora_model
+                if lora_path.exists():
+                    print(f"添加LoRA模型到列表: {lora_path}, 权重: {lora_scale}")
+                    lora_list.append((str(lora_path), lora_scale))
+                else:
+                    print(f"LoRA模型文件不存在: {lora_path}")
+        
+        # 处理第二个LoRA模型
+        lora_enable_2 = args.get("lora_enable_2", False)
+        if lora_enable_2:
+            lora_model_2 = args.get("lora_model_2")
+            lora_scale_2 = args.get("lora_scale_2", 0.5)
+            if lora_model_2:
+                # 处理可能包含子目录的LoRA路径
+                lora_path_2 = Path(__file__).parent / "loras" / lora_model_2
+                if lora_path_2.exists():
+                    print(f"添加第二个LoRA模型到列表: {lora_path_2}, 权重: {lora_scale_2}")
+                    lora_list.append((str(lora_path_2), lora_scale_2))
+                else:
+                    print(f"第二个LoRA模型文件不存在: {lora_path_2}")
+        
+        # 处理第三个LoRA模型
+        lora_enable_3 = args.get("lora_enable_3", False)
+        if lora_enable_3:
+            lora_model_3 = args.get("lora_model_3")
+            lora_scale_3 = args.get("lora_scale_3", 0.5)
+            if lora_model_3:
+                # 处理可能包含子目录的LoRA路径
+                lora_path_3 = Path(__file__).parent / "loras" / lora_model_3
+                if lora_path_3.exists():
+                    print(f"添加第三个LoRA模型到列表: {lora_path_3}, 权重: {lora_scale_3}")
+                    lora_list.append((str(lora_path_3), lora_scale_3))
+                else:
+                    print(f"第三个LoRA模型文件不存在: {lora_path_3}")
+        
+        # 如果有LoRA模型需要加载
+        if lora_list:
+            try:
+                # 对于QwenImage模型，使用compose_lora方法合并多个LoRA
+                from nunchaku.lora.flux.compose import compose_lora
+                print(f"合并LoRA模型: {lora_list}")
+                composed_lora = compose_lora(lora_list)
+                # 使用pipeline的load_lora_weights方法加载LoRA权重
+                pipe.load_lora_weights(composed_lora, adapter_name="default")
+                print("LoRA模型加载完成")
+                
+                # 尝试设置LoRA适配器，使其生效
+                try:
+                    # 检查管道是否支持get_list_adapters方法
+                    if hasattr(pipe, 'get_list_adapters'):
+                        available_adapters = pipe.get_list_adapters()
+                        print(f"可用的LoRA适配器: {available_adapters}")
+                        
+                        # 检查管道是否支持set_adapters方法
+                        if hasattr(pipe, 'set_adapters'):
+                            # 检查是否有可用的适配器
+                            if available_adapters:
+                                # 使用第一个可用的适配器
+                                if isinstance(available_adapters, dict):
+                                    adapter_name = list(available_adapters.keys())[0]
+                                else:
+                                    adapter_name = available_adapters[0] if available_adapters else "default"
+                                pipe.set_adapters(adapter_name)
+                                print(f"LoRA适配器 '{adapter_name}' 设置成功")
+                            else:
+                                # 如果没有列出适配器，尝试直接使用默认适配器
+                                # 这种情况下，我们假设LoRA已经加载但未在列表中显示
+                                print("未检测到适配器列表，但LoRA权重已加载")
+                        else:
+                            print("管道不支持set_adapters方法")
+                    else:
+                        # 对于某些版本的nunchaku，可能需要使用不同的方法
+                        print("管道不支持get_list_adapters方法，尝试直接应用LoRA")
+                except Exception as e:
+                    print(f"设置LoRA适配器时出错: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    # 即使设置适配器失败，我们也继续执行，因为LoRA可能已经应用
+            except Exception as e:
+                # 处理AwQw4A16Linear等量化模块不支持LoRA的情况
+                error_msg = str(e)
+                if "AwQw4A16Linear" in error_msg or "not supported" in error_msg:
+                    print("警告: 当前模型使用了不支持LoRA的量化模块(AwQw4A16Linear)，将跳过LoRA加载")
+                    print("提示: 如需使用LoRA功能，请使用非量化版本的模型")
+                else:
+                    print(f"LoRA模型加载失败: {e}")
+                    import traceback
+                    traceback.print_exc()
+        elif lora_enable or lora_enable_2 or lora_enable_3:
+            print("LoRA已启用但没有找到有效的LoRA模型文件")
+        else:
+            print("未启用LoRA功能")
         
         # 设置模型卸载
         if get_gpu_memory() > 18:
@@ -158,6 +365,7 @@ def run_text_to_image(args_file):
         # 使用官方推荐的参数
         image = pipe(
             prompt=args["prompt"],
+            negative_prompt=args.get("negative_prompt", ""),  # 添加负面提示词参数
             width=args["width"],
             height=args["height"],
             num_inference_steps=steps,
@@ -187,10 +395,16 @@ def run_text_to_image(args_file):
             "高度": args["height"],
             "模型类型": "Qwen文生图模型",
             "模型文件": model_path.name if model_path else "未知",
+            "采样方法": scheduler_type,
             "生成时间": f"{generation_time:.2f}秒",
             "GPU配置": system_info["gpu"],
             "系统内存": system_info["system_memory"]
         }
+        
+        # 添加LoRA信息
+        if lora_enable and args.get("lora_model"):
+            generation_info["LoRA模型"] = args["lora_model"]
+            generation_info["LoRA权重"] = args["lora_scale"]
         
         # 将生成信息保存到文件，供UI读取
         info_file = Path(args["output_dir"]) / f"qwen_image_info_{timestamp}.json"
@@ -234,6 +448,9 @@ def run_image_editing(args_file):
         
         print("依赖库导入成功")
         
+        # 获取用户选择的采样方法
+        scheduler_type = args.get("scheduler", "euler")
+        
         # Scheduler 配置
         scheduler_config = {
             "base_image_seq_len": 256,
@@ -251,13 +468,30 @@ def run_image_editing(args_file):
             "use_exponential_sigmas": False,
             "use_karras_sigmas": False,
         }
-        scheduler = FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
+        
+        # 根据用户选择创建相应的调度器
+        if scheduler_type == "euler":
+            scheduler = FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
+        elif scheduler_type == "euler_ancestral":
+            scheduler = EulerAncestralDiscreteScheduler.from_config(scheduler_config)
+        elif scheduler_type == "heun":
+            scheduler = FlowMatchHeunDiscreteScheduler.from_config(scheduler_config)
+        elif scheduler_type == "dpmpp_2m":
+            # DPM++ 2M 调度器配置稍有不同
+            dpm_config = scheduler_config.copy()
+            dpm_config.update({
+                "algorithm_type": "dpmsolver++",
+                "solver_order": 2,
+            })
+            scheduler = DPMSolverMultistepScheduler.from_config(dpm_config)
+        else:
+            # 默认使用 Euler 调度器
+            scheduler = FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
         
         # 获取模型路径
         models_dir = Path(__file__).parent / "models"
         qwenimage_edit_models_dir = models_dir / "qwen-image-edit"
         steps = args["steps"]
-        rank = args["rank"]
         
         # 获取用户选择的模型文件
         model_file = args.get("model_file")
@@ -265,31 +499,18 @@ def run_image_editing(args_file):
             # 使用用户选择的模型文件
             model_path = qwenimage_edit_models_dir / model_file
         else:
-            # 如果没有指定模型文件，则使用旧的逻辑
-            # 选择最接近的步数模型
-            if steps <= 2:
-                selected_steps = 4  # 对于小于等于2的步数，使用4步模型
-            elif steps <= 6:
-                selected_steps = 4  # 对于3-6的步数，使用4步模型
-            else:
-                selected_steps = 8  # 对于大于6的步数，使用8步模型
-            
-            # 确保rank是有效的值(32或128)
-            selected_rank = 32 if rank <= 64 else 128  # 如果rank小于等于64使用32，否则使用128
-            
-            # 查找匹配的模型文件
+            # 如果没有指定模型文件，则使用默认模型
             model_path = None
+            # 查找默认模型文件
             for file_path in qwenimage_edit_models_dir.glob("*.safetensors"):
-                if f"r{selected_rank}" in file_path.name and str(selected_steps) in file_path.name:
-                    model_path = file_path
-                    break
+                model_path = file_path
+                break
             
             if model_path is None:
-                print(f"未找到匹配的编辑模型文件: 步数={selected_steps}, rank={selected_rank}")
+                print("未找到任何编辑模型文件")
                 return
         
         print(f"用户选择步数: {steps}")
-        print(f"用户选择rank: {rank}")
         print(f"模型路径: {model_path}")
         
         if not model_path.exists():
@@ -309,6 +530,74 @@ def run_image_editing(args_file):
         )
         
         print("模型加载完成")
+        
+        # 处理LoRA
+        lora_enable = args.get("lora_enable", False)
+        lora_list = []
+        if lora_enable:
+            lora_model = args.get("lora_model")
+            lora_scale = args.get("lora_scale", 0.5)
+            if lora_model:
+                # 处理可能包含子目录的LoRA路径
+                lora_path = Path(__file__).parent / "loras" / lora_model
+                if lora_path.exists():
+                    print(f"添加LoRA模型到列表: {lora_path}, 权重: {lora_scale}")
+                    lora_list.append((str(lora_path), lora_scale))
+                else:
+                    print(f"LoRA模型文件不存在: {lora_path}")
+        
+        # 处理第二个LoRA模型
+        lora_enable_2 = args.get("lora_enable_2", False)
+        if lora_enable_2:
+            lora_model_2 = args.get("lora_model_2")
+            lora_scale_2 = args.get("lora_scale_2", 0.5)
+            if lora_model_2:
+                # 处理可能包含子目录的LoRA路径
+                lora_path_2 = Path(__file__).parent / "loras" / lora_model_2
+                if lora_path_2.exists():
+                    print(f"添加第二个LoRA模型到列表: {lora_path_2}, 权重: {lora_scale_2}")
+                    lora_list.append((str(lora_path_2), lora_scale_2))
+                else:
+                    print(f"第二个LoRA模型文件不存在: {lora_path_2}")
+        
+        # 处理第三个LoRA模型
+        lora_enable_3 = args.get("lora_enable_3", False)
+        if lora_enable_3:
+            lora_model_3 = args.get("lora_model_3")
+            lora_scale_3 = args.get("lora_scale_3", 0.5)
+            if lora_model_3:
+                # 处理可能包含子目录的LoRA路径
+                lora_path_3 = Path(__file__).parent / "loras" / lora_model_3
+                if lora_path_3.exists():
+                    print(f"添加第三个LoRA模型到列表: {lora_path_3}, 权重: {lora_scale_3}")
+                    lora_list.append((str(lora_path_3), lora_scale_3))
+                else:
+                    print(f"第三个LoRA模型文件不存在: {lora_path_3}")
+        
+        # 如果有LoRA模型需要加载
+        if lora_list:
+            try:
+                # 对于QwenImage模型，使用compose_lora方法合并多个LoRA
+                from nunchaku.lora.flux.compose import compose_lora
+                print(f"合并LoRA模型: {lora_list}")
+                composed_lora = compose_lora(lora_list)
+                # 使用pipeline的load_lora_weights方法加载LoRA权重
+                pipeline.load_lora_weights(composed_lora, adapter_name="default")
+                print("LoRA模型加载完成")
+            except Exception as e:
+                # 处理AwQw4A16Linear等量化模块不支持LoRA的情况
+                error_msg = str(e)
+                if "AwQw4A16Linear" in error_msg or "not supported" in error_msg:
+                    print("警告: 当前模型使用了不支持LoRA的量化模块(AwQw4A16Linear)，将跳过LoRA加载")
+                    print("提示: 如需使用LoRA功能，请使用非量化版本的模型")
+                else:
+                    print(f"LoRA模型加载失败: {e}")
+                    import traceback
+                    traceback.print_exc()
+        elif lora_enable or lora_enable_2 or lora_enable_3:
+            print("LoRA已启用但没有找到有效的LoRA模型文件")
+        else:
+            print("未启用LoRA功能")
         
         # 设置模型卸载
         if get_gpu_memory() > 18:
@@ -366,10 +655,16 @@ def run_image_editing(args_file):
             "提示词引导系数 (CFG Scale)": args["cfg_scale"],
             "模型类型": "Qwen图像编辑模型",
             "模型文件": model_path.name if model_path else "未知",
+            "采样方法": scheduler_type,
             "生成时间": f"{generation_time:.2f}秒",
             "GPU配置": system_info["gpu"],
             "系统内存": system_info["system_memory"]
         }
+        
+        # 添加LoRA信息
+        if lora_enable and args.get("lora_model"):
+            generation_info["LoRA模型"] = args["lora_model"]
+            generation_info["LoRA权重"] = args["lora_scale"]
         
         # 将生成信息保存到文件，供UI读取
         info_file = Path(args["output_dir"]) / f"qwen_image_edit_info_{timestamp}.json"

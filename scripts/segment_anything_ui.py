@@ -23,10 +23,13 @@ def initialize_sam_model(model_type=None):
         print("无法找到 segment_anything 库，请先安装依赖")
         return None
         
-    # 定义模型文件路径
+    # 定义模型文件路径 - 使用WebUI的models目录 (models/sam)
+    # 通过环境变量或默认方式获取WebUI根目录
+    webui_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    model_dir = os.path.join(webui_root, "models", "sam")
     model_paths = {
-        "vit_h": os.path.join(os.getcwd(), "models", "sam_vit_h_4b8939.pth"),  # 2.38G
-        "vit_l": os.path.join(os.getcwd(), "models", "sam_vit_l_0b3195.pth")   # 1.25G
+        "vit_h": os.path.join(model_dir, "sam_vit_h_4b8939.pth"),  # 2.38G
+        "vit_l": os.path.join(model_dir, "sam_vit_l_0b3195.pth")   # 1.25G
     }
     
     # 如果没有指定模型类型，则查找第一个存在的模型
@@ -780,3 +783,10 @@ def create_sam_segmentation():
         "point_clear_button": point_clear_button,
         "points_state": points_state
     }
+
+
+def create_sam_ui():
+    """
+    创建图像分割UI模块的入口函数
+    """
+    return create_sam_segmentation()

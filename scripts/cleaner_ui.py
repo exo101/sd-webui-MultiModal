@@ -82,20 +82,31 @@ class LiteLama2(LiteLama):
         self._model = None
         
         if self._checkpoint_path is None:
+            # 使用相对于插件目录的路径
             EXTENSION_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             MODEL_PATH = os.path.join(EXTENSION_PATH, "cleaner", "models")
             checkpoint_path = os.path.join(MODEL_PATH, "big-lama.safetensors")
+            
+            # 确保模型目录存在
+            os.makedirs(MODEL_PATH, exist_ok=True)
+            
             if not os.path.exists(checkpoint_path) or not os.path.isfile(checkpoint_path):
                 try:
+                    print(f"正在下载big-lama模型到: {checkpoint_path}")
                     download_file("https://huggingface.co/anyisalin/big-lama/resolve/main/big-lama.safetensors", checkpoint_path)
+                    print("模型下载完成")
                 except Exception as e:
-                    raise e
+                    print(f"模型下载失败: {e}")
+                    print("请手动下载模型文件并放置到正确位置")
             self._checkpoint_path = checkpoint_path
         
         try:
+            print(f"正在加载模型: {self._checkpoint_path}")
             self.load(location="cpu")
             self._initialized = True
+            print("模型加载成功")
         except Exception as e:
+            print(f"模型加载失败: {e}")
             raise e
 
     def to(self, device):
@@ -393,3 +404,10 @@ def create_cleaner_ui():
         "init_img_with_mask": init_img_with_mask,
         "result_gallery": result_gallery,
     }
+
+
+def create_cleaner_module():
+    """
+    创建图像清理UI模块的入口函数
+    """
+    return create_cleaner_ui()

@@ -22,21 +22,10 @@
 - 🌟 **Qwen-Image复杂文本渲染和qwen-image-edit-2509精确图像编辑
 - 
   插件支持：
-- qwen-image-edit
-- qwen-image
-- qwenVL
-- Index-TTS2
-- LatentSync
-- Ollama,deepseek
-- Segment Anything
-- FLUX.1-Kontext
-- FLUX
-- 1.5
-- XL
-- LoRA
-- XL ControlNet
-- 不支持FLUX ControlNet
-  
+|-------|-----------|------|
+| `qwen-image-edit2509\qwen-image\` | `qwenVL` | `Index-TTS2` | `qwenVL` | `LatentSync` | `Ollama` |
+| `deepseek` | `Segment Anything` | `FLUX.1-Kontext` | `FLUX` | `XL` | `XL ControlNet` |`不支持FLUX ControlNet` |
+
 个人主页：[https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click ](https://space.bilibili.com/403361177?spm_id_from=333.40164.0.0) 
 
 WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37  ](https://www.bilibili.com/video/BV1FWtBzbEiR?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37)
@@ -56,6 +45,48 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 
 ### 2025/10/12 更新多模态SD插件12版本：增加第八个功能标签页 qwen-image与 qwen-image-edit plus
  - <img width="1825" height="765" alt="88" src="https://github.com/user-attachments/assets/03327093-bb00-4a5f-ad11-a3ed31aaa90b" />
+
+ ## 目录结构
+# 主模型 
+| 主目录 | 子目录/文件 | 说明 |
+|-------|-----------|------|
+| `sd-webui-MultiModal\qwen-image\` | `models\` | 模型文件目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `qwenimage\` | 文生图模型目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `qwen-image-edit\` | 图像编辑模型目录 |
+
+# 模型组件
+ 主目录 | 子目录/文件 | 说明 |
+|-------|-----------|------|
+| `sd-webui-MultiModal\qwen-image\models\` | `processor\` | 处理器组件目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `scheduler\` | 调度器组件目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `text_encoder\` | 文本编码器组件目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `tokenizer\` | 分词器组件目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `transformer\` | Transformer组件目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `vae\` | VAE组件目录 |
+| `sd-webui-MultiModal\qwen-image\` | `outputs\` | 生成图像输出目录 |
+
+<img width="666" height="276" alt="234324" src="https://github.com/user-attachments/assets/56492f90-cd13-4e7c-8826-3e8ea1c003a2" />
+
+<img width="780" height="504" alt="55555" src="https://github.com/user-attachments/assets/ce2cac1f-e7eb-4354-a7c0-cf99f6cb406d" />
+
+qwen-image加速主模型详情页介绍
+https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
+
+qwen-image-edit加速主模型详情页介绍
+https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
+
+在WebUI Forge环境中安装nunchaku加速依赖，也就是打开D:\sd-webui-forge-aki-v4.0\python目录输入cmd
+
+python -m pip install "D:\下载\nunchaku-1.0.0+torch2.7-cp311-cp311-win_amd64.whl" 
+
+<img width="804" height="689" alt="65656" src="https://github.com/user-attachments/assets/cac2ff7c-88bf-4036-a8cd-02927e0e36c6" />
+<img width="706" height="691" alt="234234" src="https://github.com/user-attachments/assets/fcba81c7-2534-4427-a258-4472e4699347" />
+<img width="1094" height="414" alt="456536" src="https://github.com/user-attachments/assets/b50e172f-ae44-42cd-9c55-00f7af8235c3" />
+
+### 模型版本
+不同版本的模型在文件名中有明确标识，如 `lightningv1.0`、`lightningv1.1`、`lightningv2.0` 等。
+ 
+生成信息（如配置参数、生成时间等）也会一并记录
  
  qwen模型演示教程
  https://www.bilibili.com/video/BV1zn4TzKEdW/?spm_id_from=333.1387.homepage.video_card.click&vd_source=343e49b703fb5b4137cd6c1987846f37
@@ -85,60 +116,6 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
     
      <img width="1842" height="947" alt="4444" src="https://github.com/user-attachments/assets/e2329e50-db48-4f1a-9cec-c293933f4993" />
    
-## 目录结构
-
-为了更清晰地展示 qwen-image 项目结构，以下为表格形式的思维导图目录结构说明：
-
-# 主模型
-| 主目录 | 子目录/文件 | 说明 |
-|-------|-----------|------|
-| `sd-webui-MultiModal\qwen-image\` | `models\` | 模型文件目录 |
-| `sd-webui-MultiModal\qwen-image\models\` | `qwenimage\` | 文生图模型目录 |
-| `sd-webui-MultiModal\qwen-image\models\` | `qwen-image-edit\` | 图像编辑模型目录 |
-
-# 模型组件
- 主目录 | 子目录/文件 | 说明 |
-|-------|-----------|------|
-| `sd-webui-MultiModal\qwen-image\models\` | `processor\` | 处理器组件目录 |
-| `sd-webui-MultiModal\qwen-image\models\` | `scheduler\` | 调度器组件目录 |
-| `sd-webui-MultiModal\qwen-image\models\` | `text_encoder\` | 文本编码器组件目录 |
-| `sd-webui-MultiModal\qwen-image\models\` | `tokenizer\` | 分词器组件目录 |
-| `sd-webui-MultiModal\qwen-image\models\` | `transformer\` | Transformer组件目录 |
-| `sd-webui-MultiModal\qwen-image\models\` | `vae\` | VAE组件目录 |
-| `sd-webui-MultiModal\qwen-image\` | `outputs\` | 生成图像输出目录 |
-
-<img width="666" height="276" alt="234324" src="https://github.com/user-attachments/assets/56492f90-cd13-4e7c-8826-3e8ea1c003a2" />
-
-<img width="780" height="504" alt="55555" src="https://github.com/user-attachments/assets/ce2cac1f-e7eb-4354-a7c0-cf99f6cb406d" />
-
-- 模型下载说明：从基础模型中下载除了transformer（主模型）以外的，所有辅助模型组件，vae，text_encoder，scheduler，等配置文件
-
-https://www.modelscope.cn/models/Qwen/Qwen-Image/files
-
-qwen-image加速主模型详情页介绍
-https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
-
-qwen-image-edit加速主模型详情页介绍
-https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
-
-为什么在webui中要这样下载呢？而不是comfyui的那样的方式，这是个原理性问题，因为diffusion库只认完整的模型组件和预训练模型，为什么不从
-官方下载transformer（主模型）呢？因为官方的主模型实在太大了，4090显卡也很吃力，所以才要下载这个加速的主模型
-
-<img width="700" height="805" alt="1233" src="https://github.com/user-attachments/assets/93bc645f-cfb5-45a4-a9ba-e4acd213c783" />
-
-在WebUI Forge环境中安装nunchaku加速依赖，也就是打开D:\sd-webui-forge-aki-v4.0\python目录输入cmd
-
-python -m pip install "D:\下载\nunchaku-1.0.0+torch2.7-cp311-cp311-win_amd64.whl" 
-
-<img width="804" height="689" alt="65656" src="https://github.com/user-attachments/assets/cac2ff7c-88bf-4036-a8cd-02927e0e36c6" />
-<img width="706" height="691" alt="234234" src="https://github.com/user-attachments/assets/fcba81c7-2534-4427-a258-4472e4699347" />
-<img width="1094" height="414" alt="456536" src="https://github.com/user-attachments/assets/b50e172f-ae44-42cd-9c55-00f7af8235c3" />
-
-### 模型版本
-不同版本的模型在文件名中有明确标识，如 `lightningv1.0`、`lightningv1.1`、`lightningv2.0` 等。
- 
-生成信息（如配置参数、生成时间等）也会一并记录
-
 ### 2025-10-09 多模态插件11版本
 
 ## 功能模块详细介绍

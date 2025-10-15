@@ -86,10 +86,6 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
     
      <img width="1842" height="947" alt="4444" src="https://github.com/user-attachments/assets/e2329e50-db48-4f1a-9cec-c293933f4993" />
    
-     <img width="768" height="1376" alt="qwen_image_edit_1760208775892" src="https://github.com/user-attachments/assets/f1e20434-1598-4cf3-b6a3-a3bc64fc9f8b" />
-
-
-
 ## 目录结构
 
 为了更清晰地展示 qwen-image 项目结构，以下为表格形式的思维导图目录结构说明：

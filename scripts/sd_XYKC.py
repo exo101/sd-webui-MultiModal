@@ -49,41 +49,56 @@ def import_modules():
         except ImportError: create_latent_sync_ui = None
         
         try: from index_tts_ui import create_index_tts_ui, INDEX_TTS_AVAILABLE
-        except ImportError: create_index_tts_ui = None; INDEX_TTS_AVAILABLE = False
-        
-        try: from segment_anything_ui import create_sam_segmentation, SAM_AVAILABLE
-        except ImportError: create_sam_segmentation = None; SAM_AVAILABLE = False
+        except ImportError: 
+            create_index_tts_ui = None
+            INDEX_TTS_AVAILABLE = False
         
         try: from flux_kontext_ui import create_flux_kontext_ui, FLUX_KONTEXT_AVAILABLE
-        except ImportError: create_flux_kontext_ui = None; FLUX_KONTEXT_AVAILABLE = False
+        except ImportError: 
+            create_flux_kontext_ui = None
+            FLUX_KONTEXT_AVAILABLE = False
+            
+        try: 
+            from cleaner_ui import create_cleaner_module, CLEANER_AVAILABLE
+        except ImportError: 
+            create_cleaner_module = None
+            CLEANER_AVAILABLE = False
+            
+        try: 
+            from qwen_image_ui import create_qwen_image_ui, QWEN_IMAGE_MODULE_AVAILABLE
+        except ImportError: 
+            create_qwen_image_ui = None
+            QWEN_IMAGE_MODULE_AVAILABLE = False
+            
+        try: 
+            from segment_anything_ui import create_sam_ui, SAM_AVAILABLE
+        except ImportError: 
+            create_sam_ui = None
+            SAM_AVAILABLE = False
         
-        try: from cleaner_ui import create_cleaner_ui, CLEANER_AVAILABLE
-        except ImportError: create_cleaner_ui = None; CLEANER_AVAILABLE = False
+        # 返回命名空间对象
+        import types
+        namespace = types.SimpleNamespace()
+        namespace.create_prompt_template_ui = create_prompt_template_ui
+        namespace.create_quick_description = create_quick_description
+        namespace.create_video_frame_extractor = create_video_frame_extractor
+        namespace.create_image_matting_module = create_image_matting_module
+        namespace.create_image_management_module = create_image_management_module
+        namespace.create_tag_management_module = create_tag_management_module
+        namespace.create_announcement_module = create_announcement_module
+        namespace.create_latent_sync_ui = create_latent_sync_ui
+        namespace.create_index_tts_ui = create_index_tts_ui
+        namespace.INDEX_TTS_AVAILABLE = INDEX_TTS_AVAILABLE
+        namespace.create_flux_kontext_ui = create_flux_kontext_ui
+        namespace.FLUX_KONTEXT_AVAILABLE = FLUX_KONTEXT_AVAILABLE
+        namespace.create_cleaner_module = create_cleaner_module
+        namespace.CLEANER_AVAILABLE = CLEANER_AVAILABLE
+        namespace.create_qwen_image_ui = create_qwen_image_ui
+        namespace.QWEN_IMAGE_MODULE_AVAILABLE = QWEN_IMAGE_MODULE_AVAILABLE
+        namespace.create_sam_ui = create_sam_ui
+        namespace.SAM_AVAILABLE = SAM_AVAILABLE
         
-        # 移除千问图像生成模块导入
-        
-        # 创建一个命名空间对象来存储所有导入的模块
-        imported_modules = type('ImportedModules', (), {})()
-        imported_modules.create_prompt_template_ui = create_prompt_template_ui
-        imported_modules.create_quick_description = create_quick_description
-        imported_modules.create_video_frame_extractor = create_video_frame_extractor
-        imported_modules.create_image_matting_module = create_image_matting_module
-        imported_modules.create_image_management_module = create_image_management_module
-        imported_modules.create_tag_management_module = create_tag_management_module
-        imported_modules.create_announcement_module = create_announcement_module
-        imported_modules.create_latent_sync_ui = create_latent_sync_ui
-        imported_modules.create_index_tts_ui = create_index_tts_ui
-        imported_modules.INDEX_TTS_AVAILABLE = INDEX_TTS_AVAILABLE
-        imported_modules.create_sam_segmentation = create_sam_segmentation
-        imported_modules.SAM_AVAILABLE = SAM_AVAILABLE
-        imported_modules.create_flux_kontext_ui = create_flux_kontext_ui
-        imported_modules.FLUX_KONTEXT_AVAILABLE = FLUX_KONTEXT_AVAILABLE
-        imported_modules.create_cleaner_ui = create_cleaner_ui
-        imported_modules.CLEANER_AVAILABLE = CLEANER_AVAILABLE
-        
-        # 移除千问图像生成模块变量赋值
-        
-        return imported_modules
+        return namespace
     
     return _import_and_register_modules()
 
@@ -102,17 +117,26 @@ create_latent_sync_ui = imported_modules.create_latent_sync_ui
 create_index_tts_ui = imported_modules.create_index_tts_ui
 INDEX_TTS_AVAILABLE = imported_modules.INDEX_TTS_AVAILABLE
 
-create_sam_segmentation = imported_modules.create_sam_segmentation
+create_sam_segmentation = imported_modules.create_sam_ui
 SAM_AVAILABLE = imported_modules.SAM_AVAILABLE
 
 create_flux_kontext_ui = imported_modules.create_flux_kontext_ui
 FLUX_KONTEXT_AVAILABLE = imported_modules.FLUX_KONTEXT_AVAILABLE
 
-# 添加Cleaner模块变量赋值
-create_cleaner_ui = imported_modules.create_cleaner_ui
+# 添加 cleaner 模块变量赋值
+create_cleaner_module = imported_modules.create_cleaner_module
 CLEANER_AVAILABLE = imported_modules.CLEANER_AVAILABLE
 
-# 移除千问图像生成模块变量赋值
+
+# 添加 qwen_image_ui 模块变量赋值
+create_qwen_image_ui = imported_modules.create_qwen_image_ui
+QWEN_IMAGE_MODULE_AVAILABLE = imported_modules.QWEN_IMAGE_MODULE_AVAILABLE
+
+# 确保 SAM 和 Cleaner 模块变量正确赋值
+create_sam_ui = imported_modules.create_sam_ui
+SAM_AVAILABLE = imported_modules.SAM_AVAILABLE
+create_cleaner_module = imported_modules.create_cleaner_module
+CLEANER_AVAILABLE = imported_modules.CLEANER_AVAILABLE
 
 current_dir = os.path.abspath(os.getcwd())
 # 修改：不再使用插件自带的Python解释器，而是使用系统Python
@@ -539,32 +563,34 @@ def XYKC_tab():
                             gr.Markdown(f"智能抠图模块加载失败：{e}")
                     
                     with gr.TabItem("图像分割"):
-                        if 'create_sam_segmentation' in globals():
+                        # 检查并显示图像分割模块
+                        if SAM_AVAILABLE and create_sam_segmentation is not None:
                             try:
-                                sam_ui = create_sam_segmentation()
-                                if sam_ui and all(key in sam_ui for key in ["sam_input", "marked_image", "sam_output", "run_button", "download_button", "clear_button"]):
-                                    sam_input = sam_ui["sam_input"]
-                                    marked_image = sam_ui["marked_image"]
-                                    sam_output = sam_ui["sam_output"]
-                                    run_button = sam_ui["run_button"]
-                                    download_button = sam_ui["download_button"]
-                                    clear_button = sam_ui["clear_button"]
+                                sam_ui_components = create_sam_segmentation()
                             except Exception as e:
-                                pass
+                                with gr.Group():
+                                    gr.Markdown("## 图像分割")
+                                    gr.Markdown(f"图像分割模块加载时出现错误：{str(e)}")
+                                    gr.Markdown("请检查控制台输出以获取详细错误信息。")
+                                import traceback
+                                traceback.print_exc()
+                        else:
+                            gr.Markdown("图像分割模块不可用。请确保已安装segment-anything库。")
                     
                     with gr.TabItem("图像清理"):
-                        # 添加图像清理器模块（如果可用）
-                        if 'CLEANER_AVAILABLE' in globals() and CLEANER_AVAILABLE:
+                        # 检查并显示图像清理模块
+                        if CLEANER_AVAILABLE and create_cleaner_module is not None:
                             try:
-                                # 调用 create_cleaner_ui() 并展开其返回的组件
-                                cleaner_ui = create_cleaner_ui()
-                                if cleaner_ui and all(key in cleaner_ui for key in ["input_image", "output_image", "run_button", "clear_button"]):
-                                    cleaner_ui["input_image"]
-                                    cleaner_ui["run_button"]
-                                    cleaner_ui["output_image"]
-                                    cleaner_ui["clear_button"]
+                                cleaner_ui_components = create_cleaner_module()
                             except Exception as e:
-                                gr.Markdown(f"图像清理器模块加载失败：{str(e)}")
+                                with gr.Group():
+                                    gr.Markdown("## 图像清理")
+                                    gr.Markdown(f"图像清理模块加载时出现错误：{str(e)}")
+                                    gr.Markdown("请检查控制台输出以获取详细错误信息。")
+                                import traceback
+                                traceback.print_exc()
+                        else:
+                            gr.Markdown("图像清理模块不可用。请确保已安装litelama库。")
             
             # 视频关键帧提取标签页
             with gr.TabItem("4.视频关键帧提取"):
@@ -629,10 +655,28 @@ def XYKC_tab():
                     except Exception as e:
                         gr.Markdown(f"FLUX.1-Kontext模块初始化错误: {e}")
  
+            # 添加 Qwen Image 标签页（如果可用）
+            if 'QWEN_IMAGE_MODULE_AVAILABLE' in globals() and QWEN_IMAGE_MODULE_AVAILABLE:
+                with gr.TabItem("8.Qwen Image图像生成"):
+                    try:
+                        # 创建 Qwen Image UI 组件
+                        qwen_image_components = create_qwen_image_ui()
+                        
+                        # 组件已经自动显示，无需额外处理
+                        if not qwen_image_components:
+                            gr.Markdown("Qwen Image模块加载失败")
+                    except Exception as e:
+                        gr.Markdown(f"Qwen Image模块初始化错误: {e}")
+                        import traceback
+                        traceback.print_exc()
+            elif 'QWEN_IMAGE_MODULE_AVAILABLE' in globals() and not QWEN_IMAGE_MODULE_AVAILABLE:
+                with gr.TabItem("8.Qwen Image图像生成"):
+                    gr.Markdown("Qwen Image模块当前不可用，可能是因为缺少模型文件或依赖项。")
+            
             # 移除千问图像生成标签页
             
         
-    return [(ui, "多模态插件11", "XYKC_vision_tab")]
+    return [(ui, "多模态插件12", "XYKC_vision_tab")]
 
 script_callbacks.on_ui_tabs(XYKC_tab)
 
@@ -643,7 +687,7 @@ from modules import script_callbacks
 # 在WebUI启动时在后台日志中显示插件信息和使用声明
 def on_app_started(*args, **kwargs):
     print("=" * 60)
-    print("多模态webui插件11 - forge版本专用")
+    print("多模态webui插件12 - forge版本专用")
     print("开发者：鸡肉爱土豆")
     print("网址：https://space.bilibili.com/403361177")
     print("声明：为创作者提供更便捷更强大无复杂工作流的插件")
@@ -670,4 +714,5 @@ modules_status = {
     'index_tts': INDEX_TTS_AVAILABLE,
     'flux_kontext': FLUX_KONTEXT_AVAILABLE,
     'cleaner': CLEANER_AVAILABLE,
+    'sam': SAM_AVAILABLE,
 }

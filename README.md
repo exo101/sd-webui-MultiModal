@@ -54,7 +54,6 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 - 克隆本仓库到 extensions 目录：
    sd-webui-forge-aki-v4.0/extensions
 
-
 ### 2025/10/12 更新多模态SD插件12版本：增加第八个功能标签页 qwen-image与 qwen-image-edit plus
  - <img width="1825" height="765" alt="88" src="https://github.com/user-attachments/assets/03327093-bb00-4a5f-ad11-a3ed31aaa90b" />
  
@@ -90,14 +89,14 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 
 为了更清晰地展示 qwen-image 项目结构，以下为表格形式的思维导图目录结构说明：
 
-
+# 主模型
 | 主目录 | 子目录/文件 | 说明 |
 |-------|-----------|------|
-| `sd-webui-MultiModal\qwen-image\` | - | qwen-image插件根目录 |
-| `sd-webui-MultiModal\qwen-image\` | `demo\` | 示例脚本目录 |
 | `sd-webui-MultiModal\qwen-image\` | `models\` | 模型文件目录 |
-| `sd-webui-MultiModal\qwen-image\models\` | `qwenimage\` | 文本到图像生成模型目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `qwenimage\` | 文生图模型目录 |
 | `sd-webui-MultiModal\qwen-image\models\` | `qwen-image-edit\` | 图像编辑模型目录 |
+
+# 模型组件
 | `sd-webui-MultiModal\qwen-image\models\` | `processor\` | 处理器组件目录 |
 | `sd-webui-MultiModal\qwen-image\models\` | `scheduler\` | 调度器组件目录 |
 | `sd-webui-MultiModal\qwen-image\models\` | `text_encoder\` | 文本编码器组件目录 |
@@ -105,9 +104,6 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 | `sd-webui-MultiModal\qwen-image\models\` | `transformer\` | Transformer组件目录 |
 | `sd-webui-MultiModal\qwen-image\models\` | `vae\` | VAE组件目录 |
 | `sd-webui-MultiModal\qwen-image\` | `outputs\` | 生成图像输出目录 |
-| `sd-webui-MultiModal\qwen-image\` | `qwen_image_scripts.py` | Qwen-Image功能核心脚本 |
-| `sd-webui-MultiModal\qwen-image\` | `README.md` | 本说明文件 |
-
 
 <img width="666" height="276" alt="234324" src="https://github.com/user-attachments/assets/56492f90-cd13-4e7c-8826-3e8ea1c003a2" />
 

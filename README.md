@@ -150,8 +150,20 @@ python -m pip install "D:\下载\nunchaku-1.0.0+torch2.7-cp311-cp311-win_amd64.w
 - 提供快速访问各类功能的入口
 - 显示插件使用说明和更新日志<img width="1245" height="650" alt="1" src="https://github.com/user-attachments/assets/f9b99645-a76a-43ce-aa27-1d5774e9cfa3" />
 
+### 主插件结构
+
+## 文件夹结构说明
+<img width="660" height="387" alt="14" src="https://github.com/user-attachments/assets/32c734e4-e84f-4909-a020-3fee6abe35ad" />
+
+| 主目录 | 子目录 | 说明 |
+|-------|-------|------|
+| `sd-webui-MultiModal\` | `scripts\` | 主功能模块脚本目录 |
 
 ### 2. 图像识别与语言交互
+| 主目录 | 子目录 | 说明 |
+|-------|-------|------|
+| `sd-webui-MultiModal\` | `XYKC_AI\` | AI模型API接口目录 |
+| `sd-webui-MultiModal\XYKC_AI\` | `XYKC_AI_PyScripts\` | Python脚本接口 |
 
 #### 核心特性
 - 支持多种视觉模型（Qwen-VL、LLaMA-Vision等）
@@ -159,6 +171,12 @@ python -m pip install "D:\下载\nunchaku-1.0.0+torch2.7-cp311-cp311-win_amd64.w
 - 提供快捷提示词模板
 - 支持单张和批量图像处理
 - 根据显存大小推荐合适的模型（8GB显存推荐1.7B/3B模型，16GB显存可选latest/7B模型）
+
+安装(qwen2.5vl)视觉模型与(qwen3)语言模型  
+在计算机开始菜单搜索栏输入CMD执行以下命令：
+ollama run qwen2.5vl:3b
+ollama run qwen3:1.7b
+参数越大响应速度越慢质量越高，模型选择建议：8GB显存选择1.7B或3B模型获得更快响应速度，16GB显存可选择latest或7B模型
 
 #### 模型类型
 - 图像识别模型：可处理图片输入，支持单张和批量操作
@@ -191,15 +209,18 @@ python -m pip install "D:\下载\nunchaku-1.0.0+torch2.7-cp311-cp311-win_amd64.w
 - 实时预览效果
 
 #### 图像分割
+| 主目录 | 子目录 | 说明 |
+|-------|-------|------|
+| `sd-webui-forge-aki-v4.0\` | `models\` |sam_vit_h_4b8939.pth，sam_vit_l0b3195.pth| 图像分割模型
 - 集成 Segment Anything Model (SAM)
 - 精确的图像分割功能
 - 支持点选和自动分割方式
 <img width="1812" height="917" alt="10" src="https://github.com/user-attachments/assets/c0ca0f59-be6e-408c-bb4c-a117d718e588" />
 <img width="1816" height="909" alt="9" src="https://github.com/user-attachments/assets/08b633ba-7ed8-4886-a6f3-e22a3bd7cb8e" />
 
-- 可下载分割结果
-
 #### 图像清理
+
+| `sd-webui-MultiModal\` | `cleaner\` | 图像清理独立模块 |
 - 图像去噪和修复功能
 - 简单易用的界面<img width="1835" height="741" alt="11" src="https://github.com/user-attachments/assets/4ac7c40d-971c-4364-8cc1-73a872fcec79" />
 
@@ -212,86 +233,7 @@ python -m pip install "D:\下载\nunchaku-1.0.0+torch2.7-cp311-cp311-win_amd64.w
 - 可预览提取的帧<img width="1809" height="677" alt="12" src="https://github.com/user-attachments/assets/23b3cb3d-c763-4432-894f-fdc84b8c7b9f" />
 
 
-### 5. 数字人视频生成
-- 基于 LatentSync 的音频驱动视频生成
-- 支持自定义推理步数和引导尺度
-- 需要清晰正面人脸的视频作为输入
-- 支持多种音频格式
-<img width="1831" height="925" alt="18" src="https://github.com/user-attachments/assets/4b380e69-3814-4078-ac3e-9f228d83bcde" />
-https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
-
-
-
-### 6. Index-TTS语音合成
-- 集成 Index-TTS 实现高质量语音合成
-- 支持多种语音风格
-- 可调节语速、音调等参数
-- 支持中文和多语言合成
-- <img width="1786" height="805" alt="23" src="https://github.com/user-attachments/assets/1318c3fa-c979-4c93-8003-639e5f43f7f6" />
-- <img width="1788" height="428" alt="17" src="https://github.com/user-attachments/assets/52ed7801-36f3-4145-9386-f2ae7285ea11" />
-   [output_1760002640.wav](https://github.com/user-attachments/files/22794279/output_1760002640.wav)
-
-
-
-### 7. FLUX.1-Kontext图像编辑
-- 上下文感知的图像编辑功能
-- 支持基于文本的图像修改
-- 保持图像上下文一致性
-- GGUF量化模型优化使用门槛12g显存可用
-- 单图编辑
-- <img width="729" height="485" alt="22" src="https://github.com/user-attachments/assets/564199b4-bad1-4cfb-9629-88632482c6fa" />
-<img width="864" height="1200" alt="generated_image_1756609759_img1_var2" src="https://github.com/user-attachments/assets/93b6c6a8-a8cd-424c-bf4a-2b02a83ca495" />
-
-
-双图编辑
-<img width="1813" height="571" alt="21" src="https://github.com/user-attachments/assets/4df0079b-ff8d-4290-ae16-7e367eb90881" />
-<img width="1024" height="1024" alt="dual_context_image_1756582213_var1" src="https://github.com/user-attachments/assets/1bf91812-70a9-4662-aed1-ac6839a274ab" />
-
-## 文件夹结构说明
-<img width="660" height="387" alt="14" src="https://github.com/user-attachments/assets/32c734e4-e84f-4909-a020-3fee6abe35ad" />
-
-为了更清晰地展示项目结构，以下为表格形式的思维导图目录结构说明：
-
-### 主插件结构
-
-| 主目录 | 子目录 | 说明 |
-|-------|-------|------|
-| `sd-webui-MultiModal\` | `scripts\` | 主功能模块脚本目录 |
-| `sd-webui-MultiModal\` | `XYKC_AI\` | AI模型API接口目录 |
-| `sd-webui-MultiModal\XYKC_AI\` | `XYKC_AI_PyScripts\` | Python脚本接口 |
-
-
-#### 图像识别与语言交互
-安装(qwen2.5vl)视觉模型与(qwen3)语言模型  
-在计算机开始菜单搜索栏输入CMD执行以下命令：
-ollama run qwen2.5vl:3b
-ollama run qwen3:1.7b
-参数越大响应速度越慢质量越高，模型选择建议：8GB显存选择1.7B或3B模型获得更快响应速度，16GB显存可选择latest或7B模型
-
-使用语音合成或视频处理功能需下载ffmpeg
-开始菜单搜索环境变量
-添加C:\ffmpeg\bin到环境变量
-
-<img width="1693" height="734" alt="QQ20251011-134442" src="https://github.com/user-attachments/assets/651fa968-f16d-4084-b6af-db12ac26632d" />
-
-### 图像处理模块
-
-| 主目录 | 子目录 | 说明 |
-|-------|-------|------|
-| `sd-webui-MultiModal\` | `cleaner\` | 图像清理独立模块 |
-| `sd-webui-MultiModal\cleaner\` | `models\` | 图像清理模型目录 |
-
-
-### 语音合成模块
-
-| 主目录 | 子目录 | 说明 |
-|-------|-------|------|
-| `sd-webui-MultiModal\` | `index-tts\` | Index-TTS语音合成独立模块 |
-| `sd-webui-MultiModal\index-tts\` | `checkpoints\` | TTS模型检查点目录 |
-
-
-### 数字人视频生成模块
-
+### 5. 数字人视频生成 
 | 主目录 | 子目录 | 说明 |
 |-------|-------|------|
 | `sd-webui-MultiModal\` | `LatentSync\` | 数字人视频生成独立模块 |
@@ -301,10 +243,37 @@ ollama run qwen3:1.7b
 | `sd-webui-MultiModal\LatentSync\` | `latentsync\` | 核心代码目录 |
 | `sd-webui-MultiModal\LatentSync\latentsync\` | `checkpoints\` | 辅助模型检查点目录 |
 
+- 基于 LatentSync 的音频驱动视频生成
+- 支持自定义推理步数和引导尺度
+- 需要清晰正面人脸的视频作为输入
+- 支持多种音频格式
+<img width="1831" height="925" alt="18" src="https://github.com/user-attachments/assets/4b380e69-3814-4078-ac3e-9f228d83bcde" />
+https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
+
+### 6. Index-TTS语音合成
+
+### 语音合成模块
+
+| 主目录 | 子目录 | 说明 |
+|-------|-------|------|
+| `sd-webui-MultiModal\` | `index-tts\` | Index-TTS语音合成独立模块 |
+| `sd-webui-MultiModal\index-tts\` | `checkpoints\` | TTS模型检查点目录 |
+
+ 使用语音合成或视频处理功能需下载ffmpeg
+ 开始菜单搜索环境变量
+ 添加C:\ffmpeg\bin到环境变量
+
+<img width="1693" height="734" alt="QQ20251011-134442" src="https://github.com/user-attachments/assets/651fa968-f16d-4084-b6af-db12ac26632d" />
+- 集成 Index-TTS 实现高质量语音合成
+- 支持多种语音风格
+- 可调节语速、音调等参数
+- 支持中文和多语言合成
+- <img width="1786" height="805" alt="23" src="https://github.com/user-attachments/assets/1318c3fa-c979-4c93-8003-639e5f43f7f6" />
+- <img width="1788" height="428" alt="17" src="https://github.com/user-attachments/assets/52ed7801-36f3-4145-9386-f2ae7285ea11" />
+   [output_1760002640.wav](https://github.com/user-attachments/files/22794279/output_1760002640.wav)
 
 
-### 图像编辑模块
-
+### 7. FLUX.1-Kontext图像编辑
 | 主目录 | 子目录 | 说明 |
 |-------|-------|------|
 | `sd-webui-MultiModal\` | `FLUX.1-Kontext\` | FLUX.1图像编辑独立模块 |
@@ -312,7 +281,17 @@ ollama run qwen3:1.7b
 | `sd-webui-MultiModal\FLUX.1-Kontext\models\` | `FLUX.1-Kontext-dev\` | FLUX.1主模型目录 |
 | `sd-webui-MultiModal\FLUX.1-Kontext\` | `lora\` | LoRA微调模型目录 |
 
+- 上下文感知的图像编辑功能
+- 支持基于文本的图像修改
+- 保持图像上下文一致性
+- GGUF量化模型优化使用门槛12g显存可用
+- 单图编辑
+- <img width="729" height="485" alt="22" src="https://github.com/user-attachments/assets/564199b4-bad1-4cfb-9629-88632482c6fa" />
+ <img width="864" height="1200" alt="generated_image_1756609759_img1_var2" src="https://github.com/user-attachments/assets/93b6c6a8-a8cd-424c-bf4a-2b02a83ca495" />
 
+ 双图编辑
+ <img width="1813" height="571" alt="21" src="https://github.com/user-attachments/assets/4df0079b-ff8d-4290-ae16-7e367eb90881" />
+ <img width="1024" height="1024" alt="dual_context_image_1756582213_var1" src="https://github.com/user-attachments/assets/1bf91812-70a9-4662-aed1-ac6839a274ab" />
 
  重启 WebUI
 

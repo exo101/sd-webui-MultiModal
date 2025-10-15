@@ -22,7 +22,6 @@
 - 🌟 **Qwen-Image复杂文本渲染和qwen-image-edit-2509精确图像编辑
 - 
   插件支持：
-|-------|-----------|------|
 | `qwen-image-edit2509\qwen-image\` | `qwenVL` | `Index-TTS2` | `qwenVL` | `LatentSync` | `Ollama` |
 | `deepseek` | `Segment Anything` | `FLUX.1-Kontext` | `FLUX` | `XL` | `XL ControlNet` |`不支持FLUX ControlNet` |
 

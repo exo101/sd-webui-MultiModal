@@ -629,4 +629,3 @@ def create_qwen_image_ui():
 
 # 定义模块可用性变量
 QWEN_IMAGE_MODULE_AVAILABLE = QWEN_IMAGE_AVAILABLE
-

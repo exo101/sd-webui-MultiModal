@@ -113,7 +113,7 @@ ollama run qwen3:1.7b
 #### 图像分割
 | 主目录 | 子目录 | 说明 |
 |-------|-------|------|
-| `sd-webui-forge-aki-v4.0\` | `models\` |sam_vit_h_4b8939.pth，sam_vit_l0b3195.pth| 图像分割模型
+| `sd-webui-forge-aki-v4.0\` | `models\` |`sam\` |sam_vit_h_4b8939.pth，sam_vit_l0b3195.pth| 图像分割模型
 - 集成 Segment Anything Model (SAM)
 - 精确的图像分割功能
 - 支持点选和自动分割方式

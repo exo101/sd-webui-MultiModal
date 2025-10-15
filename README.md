@@ -97,6 +97,8 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 | `sd-webui-MultiModal\qwen-image\models\` | `qwen-image-edit\` | 图像编辑模型目录 |
 
 # 模型组件
+ 主目录 | 子目录/文件 | 说明 |
+|-------|-----------|------|
 | `sd-webui-MultiModal\qwen-image\models\` | `processor\` | 处理器组件目录 |
 | `sd-webui-MultiModal\qwen-image\models\` | `scheduler\` | 调度器组件目录 |
 | `sd-webui-MultiModal\qwen-image\models\` | `text_encoder\` | 文本编码器组件目录 |

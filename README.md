@@ -47,7 +47,6 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
  - <img width="1825" height="765" alt="88" src="https://github.com/user-attachments/assets/03327093-bb00-4a5f-ad11-a3ed31aaa90b" />
 
  ## 目录结构
-# 主模型 
 | 主目录 | 子目录/文件 | 说明 |
 |-------|-----------|------|
 | `sd-webui-MultiModal\qwen-image\` | `models\` | 模型文件目录 |
@@ -267,6 +266,78 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
  双图编辑
  <img width="1813" height="571" alt="21" src="https://github.com/user-attachments/assets/4df0079b-ff8d-4290-ae16-7e367eb90881" />
  <img width="1024" height="1024" alt="dual_context_image_1756582213_var1" src="https://github.com/user-attachments/assets/1bf91812-70a9-4662-aed1-ac6839a274ab" />
+
+ ### 8. qwen-image图像生成
+ - <img width="1825" height="765" alt="88" src="https://github.com/user-attachments/assets/03327093-bb00-4a5f-ad11-a3ed31aaa90b" />
+
+ ## 目录结构
+| 主目录 | 子目录/文件 | 说明 |
+|-------|-----------|------|
+| `sd-webui-MultiModal\qwen-image\` | `models\` | 模型文件目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `qwenimage\` | 文生图模型目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `qwen-image-edit\` | 图像编辑模型目录 |
+
+# 模型组件
+ 主目录 | 子目录/文件 | 说明 |
+|-------|-----------|------|
+| `sd-webui-MultiModal\qwen-image\models\` | `processor\` | 处理器组件目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `scheduler\` | 调度器组件目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `text_encoder\` | 文本编码器组件目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `tokenizer\` | 分词器组件目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `transformer\` | Transformer组件目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `vae\` | VAE组件目录 |
+| `sd-webui-MultiModal\qwen-image\` | `outputs\` | 生成图像输出目录 |
+
+<img width="666" height="276" alt="234324" src="https://github.com/user-attachments/assets/56492f90-cd13-4e7c-8826-3e8ea1c003a2" />
+
+<img width="780" height="504" alt="55555" src="https://github.com/user-attachments/assets/ce2cac1f-e7eb-4354-a7c0-cf99f6cb406d" />
+
+qwen-image加速主模型详情页介绍
+https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
+
+qwen-image-edit加速主模型详情页介绍
+https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
+
+在WebUI Forge环境中安装nunchaku加速依赖，也就是打开D:\sd-webui-forge-aki-v4.0\python目录输入cmd
+
+python -m pip install "D:\下载\nunchaku-1.0.0+torch2.7-cp311-cp311-win_amd64.whl" 
+
+<img width="804" height="689" alt="65656" src="https://github.com/user-attachments/assets/cac2ff7c-88bf-4036-a8cd-02927e0e36c6" />
+<img width="706" height="691" alt="234234" src="https://github.com/user-attachments/assets/fcba81c7-2534-4427-a258-4472e4699347" />
+<img width="1094" height="414" alt="456536" src="https://github.com/user-attachments/assets/b50e172f-ae44-42cd-9c55-00f7af8235c3" />
+
+### 模型版本
+不同版本的模型在文件名中有明确标识，如 `lightningv1.0`、`lightningv1.1`、`lightningv2.0` 等。
+ 
+生成信息（如配置参数、生成时间等）也会一并记录
+ 
+ qwen模型演示教程
+ https://www.bilibili.com/video/BV1zn4TzKEdW/?spm_id_from=333.1387.homepage.video_card.click&vd_source=343e49b703fb5b4137cd6c1987846f37
+
+   qwen-image基本文字生成，中文理解，参数大的特点，qwen-image-edit plus具备编辑图像，实现多种编辑效果的模型
+   之前一直部署不上webui是因为没有好的优化方法和策略，最近参考了comfyui的nunchaku优化方法，生成时间与配置压力大幅度减少
+    为大家带来更加便利的的使用方式，生成成功时会记录配置与参数设置信息
+   
+ - qwen-image为例
+   <img width="861" height="435" alt="122" src="https://github.com/user-attachments/assets/650e86f6-a822-424d-ae60-9fed1f1426aa" />
+
+ - 以编辑模型为例
+
+    <img width="1815" height="854" alt="333" src="https://github.com/user-attachments/assets/37e5f859-263d-478d-ab63-b9d41a682217" />
+
+ -  不融合lightning的 svdq-fp4_r128-qwen-image-edit-2509.safetensors质量最高，生成时间最长
+
+    <img width="866" height="375" alt="111" src="https://github.com/user-attachments/assets/f0601d64-fec4-4efd-b841-e44b3277e246" />
+   
+ - 融合lightning的8步模型 svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors 质量较好，生成时间中等
+
+    <img width="859" height="359" alt="222" src="https://github.com/user-attachments/assets/b6935a43-1868-4b0b-b8a5-cd0cd3bf4ff2" />
+   
+ -   在高配置的电脑上体现不出明显的时间差距，迭代步数越高时间越长，质量越高，最高不超过40，
+    
+     编辑模型最多支持上传三张图像，但多图编辑能力弱于单图编辑能力
+    
+     <img width="1842" height="947" alt="4444" src="https://github.com/user-attachments/assets/e2329e50-db48-4f1a-9cec-c293933f4993" />
 
  重启 WebUI
 

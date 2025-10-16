@@ -231,6 +231,18 @@ https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
 qwen-image-edit加速主模型详情页介绍
 https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
 
+D:\sd-webui-forge-aki-v4.2\python目录输入框输入cmd
+
+<img width="828" height="689" alt="Snipaste_2025-10-16_23-28-08" src="https://github.com/user-attachments/assets/195e0e45-c012-4ac8-927a-c9709995dc82" />
+
+<img width="955" height="246" alt="Snipaste_2025-10-16_23-27-00" src="https://github.com/user-attachments/assets/2fb858f5-f110-4c3d-ab38-90e9999a4b78" />
+
+安装最新版本的 diffusers
+
+python -m pip install git+https://github.com/huggingface/diffusers
+
+将根目录requirements_versions文件diffusers库版本改为 diffusers==0.36.0.dev0
+
 在WebUI Forge环境中安装nunchaku加速依赖，也就是打开D:\sd-webui-forge-aki-v4.0\python目录输入cmd
 
 python -m pip install "D:\下载\nunchaku-1.0.0+torch2.7-cp311-cp311-win_amd64.whl" 

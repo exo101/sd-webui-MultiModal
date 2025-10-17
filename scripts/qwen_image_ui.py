@@ -9,6 +9,8 @@ import gradio as gr
 import torch
 import glob
 import psutil
+import numpy as np
+from PIL import Image
 from modules import script_callbacks, shared
 from modules.paths import script_path
 import shutil
@@ -205,6 +207,7 @@ def get_controlnet_preprocessors():
             # 移除inpaint_only到默认列表
         ]
 
+
 # 获取预处理器选项
 CONTROLNET_PREPROCESSORS = get_controlnet_preprocessors()
 
@@ -216,6 +219,10 @@ def get_preprocessor_display_to_internal():
     mapping = {}
     for internal_name, display_name in CONTROLNET_PREPROCESSORS:
         mapping[display_name] = internal_name
+    
+    # 确保"None"映射到"none"
+    mapping["None"] = "none"
+    mapping["none"] = "none"
     return mapping
 
 PREPROCESSOR_DISPLAY_TO_INTERNAL = get_preprocessor_display_to_internal()
@@ -294,9 +301,28 @@ def parse_script_output(output):
         traceback.print_exc()
         return {}
 
-def preprocess_control_image(image_path, preprocessor_display_name):
+def preprocess_control_image(image_input, preprocessor_display_name):
     """预处理控制图像"""
     try:
+        image_path = None
+        
+        # 处理输入是numpy数组的情况
+        if isinstance(image_input, np.ndarray):
+            # 为numpy数组创建临时文件
+            temp_dir = qwen_image_dir / "temp"
+            temp_dir.mkdir(exist_ok=True)
+            image_path = temp_dir / f"preprocess_input_{int(time.time() * 1000)}.png"
+            save_result = save_numpy_image(image_input, image_path)
+            if not save_result:
+                print(f"无法保存numpy数组为图像文件")
+                return None
+            image_path = str(image_path)
+        elif isinstance(image_input, str):
+            image_path = image_input
+        else:
+            print(f"不支持的图像输入类型: {type(image_input)}")
+            return None
+            
         if not image_path or not os.path.exists(image_path):
             print(f"预处理图像路径无效: {image_path}")
             return None
@@ -304,6 +330,24 @@ def preprocess_control_image(image_path, preprocessor_display_name):
         # 加载图像
         from PIL import Image
         image = Image.open(image_path).convert("RGB")
+        
+        # 调整图像尺寸以匹配模型要求（确保是64的倍数）
+        # 这可以解决"mat1 and mat2 shapes cannot be multiplied"错误
+        original_width, original_height = image.size
+        print(f"原始控制图像尺寸: {original_width}x{original_height}")
+        
+        # 将尺寸调整为64的倍数
+        target_width = ((original_width + 31) // 64) * 64  # 向上取整到最接近的64倍数
+        target_height = ((original_height + 31) // 64) * 64
+        
+        # 但也要确保不超过合理范围
+        target_width = max(256, min(2048, target_width))
+        target_height = max(256, min(2048, target_height))
+        
+        # 如果尺寸发生了变化，则调整图像
+        if target_width != original_width or target_height != original_height:
+            print(f"调整控制图像尺寸: {original_width}x{original_height} -> {target_width}x{target_height}")
+            image = image.resize((target_width, target_height), Image.Resampling.LANCZOS)
         
         # 将UI显示名称转换为内部标识符
         mapped_preprocessor_type = PREPROCESSOR_DISPLAY_TO_INTERNAL.get(preprocessor_display_name, "none")
@@ -378,12 +422,216 @@ def preprocess_control_image(image_path, preprocessor_display_name):
             pass
         return None
 
+# 控制图像交互性更新函数
+def update_control_image_interactivity(model_name):
+    """根据选择的ControlNet模型更新控制图像组件的交互性"""
+    # 检查是否为Inpainting模型
+    is_inpainting_model = model_name and "inpaint" in model_name.lower()
+    
+    # 对于Inpainting模型，保持控制图像可见和可交互
+    # 对于其他模型，也保持可见和可交互
+    return gr.update(visible=True, interactive=True)
+
+# 预处理器可见性更新函数
+def update_preprocessor_visibility(model_name):
+    """根据选择的ControlNet模型更新预处理器组件的可见性"""
+    # 检查是否为Inpainting模型
+    is_inpainting_model = model_name and "inpaint" in model_name.lower()
+    
+    # 对于所有模型类型，预处理器功能都应该可见
+    # 即使是Inpainting模型，也应该可以预览预处理效果
+    return [
+        gr.update(visible=True),      # controlnet_preprocessor
+        gr.update(visible=True),      # preprocess_button
+        gr.update(visible=True)       # preprocess_preview
+    ]
+
+
+# 添加函数来保存numpy数组为图像文件
+def save_numpy_image(image_array, image_path):
+    """将numpy数组或PIL图像保存为图像文件"""
+    try:
+        # 如果是PIL图像对象，直接保存
+        if isinstance(image_array, Image.Image):
+            image_array.save(str(image_path), 'PNG')
+            return str(image_path)
+        # 如果是numpy数组，转换为PIL图像后保存
+        elif isinstance(image_array, np.ndarray):
+            # 确保数组数据类型正确
+            if image_array.dtype != np.uint8:
+                # 如果是浮点数且范围在0-1之间，转换为0-255
+                if image_array.dtype in [np.float32, np.float64] and image_array.max() <= 1.0:
+                    image_array = (image_array * 255).astype(np.uint8)
+                else:
+                    # 其他情况直接转换为uint8
+                    image_array = image_array.astype(np.uint8)
+            
+            # 使用PIL处理图像转换
+            if len(image_array.shape) == 2:
+                # 灰度图
+                image = Image.fromarray(image_array, mode='L')
+            elif len(image_array.shape) == 3:
+                if image_array.shape[2] == 1:
+                    # 单通道图转灰度图
+                    image = Image.fromarray(image_array.squeeze(), mode='L')
+                elif image_array.shape[2] == 3:
+                    # RGB图像
+                    image = Image.fromarray(image_array, mode='RGB')
+                elif image_array.shape[2] == 4:
+                    # RGBA图像转RGB
+                    image = Image.fromarray(image_array, mode='RGBA')
+                    image = image.convert('RGB')
+                else:
+                    # 其他情况默认转RGB
+                    image = Image.fromarray(image_array).convert('RGB')
+            else:
+                # 其他情况默认转RGB
+                image = Image.fromarray(image_array).convert('RGB')
+            
+            # 保存图像
+            image.save(str(image_path), 'PNG')
+            return str(image_path)
+        else:
+            print(f"输入不是numpy数组或PIL图像: {type(image_array)}")
+            return None
+    except Exception as e:
+        print(f"保存图像时出错: {e}")
+        traceback.print_exc()
+        return None
+
+# 添加函数来保存处理后的图像
+def save_processed_image(processed_image):
+    """保存处理后的图像到临时文件"""
+    try:
+        if processed_image is None:
+            return None
+            
+        # 创建临时目录
+        temp_dir = qwen_image_dir / "temp"
+        temp_dir.mkdir(exist_ok=True)
+        
+        # 生成唯一文件名
+        timestamp = int(time.time() * 1000)
+        temp_path = temp_dir / f"preprocess_preview_{timestamp}.png"
+        
+        # 保存图像
+        saved_path = save_numpy_image(processed_image, temp_path)
+        if saved_path and os.path.exists(saved_path):
+            return saved_path
+        else:
+            print("无法保存处理后的图像")
+            return None
+    except Exception as e:
+        print(f"保存处理后图像时出错: {e}")
+        traceback.print_exc()
+        return None
+
 def run_text_to_image(prompt, negative_prompt, width, height, steps, cfg_scale, 
                       model_file, scheduler, controlnet_enable=False, controlnet_model=None,
-                      control_image=None, controlnet_conditioning_scale=1.0,
+                      control_image=None, control_mask=None, controlnet_conditioning_scale=1.0,
                           controlnet_preprocessor="none", controlnet_start=0.0, controlnet_end=1.0):
     try:
         print("开始执行文生图功能...")
+        # 处理control_image参数，如果它是numpy数组则保存为临时文件
+        processed_control_image = control_image
+        if isinstance(control_image, np.ndarray):
+            # 为numpy数组创建临时文件
+            temp_dir = qwen_image_dir / "temp"
+            temp_dir.mkdir(exist_ok=True)
+            temp_image_path = temp_dir / f"control_image_{int(time.time() * 1000)}.png"
+            save_result = save_numpy_image(control_image, temp_image_path)
+            if save_result:
+                processed_control_image = str(temp_image_path)
+            else:
+                processed_control_image = None
+        elif hasattr(control_image, 'save'):  # 如果是PIL Image对象
+            # 为PIL Image创建临时文件
+            temp_dir = qwen_image_dir / "temp"
+            temp_dir.mkdir(exist_ok=True)
+            temp_image_path = temp_dir / f"control_image_{int(time.time() * 1000)}.png"
+            try:
+                control_image.save(temp_image_path)
+                processed_control_image = str(temp_image_path)
+            except Exception as e:
+                print(f"保存PIL Image对象时出错: {e}")
+                processed_control_image = None
+                
+        # 处理control_mask参数，如果它是numpy数组则保存为临时文件
+        processed_control_mask = control_mask
+        if isinstance(control_mask, np.ndarray):
+            # 为numpy数组创建临时文件
+            temp_dir = qwen_image_dir / "temp"
+            temp_dir.mkdir(exist_ok=True)
+            temp_mask_path = temp_dir / f"control_mask_{int(time.time() * 1000)}.png"
+            save_result = save_numpy_image(control_mask, temp_mask_path)
+            if save_result:
+                processed_control_mask = str(temp_mask_path)
+            else:
+                processed_control_mask = None
+        elif hasattr(control_mask, 'save'):  # 如果是PIL Image对象
+            # 为PIL Image创建临时文件
+            temp_dir = qwen_image_dir / "temp"
+            temp_dir.mkdir(exist_ok=True)
+            temp_mask_path = temp_dir / f"control_mask_{int(time.time() * 1000)}.png"
+            try:
+                control_mask.save(temp_mask_path)
+                processed_control_mask = str(temp_mask_path)
+            except Exception as e:
+                print(f"保存PIL Image对象时出错: {e}")
+                processed_control_mask = None
+        
+        # 处理control_mask参数，如果它是numpy数组则保存为临时文件
+        processed_control_mask = control_mask
+        if isinstance(control_mask, np.ndarray):
+            # 为numpy数组创建临时文件
+            temp_dir = qwen_image_dir / "temp"
+            temp_dir.mkdir(exist_ok=True)
+            temp_mask_path = temp_dir / f"control_mask_{int(time.time() * 1000)}.png"
+            save_result = save_numpy_image(control_mask, temp_mask_path)
+            if save_result:
+                processed_control_mask = str(temp_mask_path)
+            else:
+                processed_control_mask = None
+        elif hasattr(control_mask, 'save'):  # 如果是PIL Image对象
+            # 为PIL Image创建临时文件
+            temp_dir = qwen_image_dir / "temp"
+            temp_dir.mkdir(exist_ok=True)
+            temp_mask_path = temp_dir / f"control_mask_{int(time.time() * 1000)}.png"
+            try:
+                control_mask.save(temp_mask_path)
+                processed_control_mask = str(temp_mask_path)
+            except Exception as e:
+                print(f"保存PIL Image对象时出错: {e}")
+                processed_control_mask = None
+        
+        # 检查是否使用Inpainting模型
+        is_inpainting_model = controlnet_model and "inpaint" in controlnet_model.lower()
+        
+        # 如果有控制图像，调整其尺寸以确保与模型兼容（包括Inpainting模型）
+        if processed_control_image and controlnet_enable and CONTROLNET_AVAILABLE:
+            try:
+                from PIL import Image
+                pil_image = Image.open(processed_control_image).convert("RGB")
+                original_width, original_height = pil_image.size
+                print(f"原始控制图像尺寸: {original_width}x{original_height}")
+                
+                # 调整图像尺寸为64的倍数以匹配模型要求
+                target_width = ((original_width + 31) // 64) * 64
+                target_height = ((original_height + 31) // 64) * 64
+                
+                # 确保尺寸在合理范围内
+                target_width = max(256, min(2048, target_width))
+                target_height = max(256, min(2048, target_height))
+                
+                # 如果尺寸发生了变化，则调整图像
+                if target_width != original_width or target_height != original_height:
+                    print(f"调整控制图像尺寸: {original_width}x{original_height} -> {target_width}x{target_height}")
+                    pil_image = pil_image.resize((target_width, target_height), Image.Resampling.LANCZOS)
+                    # 保存调整后的图像
+                    pil_image.save(processed_control_image)
+            except Exception as e:
+                print(f"调整控制图像尺寸时出错: {e}")
+        
         # 准备参数
         args = {
             "prompt": prompt,
@@ -396,9 +644,10 @@ def run_text_to_image(prompt, negative_prompt, width, height, steps, cfg_scale,
             "scheduler": scheduler,
             "controlnet_enable": controlnet_enable and CONTROLNET_AVAILABLE,
             "controlnet_model": controlnet_model if controlnet_enable and CONTROLNET_AVAILABLE else None,
-            "control_image": control_image if controlnet_enable and CONTROLNET_AVAILABLE else None,
+            "control_image": processed_control_image if controlnet_enable and CONTROLNET_AVAILABLE else None,
+            "control_mask": processed_control_mask if controlnet_enable and CONTROLNET_AVAILABLE and is_inpainting_model else None,
             "controlnet_conditioning_scale": controlnet_conditioning_scale if controlnet_enable and CONTROLNET_AVAILABLE else 1.0,
-            "controlnet_preprocessor": controlnet_preprocessor if controlnet_enable and CONTROLNET_AVAILABLE else "none",
+            "controlnet_preprocessor": controlnet_preprocessor if controlnet_enable and CONTROLNET_AVAILABLE and not is_inpainting_model else "none",
             "controlnet_start": controlnet_start if controlnet_enable and CONTROLNET_AVAILABLE else 0.0,
             "controlnet_end": controlnet_end if controlnet_enable and CONTROLNET_AVAILABLE else 1.0,
             "output_dir": str(qwen_image_outputs_dir)
@@ -473,7 +722,22 @@ def edit_images(prompt, image1, image2, image3, steps, cfg_scale, negative_promp
         
         # 检查至少有一张图像
         images = [image1, image2, image3]
-        uploaded_images = [img for img in images if img is not None]
+        uploaded_images = []
+        
+        # 处理图像参数，如果它们是numpy数组则保存为临时文件
+        for i, img in enumerate(images):
+            if img is not None:
+                if isinstance(img, np.ndarray):
+                    # 为numpy数组创建临时文件
+                    temp_dir = qwen_image_dir / "temp"
+                    temp_dir.mkdir(exist_ok=True)
+                    temp_image_path = temp_dir / f"edit_image_{i}_{int(time.time() * 1000)}.png"
+                    save_result = save_numpy_image(img, temp_image_path)
+                    if save_result:
+                        uploaded_images.append(str(temp_image_path))
+                else:
+                    # 假设是文件路径
+                    uploaded_images.append(img)
         
         if len(uploaded_images) == 0:
             return None, "请至少上传一张图像", "暂无生成记录"
@@ -565,6 +829,15 @@ def create_qwen_image_ui():
                 """)
             return {}
         
+        # 添加自定义CSS样式来隐藏ForgeCanvas的background组件
+        gr.HTML("""
+        <style>
+        .logical_image_background {
+            display: none !important;
+        }
+        </style>
+        """)
+        
         with gr.Tabs():
             # 文生图标签页
             with gr.TabItem("文生图"):
@@ -597,18 +870,15 @@ def create_qwen_image_ui():
                             )
                         
                         with gr.Row():
-                            text_to_image_steps = gr.Number(
-                                value=8, 
+                            text_to_image_steps = gr.Slider(
+                                minimum=1, maximum=50, step=1, value=8,
                                 label="推理步数",
-                                precision=0,
-                                interactive=True,
                                 min_width=80
                             )
                             
-                            text_to_image_cfg = gr.Number(
-                                value=4.0,
+                            text_to_image_cfg = gr.Slider(
+                                minimum=1.0, maximum=20.0, step=0.1, value=4.0,
                                 label="CFG Scale",
-                                precision=1,
                                 min_width=80
                             )
                         
@@ -710,96 +980,107 @@ def create_qwen_image_ui():
                                 
                                 qwen_image_controlnet_models = get_qwen_image_controlnet_models()
                                 
-                                controlnet_model = gr.Dropdown(
-                                    choices=qwen_image_controlnet_models,
-                                    value=qwen_image_controlnet_models[0][0] if qwen_image_controlnet_models else "Qwen-Image-ControlNet-Union",
-                                    label="ControlNet 模型",
-                                    interactive=True
-                                )
-                            
-                            with gr.Row():
-                                # 使用支持绘图的图像组件，允许用户绘制蒙版
-                                control_image = gr.Image(
-                                    type="filepath",
-                                    label="控制图像",
-                                    elem_classes=["controlnet-image-container"],
-                                    height=300,
-                                    tool="sketch",  # 启用绘图工具
-                                    interactive=True,
-                                    image_mode="RGB"  # 确保图像模式为RGB
-                                )
-                                
-                                # 预处理效果图预览 (参考WebUI中ControlNet的设计)
-                                preprocess_preview = gr.Image(
-                                    label="预处理效果图预览",
-                                    interactive=False,
-                                    elem_classes=["preprocess-preview-container"],
-                                    visible=False,
-                                    height=300
-                                )
-                            
-                            # 添加图像尺寸显示在控制图像上方
-                            control_image_size = gr.Textbox(
-                                label="图像尺寸",
-                                interactive=False,
-                                value="未上传图像"
-                            )
-                            
-                            # 添加函数来根据模型类型更新控制图像组件的绘图功能
-                            def update_control_image_interactivity(model_name):
-                                """根据模型类型更新控制图像组件的交互性"""
-                                # 对于inpainting模型，启用绘图功能
-                                if "inpaint" in model_name.lower() or "Inpaint" in model_name:
-                                    return gr.update(tool="sketch", interactive=True)
-                                else:
-                                    # 对于其他模型，保持现有设置
-                                    return gr.update()
-                            
-                            # 当模型选择改变时，更新控制图像组件
-                            controlnet_model.change(
-                                fn=update_control_image_interactivity,
-                                inputs=[controlnet_model],
-                                outputs=[control_image]
-                            )
-                            
-                            with gr.Row():
-                                controlnet_preprocessor = gr.Dropdown(
-                                    choices=CONTROLNET_PREPROCESSORS,
-                                    value="none",
-                                    label="预处理器",
-                                    interactive=True
-                                )
-                                
-                                # 添加预处理按钮
-                                with gr.Column():
+                            with gr.Tabs(visible=True):
+                                with gr.Tab(label="Single Image"):
+                                    with gr.Row(elem_classes=["cnet-image-row"], equal_height=True):
+                                        with gr.Group(elem_classes=["cnet-input-image-group"]):
+                                            # 使用ForgeCanvas支持绘图功能，允许用户绘制蒙版
+                                            # 注意：ForgeCanvas需要在modules_forge.forge_canvas.canvas中导入
+                                            from modules_forge.forge_canvas.canvas import ForgeCanvas
+                                            control_image = ForgeCanvas(
+                                                elem_id="qwen_image_control_image",
+                                                elem_classes=["cnet-image"],
+                                                height=300,
+                                                contrast_scribbles=True,
+                                                numpy=True  # 设置为True以返回numpy数组而不是文件路径
+                                            )
+                                            
+                                        with gr.Group(elem_classes=["cnet-generated-image-group"]):
+                                            # 预处理效果图预览 (参考WebUI中ControlNet的设计)
+                                            preprocess_preview = gr.Image(
+                                                label="预处理效果图预览",
+                                                interactive=False,
+                                                elem_classes=["cnet-image"],
+                                                visible=False,
+                                                height=300
+                                            )
+                                    
+                                    # 根据项目规范，对于Inpainting模型，我们需要使用background作为原始图像
+                                    # foreground用于蒙版绘制，但隐藏其UI显示
+                                    control_image.background.visible = True
+                                    control_image.background.render = True
+                                    # 隐藏foreground组件的UI显示，但保持功能可用
+                                    control_image.foreground.visible = False
+                                    control_image.foreground.render = False
+                                    
+                                    with gr.Row(elem_classes="controlnet_image_controls"):
+                                        controlnet_preprocessor = gr.Dropdown(
+                                            choices=CONTROLNET_PREPROCESSORS,
+                                            value="none",
+                                            label="预处理器",
+                                            interactive=True,
+                                            elem_classes=["cnet-preprocessor-dropdown"]
+                                        )
+                                        
+                                        # 添加预处理按钮，使用爆炸图标
+                                        from modules.ui_components import ToolButton
+                                        preprocess_button = ToolButton(
+                                            value="\U0001F4A5",  # 💥爆炸图标
+                                            elem_classes=["cnet-run-preprocessor", "cnet-toolbutton"],
+                                            tooltip="运行预处理器"
+                                        )
+                                        
+                                        controlnet_model = gr.Dropdown(
+                                            choices=qwen_image_controlnet_models,
+                                            value=qwen_image_controlnet_models[0][0] if qwen_image_controlnet_models else "Qwen-Image-ControlNet-Union",
+                                            label="ControlNet 模型",
+                                            interactive=True
+                                        )
+                                        
+                                        refresh_models_button = ToolButton(
+                                            value="\U0001f504",  # 🔄刷新图标
+                                            elem_classes=["cnet-toolbutton"],
+                                            tooltip="刷新模型列表"
+                                        )
+                                    
                                     with gr.Row():
-                                        preprocess_button = gr.Button("预览预处理效果", elem_classes=["preprocess-button"])
-                                        preprocess_refresh = gr.Checkbox(label="启用自动预览", value=True)
-                            
-                            with gr.Row():
-                                controlnet_conditioning_scale = gr.Slider(
-                                    minimum=0.0,
-                                    maximum=2.0,
-                                    value=1.0,
-                                    step=0.05,
-                                    label="ControlNet 强度"
-                                )
-                                
-                                controlnet_start = gr.Slider(
-                                    minimum=0.0,
-                                    maximum=1.0,
-                                    value=0.0,
-                                    step=0.05,
-                                    label="开始时间步"
-                                )
-                                
-                                controlnet_end = gr.Slider(
-                                    minimum=0.0,
-                                    maximum=1.0,
-                                    value=1.0,
-                                    step=0.05,
-                                    label="结束时间步"
-                                )
+                                        controlnet_conditioning_scale = gr.Slider(
+                                            minimum=0.0,
+                                            maximum=2.0,
+                                            value=1.0,
+                                            step=0.05,
+                                            label="ControlNet 强度"
+                                        )
+                                        
+                                        controlnet_start = gr.Slider(
+                                            minimum=0.0,
+                                            maximum=1.0,
+                                            value=0.0,
+                                            step=0.05,
+                                            label="开始时间步"
+                                        )
+                                        
+                                        controlnet_end = gr.Slider(
+                                            minimum=0.0,
+                                            maximum=1.0,
+                                            value=1.0,
+                                            step=0.05,
+                                            label="结束时间步"
+                                        )
+                        
+                        # 当模型选择改变时，更新控制图像组件
+                        controlnet_model.change(
+                            fn=update_control_image_interactivity,
+                            inputs=[controlnet_model],
+                            outputs=[control_image.background]
+                        )
+                        
+                        # 当模型选择改变时，更新预处理功能可见性
+                        controlnet_model.change(
+                            fn=update_preprocessor_visibility,
+                            inputs=[controlnet_model],
+                            outputs=[controlnet_preprocessor, preprocess_button, preprocess_preview]
+                        )
                         
                         # 生成按钮
                         text_to_image_button = gr.Button("生成图像")
@@ -839,18 +1120,15 @@ def create_qwen_image_ui():
                             edit_image3 = gr.Image(type="filepath", label="图像3", interactive=True)
                         
                         with gr.Row():
-                            edit_steps = gr.Number(
-                                value=8, 
+                            edit_steps = gr.Slider(
+                                minimum=1, maximum=50, step=1, value=8,
                                 label="推理步数",
-                                precision=0,
-                                interactive=True,
                                 min_width=80
                             )
                             
-                            edit_cfg = gr.Number(
-                                value=4.0,
+                            edit_cfg = gr.Slider(
+                                minimum=1.0, maximum=20.0, step=0.1, value=4.0,
                                 label="CFG Scale",
-                                precision=1,
                                 min_width=80
                             )
                             
@@ -906,28 +1184,11 @@ def create_qwen_image_ui():
             else:
                 return "未上传图像", gr.update(visible=False)
         
-        def save_processed_image(processed_image):
-            """保存处理后的图像到临时文件并返回路径"""
-            if not processed_image:
-                return None
-                
-            # 创建临时目录
-            temp_dir = qwen_image_dir / "temp"
-            temp_dir.mkdir(exist_ok=True)
-            
-            # 生成唯一文件名
-            timestamp = int(time.time() * 1000)
-            temp_path = temp_dir / f"preprocess_preview_{timestamp}.png"
-            
-            # 保存图像
-            processed_image.save(temp_path)
-            return str(temp_path)
-
-        def on_preprocess_params_change(image_path, preprocessor_type, auto_refresh):
+        def on_preprocess_params_change(image_path, preprocessor_type, preprocess_refresh):
             """当预处理参数改变时触发"""
             try:
-                print(f"预处理参数变更: image_path={image_path}, preprocessor_type={preprocessor_type}, auto_refresh={auto_refresh}")
-                if auto_refresh and image_path and os.path.exists(image_path) and preprocessor_type != "none":
+                print(f"预处理参数变更: image_path={image_path}, preprocessor_type={preprocessor_type}, preprocess_refresh={preprocess_refresh}")
+                if preprocess_refresh and image_path and os.path.exists(image_path) and preprocessor_type != "none":
                     processed_image = preprocess_control_image(image_path, preprocessor_type)
                     if processed_image:
                         temp_path = save_processed_image(processed_image)
@@ -946,90 +1207,89 @@ def create_qwen_image_ui():
                 traceback.print_exc()
                 return gr.update(visible=False)
 
-        def on_preprocess_button_click(image, preprocessor_display_name):
+        def on_preprocess_button_click(image_input, preprocessor_type):
             """预处理按钮点击事件处理函数"""
-            try:
-                print(f"预处理按钮点击: image_path={image}, preprocessor={preprocessor_display_name}")
-                
-                if image is None:
-                    return "未选择图像", None
-                
-                # 将UI显示名称转换为内部标识符
-                preprocessor_internal_name = PREPROCESSOR_DISPLAY_TO_INTERNAL.get(preprocessor_display_name, "none")
-                if preprocessor_internal_name == "none":
-                    return "请选择有效的预处理器", None
-                print(f"映射预处理器类型: {preprocessor_display_name} -> {preprocessor_internal_name}")
-                
-                # 创建临时参数文件
-                temp_args = {
-                    "image_path": image,
-                    "preprocessor_type": preprocessor_internal_name
-                }
-                
-                temp_args_file = qwen_image_dir / "temp_preprocess_args.json"
-                with open(temp_args_file, "w", encoding="utf-8") as f:
-                    json.dump(temp_args, f, ensure_ascii=False, indent=2)
-                
-                # 构建预处理命令
-                temp_args_file_str = str(temp_args_file).replace('\\', '/')
-                scripts_dir_str = str(scripts_dir).replace('\\', '/')
-                
-                cmd = [
-                    main_python,
-                    "-c",
-                    f"import sys; sys.path.append('{scripts_dir_str}'); from qwen_image_scripts import run_preprocess_control_image; run_preprocess_control_image('{temp_args_file_str}')"
-                ]
-                
-                # 执行预处理命令
-                print(f"执行预处理命令: {' '.join(cmd)}")
-                result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(qwen_image_dir), timeout=120)
-                
-                # 删除临时参数文件
-                if temp_args_file.exists():
-                    temp_args_file.unlink()
-                
-                print(f"预处理命令返回码: {result.returncode}")
-                print(f"预处理命令输出: {result.stdout}")
-                if result.stderr:
-                    print(f"预处理命令错误: {result.stderr}")
-                
-                if result.returncode != 0:
-                    return f"预处理失败: {result.stderr}", None
-                
-                # 解析成功输出
-                output_info = parse_script_output(result.stdout)
-                if "image_path" in output_info:
-                    output_path = output_info["image_path"]
-                    print(f"成功找到预处理图像: {output_path}")
-                    return f"预处理完成: {output_path}", output_path
+            # 处理预览更新
+            preview_update = gr.update(visible=False)
+            
+            # 检查输入是文件路径还是numpy数组
+            image_path = None
+            if isinstance(image_input, str):  # 文件路径
+                image_path = image_input
+            elif isinstance(image_input, np.ndarray):  # numpy数组
+                # 为numpy数组创建临时文件
+                temp_dir = qwen_image_dir / "temp"
+                temp_dir.mkdir(exist_ok=True)
+                image_path = temp_dir / f"control_image_temp_{int(time.time() * 1000)}.png"
+                saved_path = save_numpy_image(image_input, image_path)
+                if saved_path:
+                    image_path = saved_path
+            
+            if image_path and os.path.exists(image_path) and preprocessor_type != "none":
+                processed_image = preprocess_control_image(image_path, preprocessor_type)
+                if processed_image is not None:
+                    temp_path = save_processed_image(processed_image)
+                    if temp_path and os.path.exists(temp_path):
+                        preview_update = gr.update(visible=True, value=temp_path)
+                    else:
+                        print("无法保存预览图像")
                 else:
-                    return "预处理完成，但未找到输出图像", None
-                    
-            except Exception as e:
-                error_msg = f"预处理过程中出现异常: {str(e)}"
-                print(error_msg)
-                traceback.print_exc()
-                return error_msg, None
-        
+                    print("预处理未返回有效图像")
+            else:
+                print("不满足预览条件")
+            
+            return preview_update
+
         # 组合控制图像和预处理参数改变事件的处理函数
-        def combined_control_image_handler(image_path, preprocessor_type, auto_refresh):
-            # 处理尺寸显示
-            size_text = "未上传图像"
+        def combined_control_image_handler(background_input, foreground_input, preprocessor_type, controlnet_model):
+            """处理控制图像变化的组合函数"""
+            image_path = None
+            mask_path = None
+            width = None
+            height = None
+            
+            # 检查是否为Inpainting模型
+            is_inpainting_model = controlnet_model and "inpaint" in controlnet_model.lower()
+            
+            # 处理背景图像（实际图像）
+            if isinstance(background_input, str):  # 文件路径
+                image_path = background_input
+            elif isinstance(background_input, np.ndarray):  # numpy数组
+                # 为numpy数组创建临时文件
+                temp_dir = qwen_image_dir / "temp"
+                temp_dir.mkdir(exist_ok=True)
+                image_path = temp_dir / f"control_image_temp_{int(time.time() * 1000)}.png"
+                saved_path = save_numpy_image(background_input, image_path)
+                if saved_path:
+                    image_path = saved_path
+            
+            # 处理前景图像（蒙版）
+            if isinstance(foreground_input, str):  # 文件路径
+                mask_path = foreground_input
+            elif isinstance(foreground_input, np.ndarray):  # numpy数组
+                # 为numpy数组创建临时文件
+                temp_dir = qwen_image_dir / "temp"
+                temp_dir.mkdir(exist_ok=True)
+                mask_path = temp_dir / f"control_mask_temp_{int(time.time() * 1000)}.png"
+                saved_path = save_numpy_image(foreground_input, mask_path)
+                if saved_path:
+                    mask_path = saved_path
+            
+            # 对于所有模型类型（包括Inpainting），都获取背景图像尺寸
             if image_path and os.path.exists(image_path):
                 try:
-                    from PIL import Image
                     image = Image.open(image_path)
                     width, height = image.size
-                    size_text = f"{width} × {height}"
                 except Exception as e:
                     print(f"读取图像尺寸时出错: {e}")
             
             # 处理预览更新
             preview_update = gr.update(visible=False)
-            if auto_refresh and image_path and os.path.exists(image_path) and preprocessor_type != "none":
-                print(f"组合处理: image_path={image_path}, preprocessor_type={preprocessor_type}, auto_refresh={auto_refresh}")
+            # 注意：即使是Inpainting模型，也应该可以预览预处理效果
+            if image_path and os.path.exists(image_path) and preprocessor_type != "none":
+                print(f"组合处理: image_path={image_path}, preprocessor_type={preprocessor_type}")
                 processed_image = preprocess_control_image(image_path, preprocessor_type)
-                if processed_image:
+                if processed_image is not None:
                     temp_path = save_processed_image(processed_image)
                     if temp_path and os.path.exists(temp_path):
                         print(f"组合处理预览图像已保存到: {temp_path}")
@@ -1039,33 +1299,35 @@ def create_qwen_image_ui():
                 else:
                     print("组合处理预处理未返回有效图像")
             
-            return size_text, preview_update
+            # 如果获取到有效的宽度和高度，则更新宽度和高度滑块（适用于所有模型类型）
+            if width is not None and height is not None:
+                # 限制宽度和高度在滑块的有效范围内
+                width = max(256, min(2048, width))
+                height = max(256, min(2048, height))
+                # 确保宽度和高度是64的倍数
+                width = (width // 64) * 64
+                height = (height // 64) * 64
+                return preview_update, gr.update(value=width), gr.update(value=height)
+            else:
+                return preview_update, gr.update(), gr.update()
         
         # 绑定组合事件处理程序
-        control_image.change(
+        control_image.background.change(
             fn=combined_control_image_handler,
-            inputs=[control_image, controlnet_preprocessor, preprocess_refresh],
-            outputs=[control_image_size, preprocess_preview]
+            inputs=[control_image.background, control_image.foreground, controlnet_preprocessor, controlnet_model],
+            outputs=[preprocess_preview, text_to_image_width, text_to_image_height]
         )
-        
-        # 当预处理器类型或自动刷新状态改变时，也触发相同的处理逻辑
-        controlnet_preprocessor.change(
+        control_image.foreground.change(
             fn=combined_control_image_handler,
-            inputs=[control_image, controlnet_preprocessor, preprocess_refresh],
-            outputs=[control_image_size, preprocess_preview]
-        )
-        
-        preprocess_refresh.change(
-            fn=combined_control_image_handler,
-            inputs=[control_image, controlnet_preprocessor, preprocess_refresh],
-            outputs=[control_image_size, preprocess_preview]
+            inputs=[control_image.background, control_image.foreground, controlnet_preprocessor, controlnet_model],
+            outputs=[preprocess_preview, text_to_image_width, text_to_image_height]
         )
         
         # 预处理按钮点击事件（手动预览）
         preprocess_button.click(
             fn=on_preprocess_button_click,
-            inputs=[control_image, controlnet_preprocessor],
-            outputs=[control_image_size, preprocess_preview]
+            inputs=[control_image.background, controlnet_preprocessor],
+            outputs=[preprocess_preview]
         )
 
         text_to_image_button.click(
@@ -1081,7 +1343,8 @@ def create_qwen_image_ui():
                 text_to_image_scheduler,
                 controlnet_enable,
                 controlnet_model,
-                control_image,
+                control_image.background,  # 使用background组件作为控制图像
+                control_image.foreground,  # 使用foreground组件作为控制蒙版
                 controlnet_conditioning_scale,
                 controlnet_preprocessor,
                 controlnet_start,
@@ -1122,7 +1385,7 @@ def create_qwen_image_ui():
             "text_to_image_info": text_to_image_info,
             "controlnet_enable": controlnet_enable,
             "controlnet_model": controlnet_model,
-            "control_image": control_image,
+            "control_image": control_image.background,  # 返回background组件
             "controlnet_conditioning_scale": controlnet_conditioning_scale,
             "edit_prompt": edit_prompt,
             "edit_image1": edit_image1,

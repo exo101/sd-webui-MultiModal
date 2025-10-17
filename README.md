@@ -63,7 +63,7 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 | `sd-webui-MultiModal\` | `XYKC_AI\` | AI模型API接口目录 |
 | `sd-webui-MultiModal\XYKC_AI\` | `XYKC_AI_PyScripts\` | Python脚本接口 |
 
-####3.图像分割
+#### 3.图像分割
 
 | 主目录 | 子目录 | 说明 |
 |-------|-------|------|
@@ -74,6 +74,7 @@ sam_vit_h_4b8939.pth，sam_vit_l0b3195.pth
 #### 3.图像清理
 
 | `sd-webui-MultiModal\` | `cleaner\` | 图像清理独立模块 |
+
 ### 5.数字人视频生成 
 
 | 主目录 | 子目录 | 说明 |

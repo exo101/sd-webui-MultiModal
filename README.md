@@ -50,14 +50,7 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 
 ## 功能模块详细介绍
 
-### 1. 资源汇总
-- 集中展示重要公告和资源信息
-- 提供快速访问各类功能的入口
-- 显示插件使用说明和更新日志<img width="1245" height="650" alt="1" src="https://github.com/user-attachments/assets/f9b99645-a76a-43ce-aa27-1d5774e9cfa3" />
-
-### 主插件结构
-
-## 文件夹结构说明
+ ## 文件夹结构说明
 <img width="660" height="387" alt="14" src="https://github.com/user-attachments/assets/32c734e4-e84f-4909-a020-3fee6abe35ad" />
 
 | 主目录 | 子目录 | 说明 |
@@ -70,7 +63,63 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 | `sd-webui-MultiModal\` | `XYKC_AI\` | AI模型API接口目录 |
 | `sd-webui-MultiModal\XYKC_AI\` | `XYKC_AI_PyScripts\` | Python脚本接口 |
 
-#### 核心特性
+####3.图像分割
+
+| 主目录 | 子目录 | 说明 |
+|-------|-------|------|
+| `sd-webui-forge-aki-v4.0\` | `models\` |`sam\`|
+
+sam_vit_h_4b8939.pth，sam_vit_l0b3195.pth
+
+#### 3.图像清理
+
+| `sd-webui-MultiModal\` | `cleaner\` | 图像清理独立模块 |
+### 5.数字人视频生成 
+
+| 主目录 | 子目录 | 说明 |
+|-------|-------|------|
+| `sd-webui-MultiModal\` | `LatentSync\` | 数字人视频生成独立模块 |
+| `sd-webui-MultiModal\LatentSync\` | `checkpoints\` | 主模型检查点目录 |
+| `sd-webui-MultiModal\LatentSync\checkpoints\` | `sd-vae-ft-mse\` | VAE模型目录 |
+| `sd-webui-MultiModal\LatentSync\checkpoints\` | `whisper\` | Whisper模型目录 |
+| `sd-webui-MultiModal\LatentSync\` | `latentsync\` | 核心代码目录 |
+| `sd-webui-MultiModal\LatentSync\latentsync\` | `checkpoints\` | 辅助模型检查点目录 |
+
+### 6. Index-TTS语音合成
+
+ 使用语音合成或视频处理功能需下载ffmpeg
+ 开始菜单搜索环境变量
+ 添加C:\ffmpeg\bin到环境变量
+| 主目录 | 子目录 | 说明 |
+|-------|-------|------|
+| `sd-webui-MultiModal\` | `index-tts\` | Index-TTS语音合成独立模块 |
+| `sd-webui-MultiModal\index-tts\` | `checkpoints\` | TTS模型检查点目录 |
+
+### 7. FLUX.1-Kontext图像编辑
+| 主目录 | 子目录 | 说明 |
+|-------|-------|------|
+| `sd-webui-MultiModal\` | `FLUX.1-Kontext\` | FLUX.1图像编辑独立模块 |
+| `sd-webui-MultiModal\FLUX.1-Kontext\` | `models\` | 图像编辑模型目录 |
+| `sd-webui-MultiModal\FLUX.1-Kontext\models\` | `FLUX.1-Kontext-dev\` | FLUX.1主模型目录 |
+| `sd-webui-MultiModal\FLUX.1-Kontext\` | `lora\` | LoRA微调模型目录 |
+
+ ### 8. qwen-image图像生成
+
+| 主目录 | 子目录/文件 | 说明 |
+|-------|-----------|------|
+| `sd-webui-MultiModal\qwen-image\` | `models\` | 模型文件目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `qwenimage\` | 文生图模型目录 |
+| `sd-webui-MultiModal\qwen-image\models\` | `qwen-image-edit\` | 图像编辑模型目录 |
+
+<img width="666" height="276" alt="234324" src="https://github.com/user-attachments/assets/56492f90-cd13-4e7c-8826-3e8ea1c003a2" />
+
+<img width="780" height="504" alt="55555" src="https://github.com/user-attachments/assets/ce2cac1f-e7eb-4354-a7c0-cf99f6cb406d" />
+### 1. 资源汇总
+- 集中展示重要公告和资源信息
+- 提供快速访问各类功能的入口
+- 显示插件使用说明和更新日志<img width="1245" height="650" alt="1" src="https://github.com/user-attachments/assets/f9b99645-a76a-43ce-aa27-1d5774e9cfa3" />
+
+### 2. 图像识别与语言交互
 - 支持多种视觉模型（Qwen-VL、LLaMA-Vision等）
 - 支持多种语言模型（Qwen、DeepSeek等）
 - 提供快捷提示词模板
@@ -83,7 +132,6 @@ ollama run qwen2.5vl:3b
 
 ollama run qwen3:1.7b
 <img width="1107" height="385" alt="123" src="https://github.com/user-attachments/assets/454cc34a-ca0a-4f4d-a816-539859c484de" />
-
 
 <img width="1851" height="953" alt="3" src="https://github.com/user-attachments/assets/aaaedc60-8b8a-4d13-85e1-64599e71d5b1" />
 <img width="1829" height="965" alt="2" src="https://github.com/user-attachments/assets/606bfe39-5b26-4c4a-a400-6aa496a75cb4" />
@@ -111,12 +159,6 @@ ollama run qwen3:1.7b
 - 实时预览效果
 
 #### 图像分割
-| 主目录 | 子目录 | 说明 |
-|-------|-------|------|
-| `sd-webui-forge-aki-v4.0\` | `models\` |`sam\`|
-
-sam_vit_h_4b8939.pth，sam_vit_l0b3195.pth
-
 - 集成 Segment Anything Model (SAM)
 - 精确的图像分割功能
 - 支持点选和自动分割方式
@@ -124,8 +166,6 @@ sam_vit_h_4b8939.pth，sam_vit_l0b3195.pth
 <img width="1816" height="909" alt="9" src="https://github.com/user-attachments/assets/08b633ba-7ed8-4886-a6f3-e22a3bd7cb8e" />
 
 #### 图像清理
-
-| `sd-webui-MultiModal\` | `cleaner\` | 图像清理独立模块 |
 - 图像去噪和修复功能
 - 简单易用的界面<img width="1835" height="741" alt="11" src="https://github.com/user-attachments/assets/4ac7c40d-971c-4364-8cc1-73a872fcec79" />
 
@@ -139,15 +179,6 @@ sam_vit_h_4b8939.pth，sam_vit_l0b3195.pth
 
 
 ### 5. 数字人视频生成 
-| 主目录 | 子目录 | 说明 |
-|-------|-------|------|
-| `sd-webui-MultiModal\` | `LatentSync\` | 数字人视频生成独立模块 |
-| `sd-webui-MultiModal\LatentSync\` | `checkpoints\` | 主模型检查点目录 |
-| `sd-webui-MultiModal\LatentSync\checkpoints\` | `sd-vae-ft-mse\` | VAE模型目录 |
-| `sd-webui-MultiModal\LatentSync\checkpoints\` | `whisper\` | Whisper模型目录 |
-| `sd-webui-MultiModal\LatentSync\` | `latentsync\` | 核心代码目录 |
-| `sd-webui-MultiModal\LatentSync\latentsync\` | `checkpoints\` | 辅助模型检查点目录 |
-
 - 基于 LatentSync 的音频驱动视频生成
 - 支持自定义推理步数和引导尺度
 - 需要清晰正面人脸的视频作为输入
@@ -156,18 +187,6 @@ sam_vit_h_4b8939.pth，sam_vit_l0b3195.pth
 https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 
 ### 6. Index-TTS语音合成
-
-### 语音合成模块
-
-| 主目录 | 子目录 | 说明 |
-|-------|-------|------|
-| `sd-webui-MultiModal\` | `index-tts\` | Index-TTS语音合成独立模块 |
-| `sd-webui-MultiModal\index-tts\` | `checkpoints\` | TTS模型检查点目录 |
-
- 使用语音合成或视频处理功能需下载ffmpeg
- 开始菜单搜索环境变量
- 添加C:\ffmpeg\bin到环境变量
-
 <img width="1693" height="734" alt="QQ20251011-134442" src="https://github.com/user-attachments/assets/651fa968-f16d-4084-b6af-db12ac26632d" />
 - 集成 Index-TTS 实现高质量语音合成
 - 支持多种语音风格
@@ -179,13 +198,6 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 
 
 ### 7. FLUX.1-Kontext图像编辑
-| 主目录 | 子目录 | 说明 |
-|-------|-------|------|
-| `sd-webui-MultiModal\` | `FLUX.1-Kontext\` | FLUX.1图像编辑独立模块 |
-| `sd-webui-MultiModal\FLUX.1-Kontext\` | `models\` | 图像编辑模型目录 |
-| `sd-webui-MultiModal\FLUX.1-Kontext\models\` | `FLUX.1-Kontext-dev\` | FLUX.1主模型目录 |
-| `sd-webui-MultiModal\FLUX.1-Kontext\` | `lora\` | LoRA微调模型目录 |
-
 - 上下文感知的图像编辑功能
 - 支持基于文本的图像修改
 - 保持图像上下文一致性
@@ -200,30 +212,6 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 
  ### 8. qwen-image图像生成
  - <img width="1825" height="765" alt="88" src="https://github.com/user-attachments/assets/03327093-bb00-4a5f-ad11-a3ed31aaa90b" />
-
- ## 目录结构
-#主模型
- 
-| 主目录 | 子目录/文件 | 说明 |
-|-------|-----------|------|
-| `sd-webui-MultiModal\qwen-image\` | `models\` | 模型文件目录 |
-| `sd-webui-MultiModal\qwen-image\models\` | `qwenimage\` | 文生图模型目录 |
-| `sd-webui-MultiModal\qwen-image\models\` | `qwen-image-edit\` | 图像编辑模型目录 |
-
-# 模型组件
- 主目录 | 子目录/文件 | 说明 |
-|-------|-----------|------|
-| `sd-webui-MultiModal\qwen-image\models\` | `processor\` | 处理器组件目录 |
-| `sd-webui-MultiModal\qwen-image\models\` | `scheduler\` | 调度器组件目录 |
-| `sd-webui-MultiModal\qwen-image\models\` | `text_encoder\` | 文本编码器组件目录 |
-| `sd-webui-MultiModal\qwen-image\models\` | `tokenizer\` | 分词器组件目录 |
-| `sd-webui-MultiModal\qwen-image\models\` | `transformer\` | Transformer组件目录 |
-| `sd-webui-MultiModal\qwen-image\models\` | `vae\` | VAE组件目录 |
-| `sd-webui-MultiModal\qwen-image\` | `outputs\` | 生成图像输出目录 |
-
-<img width="666" height="276" alt="234324" src="https://github.com/user-attachments/assets/56492f90-cd13-4e7c-8826-3e8ea1c003a2" />
-
-<img width="780" height="504" alt="55555" src="https://github.com/user-attachments/assets/ce2cac1f-e7eb-4354-a7c0-cf99f6cb406d" />
 
 qwen-image加速主模型详情页介绍
 https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary

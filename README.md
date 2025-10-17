@@ -196,11 +196,14 @@ ollama run qwen3:1.7b
 https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 
 ### 6. Index-TTS语音合成
-<img width="1693" height="734" alt="QQ20251011-134442" src="https://github.com/user-attachments/assets/651fa968-f16d-4084-b6af-db12ac26632d" />
+
 - 集成 Index-TTS 实现高质量语音合成
 - 支持多种语音风格
 - 可调节语速、音调等参数
 - 支持中文和多语言合成
+- 添加ffmpeg到c盘，添加ffmpeg到环境变量
+- <img width="722" height="479" alt="QQ20251018-013019" src="https://github.com/user-attachments/assets/4fe32403-16bd-47c2-9639-59390b7cd741" />
+- <img width="1693" height="734" alt="QQ20251011-134442" src="https://github.com/user-attachments/assets/651fa968-f16d-4084-b6af-db12ac26632d" />
 - <img width="1786" height="805" alt="23" src="https://github.com/user-attachments/assets/1318c3fa-c979-4c93-8003-639e5f43f7f6" />
 - <img width="1788" height="428" alt="17" src="https://github.com/user-attachments/assets/52ed7801-36f3-4145-9386-f2ae7285ea11" />
    [output_1760002640.wav](https://github.com/user-attachments/files/22794279/output_1760002640.wav)

@@ -115,7 +115,9 @@ sam_vit_h_4b8939.pth，sam_vit_l0b3195.pth
 <img width="666" height="276" alt="234324" src="https://github.com/user-attachments/assets/56492f90-cd13-4e7c-8826-3e8ea1c003a2" />
 
 <img width="780" height="504" alt="55555" src="https://github.com/user-attachments/assets/ce2cac1f-e7eb-4354-a7c0-cf99f6cb406d" />
+
 ### 1. 资源汇总
+
 - 集中展示重要公告和资源信息
 - 提供快速访问各类功能的入口
 - 显示插件使用说明和更新日志<img width="1245" height="650" alt="1" src="https://github.com/user-attachments/assets/f9b99645-a76a-43ce-aa27-1d5774e9cfa3" />

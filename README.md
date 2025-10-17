@@ -88,9 +88,10 @@ sam_vit_h_4b8939.pth，sam_vit_l0b3195.pth
 
 ### 6. Index-TTS语音合成
 
- 使用语音合成或视频处理功能需下载ffmpeg
- 开始菜单搜索环境变量
- 添加C:\ffmpeg\bin到环境变量
+ 使用语音合成或视频处理功能需将ffmpeg放置c盘根目录
+ 
+ 开始菜单搜索环境变量， 添加C:\ffmpeg\bin到环境变量
+ 
 | 主目录 | 子目录 | 说明 |
 |-------|-------|------|
 | `sd-webui-MultiModal\` | `index-tts\` | Index-TTS语音合成独立模块 |

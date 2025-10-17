@@ -44,9 +44,8 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
    sd-webui-forge-aki-v4.0/extensions
   
 ### 2025/10/18 更新qwen-image ControlNet
-
+同时实现了深度，姿势，线稿，软边缘
 <img width="1805" height="918" alt="23325" src="https://github.com/user-attachments/assets/5d73db90-68ff-44ce-a5ed-d6df82ebe099" />
-<img width="1776" height="941" alt="2344235" src="https://github.com/user-attachments/assets/800a7b5d-0904-459d-9ba1-c3232b6db663" />
 <img width="1804" height="952" alt="5C9EF6EF5F53BEA97DAB7CD5B68CF140" src="https://github.com/user-attachments/assets/fa396296-2090-4067-a1fb-17462d55a71d" />
 <img width="367" height="219" alt="2323235" src="https://github.com/user-attachments/assets/6de07c18-6753-414e-898b-1e5a9bf3b89c" />
 

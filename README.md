@@ -42,6 +42,15 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 
 - 克隆本仓库到 extensions 目录：
    sd-webui-forge-aki-v4.0/extensions
+  
+### 2025/10/18 更新qwen-image ControlNet
+
+<img width="1805" height="918" alt="23325" src="https://github.com/user-attachments/assets/5d73db90-68ff-44ce-a5ed-d6df82ebe099" />
+<img width="1776" height="941" alt="2344235" src="https://github.com/user-attachments/assets/800a7b5d-0904-459d-9ba1-c3232b6db663" />
+<img width="1804" height="952" alt="5C9EF6EF5F53BEA97DAB7CD5B68CF140" src="https://github.com/user-attachments/assets/fa396296-2090-4067-a1fb-17462d55a71d" />
+<img width="367" height="219" alt="2323235" src="https://github.com/user-attachments/assets/6de07c18-6753-414e-898b-1e5a9bf3b89c" />
+
+
 
 ### 2025/10/12 更新多模态SD插件12版本：增加第八个功能标签页 qwen-image与 qwen-image-edit plus
  - <img width="1825" height="765" alt="88" src="https://github.com/user-attachments/assets/03327093-bb00-4a5f-ad11-a3ed31aaa90b" />
@@ -112,6 +121,7 @@ sam_vit_h_4b8939.pth，sam_vit_l0b3195.pth
 | `sd-webui-MultiModal\qwen-image\` | `models\` | 模型文件目录 |
 | `sd-webui-MultiModal\qwen-image\models\` | `qwenimage\` | 文生图模型目录 |
 | `sd-webui-MultiModal\qwen-image\models\` | `qwen-image-edit\` | 图像编辑模型目录 |
+| `sd-webui-forge-aki-v4.0\` | `models\` |`ControlNet\`|`Qwen-Image-ControlNet-Union\`| ControlNet模型目录 |
 
 <img width="666" height="276" alt="234324" src="https://github.com/user-attachments/assets/56492f90-cd13-4e7c-8826-3e8ea1c003a2" />
 
@@ -275,6 +285,22 @@ python -m pip install "D:\下载\nunchaku-1.0.0+torch2.7-cp311-cp311-win_amd64.w
      编辑模型最多支持上传三张图像，但多图编辑能力弱于单图编辑能力
     
      <img width="1842" height="947" alt="4444" src="https://github.com/user-attachments/assets/e2329e50-db48-4f1a-9cec-c293933f4993" />
+     
+   ### 8. qwen-image ControlNet
+   
+   qwen 使用方式与XL ControlNet并无差别，得益于qwen模型的优化能力生成效果与质量要远比XL好的多
+   
+   点击爆炸图标可预览预处理器结果，权重0.7-1之间，与处理器与模型都在网盘中 Qwen-Image-ControlNet-Union
+
+   这是一个综合ControlNet模型，同时具备深度，姿势，线稿，软边缘
+     
+   <img width="877" height="552" alt="1241214" src="https://github.com/user-attachments/assets/4807196b-3641-46de-b3c3-25d641e9373c" />
+   
+  <img width="1776" height="941" alt="2344235" src="https://github.com/user-attachments/assets/45ef3c01-689c-44d4-b543-512fbbdf3c08" />
+
+  <img width="1805" height="918" alt="23325" src="https://github.com/user-attachments/assets/2c6de0b0-7b72-4aba-aba7-2ff90368176e" />
+
+     
 
  重启 WebUI
 

@@ -50,13 +50,9 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 <img width="1804" height="952" alt="5C9EF6EF5F53BEA97DAB7CD5B68CF140" src="https://github.com/user-attachments/assets/fa396296-2090-4067-a1fb-17462d55a71d" />
 <img width="367" height="219" alt="2323235" src="https://github.com/user-attachments/assets/6de07c18-6753-414e-898b-1e5a9bf3b89c" />
 
-
-
 ### 2025/10/12 更新多模态SD插件12版本：增加第八个功能标签页 qwen-image与 qwen-image-edit plus
  - <img width="1825" height="765" alt="88" src="https://github.com/user-attachments/assets/03327093-bb00-4a5f-ad11-a3ed31aaa90b" />
- <img width="1821" height="907" alt="11" src="https://github.com/user-attachments/assets/c20d33bc-a494-4c7f-8aa6-639306bf26e4" />
-
-
+ 
 ## 功能模块详细介绍
 
  ## 文件夹结构说明

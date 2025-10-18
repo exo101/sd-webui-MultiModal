@@ -54,6 +54,10 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
  
 ## 功能模块详细介绍
 
+模型已存至网盘
+
+<img width="1381" height="540" alt="14325" src="https://github.com/user-attachments/assets/cf5d91c9-8da8-4fbe-9a58-20ae013e8ebc" />
+
  ## 文件夹结构说明
 <img width="660" height="387" alt="14" src="https://github.com/user-attachments/assets/32c734e4-e84f-4909-a020-3fee6abe35ad" />
 

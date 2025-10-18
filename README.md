@@ -71,14 +71,15 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 
 | 主目录 | 子目录 | 
 |-------|-------|------|
-| `sd-webui-forge-aki-v4.0\models\` | `sam` |
+| `sd-webui-forge-aki-v4.0\models\`| `sam` |
 
 sam_vit_h_4b8939.pth
 
 sam_vit_l0b3195.pth
 
 #### 3.图像清理
-
+| 主目录 | 子目录 | 
+|-------|-------|------|
 | `sd-webui-MultiModal\` | `cleaner\` | 图像清理独立模块 |
 
 ### 5.数字人视频生成 

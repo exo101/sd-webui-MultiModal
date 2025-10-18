@@ -58,13 +58,15 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 
 <img width="1381" height="540" alt="14325" src="https://github.com/user-attachments/assets/cf5d91c9-8da8-4fbe-9a58-20ae013e8ebc" />
 
- ## 文件夹结构说明
+ ## 插件目录
 <img width="660" height="387" alt="14" src="https://github.com/user-attachments/assets/32c734e4-e84f-4909-a020-3fee6abe35ad" />
+
+## 模型目录
 
 | 主目录 | 子目录 | 说明 |
 |-------|-------|------|
-| `sd-webui-forge-aki-v4.2\models\`|`sam` |`图像分割模型目录` |
-| `sd-webui-forge-aki-v4.2\models\`|`cleaner\`| `图像清理模型目录 |
+| `sd-webui-forge-aki-v4.2\models\`|`sam` | 图像分割模型目录 |
+| `sd-webui-forge-aki-v4.2\models\`|`cleaner\`| 图像清理模型目录 |
 | `sd-webui-forge-aki-v4.2\models\`|`LatentSync\` | 数字人视频生成模型目录 |
 | `sd-webui-forge-aki-v4.2\models\`|`index-tts\` | Index-TTS语音合成模型目录 |
 | `sd-webui-forge-aki-v4.2\models\`|`FLUX.1-Kontext\` | 图像编辑模型目录 |

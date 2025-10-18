@@ -72,8 +72,6 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 | `sd-webui-forge-aki-v4.2\models\`|`qwenimage\ qwen-image-edit\` | qwen图像编辑模型目录 |
 | `sd-webui-forge-aki-v4.2\models\`|`ControlNet\ Qwen-Image-ControlNet-Union\`| qwen ControlNet模型目录 |
 
-<img width="793" height="776" alt="Snipaste_2025-10-19_00-11-55" src="https://github.com/user-attachments/assets/eb60fbf1-d3ac-4f1a-9f79-616916501077" />
-
 模型已存至网盘
 <img width="908" height="537" alt="124124" src="https://github.com/user-attachments/assets/ee4cbb1d-e8eb-4725-aa22-848165581f98" />
 

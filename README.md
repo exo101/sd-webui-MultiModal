@@ -68,7 +68,7 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 | `sd-webui-forge-aki-v4.2\models\`|`sam` | 图像分割模型目录 |
 | `sd-webui-forge-aki-v4.2\models\`|`cleaner\`| 图像清理模型目录 |
 | `sd-webui-forge-aki-v4.2\models\`|`LatentSync\` | 数字人视频生成模型目录 |
-| `sd-webui-forge-aki-v4.2\models\`|`index-tts\` | Index-TTS语音合成模型目录 |
+| `sd-webui-forge-aki-v4.2\models\`|`index-tts2\` | Index-TTS语音合成模型目录 |
 | `sd-webui-forge-aki-v4.2\models\`|`FLUX.1-Kontext\` | 图像编辑模型目录 |
 | `sd-webui-forge-aki-v4.2\models\`|`lora\` | FLUX.1-Kontext LoRA微调模型目录 |
 | `sd-webui-forge-aki-v4.2\models\`|`qwen-image\` | qwen模型文件目录 |

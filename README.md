@@ -63,67 +63,16 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 
 | 主目录 | 子目录 | 说明 |
 |-------|-------|------|
-| `sd-webui-MultiModal\` | `scripts\` | 主功能模块脚本目录 |
-
-### 2. 图像识别与语言交互
-
-| 主目录 | 子目录 | 说明 |
-|-------|-------|------|
-| `sd-webui-MultiModal\` | `XYKC_AI\` | AI模型API接口目录 |
-| `sd-webui-MultiModal\XYKC_AI\` | `XYKC_AI_PyScripts\` | Python脚本接口 |
-
-#### 3.图像分割
-
-| 主目录 | 子目录 | 说明 |
-|-------|-------|------|
-| `sd-webui-forge-aki-v4.0\models\`| `sam` |
-
-sam_vit_h_4b8939.pth
-
-sam_vit_l0b3195.pth
-
-#### 3.图像清理
-
-| 主目录 | 子目录 | 说明 |
-|-------|-------|------|
-| `sd-webui-MultiModal\` | `cleaner\` | 图像清理独立模块 |
-
-### 5.数字人视频生成 
-
-| 主目录 | 子目录 | 说明 |
-|-------|-------|------|
-| `sd-webui-MultiModal\` | `LatentSync\` | 数字人视频生成独立模块 |
-| `sd-webui-MultiModal\LatentSync\` | `checkpoints\` | 主模型检查点目录 |
-| `sd-webui-MultiModal\LatentSync\latentsync\` | `checkpoints\` | 辅助模型检查点目录 |
-
-### 6. Index-TTS语音合成
-
- 使用语音合成或视频处理功能需将ffmpeg放置c盘根目录
- 
- 开始菜单搜索环境变量， 添加C:\ffmpeg\bin到环境变量
- 
-| 主目录 | 子目录 | 说明 |
-|-------|-------|------|
-| `sd-webui-MultiModal\` | `index-tts\` | Index-TTS语音合成独立模块 |
-| `sd-webui-MultiModal\index-tts\` | `checkpoints\` | TTS主模型目录 |
-| `sd-webui-MultiModal\index-tts\` | `indextts\` | TTS辅助模型目录 |
-
-### 7. FLUX.1-Kontext图像编辑
-
-| 主目录 | 子目录 | 说明 |
-|-------|-------|------|
-| `sd-webui-MultiModal\` | `FLUX.1-Kontext\` | FLUX.1图像编辑独立模块 |
-| `sd-webui-MultiModal\FLUX.1-Kontext\` | `models\` | 图像编辑模型目录 |
-| `sd-webui-MultiModal\FLUX.1-Kontext\` | `lora\` | LoRA微调模型目录 |
-
- ### 8. qwen-image图像生成
- 
-| 主目录 | 子目录 | 说明 |
-|-------|-------|------|
-| `sd-webui-MultiModal\qwen-image\` | `models\` | 模型文件目录 |
-| `sd-webui-MultiModal\qwen-image\models\` | `qwenimage\` | 文生图模型目录 |
-| `sd-webui-MultiModal\qwen-image\models\` | `qwen-image-edit\` | 图像编辑模型目录 |
-| `sd-webui-forge-aki-v4.0\models\ControlNet`|`Qwen-Image-ControlNet-Union\`| ControlNet模型目录 |
+| `sd-webui-forge-aki-v4.2\models\`|`sam` |`图像分割模型目录` |
+| `sd-webui-forge-aki-v4.2\models\`|`cleaner\`| `图像清理模型目录 |
+| `sd-webui-forge-aki-v4.2\models\`|`LatentSync\` | 数字人视频生成模型目录 |
+| `sd-webui-forge-aki-v4.2\models\`|`index-tts\` | Index-TTS语音合成模型目录 |
+| `sd-webui-forge-aki-v4.2\models\`|`FLUX.1-Kontext\` | 图像编辑模型目录 |
+| `sd-webui-forge-aki-v4.2\models\`|`lora\` | LoRA微调模型目录 |
+| `sd-webui-forge-aki-v4.2\models\`|`qwen-image\` | qwen模型文件目录 |
+| `sd-webui-forge-aki-v4.2\models\`|`qwenimage\qwenimage` | 文生图模型目录 |
+| `sd-webui-forge-aki-v4.2\models\`|`qwenimage\ qwen-image-edit\` | 图像编辑模型目录 |
+| `sd-webui-forge-aki-v4.0\models\`|`ControlNet`|`Qwen-Image-ControlNet-Union\`| ControlNet模型目录 |
 
 <img width="666" height="276" alt="234324" src="https://github.com/user-attachments/assets/56492f90-cd13-4e7c-8826-3e8ea1c003a2" />
 <img width="764" height="270" alt="23525" src="https://github.com/user-attachments/assets/3cebe7db-bb6d-4477-848e-79c6e8248398" />
@@ -198,6 +147,8 @@ ollama run qwen3:1.7b
 - 支持自定义推理步数和引导尺度
 - 需要清晰正面人脸的视频作为输入
 - 支持多种音频格式
+-  使用语音合成或视频处理功能需将ffmpeg放置c盘根目录
+- 开始菜单搜索环境变量， 添加C:\ffmpeg\bin到环境变量
 <img width="1831" height="925" alt="18" src="https://github.com/user-attachments/assets/4b380e69-3814-4078-ac3e-9f228d83bcde" />
 https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 
@@ -207,7 +158,8 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 - 支持多种语音风格
 - 可调节语速、音调等参数
 - 支持中文和多语言合成
-- 添加ffmpeg到c盘，添加ffmpeg到环境变量
+- 使用语音合成或视频处理功能需将ffmpeg放置c盘根目录
+- 开始菜单搜索环境变量， 添加C:\ffmpeg\bin到环境变量
 - <img width="722" height="479" alt="QQ20251018-013019" src="https://github.com/user-attachments/assets/4fe32403-16bd-47c2-9639-59390b7cd741" />
 - <img width="1693" height="734" alt="QQ20251011-134442" src="https://github.com/user-attachments/assets/651fa968-f16d-4084-b6af-db12ac26632d" />
 - <img width="1786" height="805" alt="23" src="https://github.com/user-attachments/assets/1318c3fa-c979-4c93-8003-639e5f43f7f6" />

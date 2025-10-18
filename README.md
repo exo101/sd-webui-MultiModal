@@ -77,9 +77,6 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 模型已存至网盘
 <img width="908" height="537" alt="124124" src="https://github.com/user-attachments/assets/ee4cbb1d-e8eb-4725-aa22-848165581f98" />
 
-<img width="1381" height="540" alt="14325" src="https://github.com/user-attachments/assets/cf5d91c9-8da8-4fbe-9a58-20ae013e8ebc" />
-
-
 ### 1. 资源汇总
 
 - 集中展示重要公告和资源信息

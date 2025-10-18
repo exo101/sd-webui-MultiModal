@@ -62,15 +62,12 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 | `sd-webui-MultiModal\` | `scripts\` | 主功能模块脚本目录 |
 
 ### 2. 图像识别与语言交互
-| 主目录 | 子目录 | 说明 |
-|-------|-------|------|
+
 | `sd-webui-MultiModal\` | `XYKC_AI\` | AI模型API接口目录 |
 | `sd-webui-MultiModal\XYKC_AI\` | `XYKC_AI_PyScripts\` | Python脚本接口 |
 
 #### 3.图像分割
 
-| 主目录 | 子目录 | 
-|-------|-------|------|
 | `sd-webui-forge-aki-v4.0\models\`| `sam` |
 
 sam_vit_h_4b8939.pth
@@ -78,14 +75,11 @@ sam_vit_h_4b8939.pth
 sam_vit_l0b3195.pth
 
 #### 3.图像清理
-| 主目录 | 子目录 | 
-|-------|-------|------|
+
 | `sd-webui-MultiModal\` | `cleaner\` | 图像清理独立模块 |
 
 ### 5.数字人视频生成 
 
-| 主目录 | 子目录 | 说明 |
-|-------|-------|------|
 | `sd-webui-MultiModal\` | `LatentSync\` | 数字人视频生成独立模块 |
 | `sd-webui-MultiModal\LatentSync\` | `checkpoints\` | 主模型检查点目录 |
 | `sd-webui-MultiModal\LatentSync\latentsync\` | `checkpoints\` | 辅助模型检查点目录 |
@@ -96,23 +90,18 @@ sam_vit_l0b3195.pth
  
  开始菜单搜索环境变量， 添加C:\ffmpeg\bin到环境变量
  
-| 主目录 | 子目录 | 说明 |
-|-------|-------|------|
 | `sd-webui-MultiModal\` | `index-tts\` | Index-TTS语音合成独立模块 |
 | `sd-webui-MultiModal\index-tts\` | `checkpoints\` | TTS主模型目录 |
 | `sd-webui-MultiModal\index-tts\` | `indextts\` | TTS辅助模型目录 |
 
 ### 7. FLUX.1-Kontext图像编辑
-| 主目录 | 子目录 | 说明 |
-|-------|-------|------|
+
 | `sd-webui-MultiModal\` | `FLUX.1-Kontext\` | FLUX.1图像编辑独立模块 |
 | `sd-webui-MultiModal\FLUX.1-Kontext\` | `models\` | 图像编辑模型目录 |
 | `sd-webui-MultiModal\FLUX.1-Kontext\` | `lora\` | LoRA微调模型目录 |
 
  ### 8. qwen-image图像生成
 
-| 主目录 | 子目录/文件 | 说明 |
-|-------|-----------|------|
 | `sd-webui-MultiModal\qwen-image\` | `models\` | 模型文件目录 |
 | `sd-webui-MultiModal\qwen-image\models\` | `qwenimage\` | 文生图模型目录 |
 | `sd-webui-MultiModal\qwen-image\models\` | `qwen-image-edit\` | 图像编辑模型目录 |

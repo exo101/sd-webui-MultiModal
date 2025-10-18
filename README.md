@@ -126,8 +126,7 @@ sam_vit_l0b3195.pth
 | `sd-webui-forge-aki-v4.0\models\ControlNet`|`Qwen-Image-ControlNet-Union\`| ControlNet模型目录 |
 
 <img width="666" height="276" alt="234324" src="https://github.com/user-attachments/assets/56492f90-cd13-4e7c-8826-3e8ea1c003a2" />
-
-<img width="780" height="504" alt="55555" src="https://github.com/user-attachments/assets/ce2cac1f-e7eb-4354-a7c0-cf99f6cb406d" />
+<img width="764" height="270" alt="23525" src="https://github.com/user-attachments/assets/3cebe7db-bb6d-4477-848e-79c6e8248398" />
 
 ### 1. 资源汇总
 

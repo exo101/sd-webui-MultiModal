@@ -71,9 +71,11 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 
 | 主目录 | 子目录 | 说明 |
 |-------|-------|------|
-| `sd-webui-forge-aki-v4.0\` | `models\` |`sam\`|
+| `sd-webui-forge-aki-v4.0\models\` | `sam` |
 
-sam_vit_h_4b8939.pth，sam_vit_l0b3195.pth
+sam_vit_h_4b8939.pth
+
+sam_vit_l0b3195.pth
 
 #### 3.图像清理
 
@@ -85,9 +87,6 @@ sam_vit_h_4b8939.pth，sam_vit_l0b3195.pth
 |-------|-------|------|
 | `sd-webui-MultiModal\` | `LatentSync\` | 数字人视频生成独立模块 |
 | `sd-webui-MultiModal\LatentSync\` | `checkpoints\` | 主模型检查点目录 |
-| `sd-webui-MultiModal\LatentSync\checkpoints\` | `sd-vae-ft-mse\` | VAE模型目录 |
-| `sd-webui-MultiModal\LatentSync\checkpoints\` | `whisper\` | Whisper模型目录 |
-| `sd-webui-MultiModal\LatentSync\` | `latentsync\` | 核心代码目录 |
 | `sd-webui-MultiModal\LatentSync\latentsync\` | `checkpoints\` | 辅助模型检查点目录 |
 
 ### 6. Index-TTS语音合成
@@ -99,14 +98,14 @@ sam_vit_h_4b8939.pth，sam_vit_l0b3195.pth
 | 主目录 | 子目录 | 说明 |
 |-------|-------|------|
 | `sd-webui-MultiModal\` | `index-tts\` | Index-TTS语音合成独立模块 |
-| `sd-webui-MultiModal\index-tts\` | `checkpoints\` | TTS模型检查点目录 |
+| `sd-webui-MultiModal\index-tts\` | `checkpoints\` | TTS主模型目录 |
+| `sd-webui-MultiModal\index-tts\` | `indextts\` | TTS辅助模型目录 |
 
 ### 7. FLUX.1-Kontext图像编辑
 | 主目录 | 子目录 | 说明 |
 |-------|-------|------|
 | `sd-webui-MultiModal\` | `FLUX.1-Kontext\` | FLUX.1图像编辑独立模块 |
 | `sd-webui-MultiModal\FLUX.1-Kontext\` | `models\` | 图像编辑模型目录 |
-| `sd-webui-MultiModal\FLUX.1-Kontext\models\` | `FLUX.1-Kontext-dev\` | FLUX.1主模型目录 |
 | `sd-webui-MultiModal\FLUX.1-Kontext\` | `lora\` | LoRA微调模型目录 |
 
  ### 8. qwen-image图像生成
@@ -140,6 +139,7 @@ sam_vit_h_4b8939.pth，sam_vit_l0b3195.pth
 ollama run qwen2.5vl:3b
 
 ollama run qwen3:1.7b
+
 <img width="1107" height="385" alt="123" src="https://github.com/user-attachments/assets/454cc34a-ca0a-4f4d-a816-539859c484de" />
 
 <img width="1851" height="953" alt="3" src="https://github.com/user-attachments/assets/aaaedc60-8b8a-4d13-85e1-64599e71d5b1" />

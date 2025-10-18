@@ -237,9 +237,13 @@ https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
 qwen-image-edit加速主模型详情页介绍
 https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
 
-<img width="804" height="689" alt="65656" src="https://github.com/user-attachments/assets/cac2ff7c-88bf-4036-a8cd-02927e0e36c6" />
-<img width="706" height="691" alt="234234" src="https://github.com/user-attachments/assets/fcba81c7-2534-4427-a258-4472e4699347" />
-<img width="1094" height="414" alt="456536" src="https://github.com/user-attachments/assets/b50e172f-ae44-42cd-9c55-00f7af8235c3" />
+模型分为适用于非 Blackwell GPU（50 系列之前的用户）适用于 Blackwell GPU（50 系列）的用户。
+
+我在网盘当中下载的模型是适合50系列模型，如果你是非50系显卡，需要自行下载模型
+
+<img width="1102" height="834" alt="Snipaste_2025-10-18_18-55-07" src="https://github.com/user-attachments/assets/026ae2e7-8cb5-42d5-b3b4-d62912dbd031" />
+
+
 
 ### 模型版本
 不同版本的模型在文件名中有明确标识，如 `lightningv1.0`、`lightningv1.1`、`lightningv2.0` 等。

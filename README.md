@@ -68,8 +68,8 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 | `sd-webui-forge-aki-v4.2\models\`|`FLUX.1-Kontext\` | 图像编辑模型目录 |
 | `sd-webui-forge-aki-v4.2\models\`|`lora\` | FLUX.1-Kontext LoRA微调模型目录 |
 | `sd-webui-forge-aki-v4.2\models\`|`qwen-image\` | qwen模型文件目录 |
-| `sd-webui-forge-aki-v4.2\models\`|`qwenimage\qwenimage` | qwen文生图模型目录 |
-| `sd-webui-forge-aki-v4.2\models\`|`qwenimage\ qwen-image-edit\` | qwen图像编辑模型目录 |
+| `sd-webui-forge-aki-v4.2\models\`|`qwen-image\qwenimage` | qwen文生图模型目录 |
+| `sd-webui-forge-aki-v4.2\models\`|`qwen-image\ qwen-image-edit\` | qwen图像编辑模型目录 |
 | `sd-webui-forge-aki-v4.2\models\`|`ControlNet\ Qwen-Image-ControlNet-Union\`| qwen ControlNet模型目录 |
 
 模型已存至网盘

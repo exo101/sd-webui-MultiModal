@@ -193,6 +193,9 @@ https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/sum
 
 <img width="1102" height="834" alt="Snipaste_2025-10-18_18-55-07" src="https://github.com/user-attachments/assets/026ae2e7-8cb5-42d5-b3b4-d62912dbd031" />
 
+模型目录内的qwenimage与qwen-image-edit是主模型
+
+<img width="762" height="495" alt="24542525" src="https://github.com/user-attachments/assets/f8e58477-3e33-478c-ac0f-495da4adea4e" />
 
 
 ### 模型版本

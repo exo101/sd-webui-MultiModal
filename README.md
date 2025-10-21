@@ -23,7 +23,7 @@
 - 
   插件支持：
   
-| `qwen-image-edit2509\qwen-image\` | `qwenVL` | `Index-TTS2` | `qwenVL` | `LatentSync` | `Ollama` |
+| `qwen-image-edit2509\qwen-image\` | `qwenVL2.5` | `Index-TTS2` | `LatentSync` | `Ollama` |
 | `deepseek` | `Segment Anything` | `FLUX.1-Kontext` | `FLUX` | `XL` | `XL ControlNet` |`不支持FLUX ControlNet` |
 
 个人主页：[https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click ](https://space.bilibili.com/403361177?spm_id_from=333.40164.0.0) 

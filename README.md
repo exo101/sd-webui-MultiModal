@@ -184,10 +184,10 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
  ### 8. qwen-image图像生成
  - <img width="1825" height="765" alt="88" src="https://github.com/user-attachments/assets/03327093-bb00-4a5f-ad11-a3ed31aaa90b" />
 
-qwen-image加速主模型详情页介绍
+qwen-image文生图加速主模型详情页介绍
 https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
 
-qwen-image-edit加速主模型详情页介绍
+qwen-image-edit编辑加速主模型详情页介绍
 https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
 
 模型分为适用于非 Blackwell GPU（50 系列之前的用户）适用于 Blackwell GPU（50 系列）的用户。

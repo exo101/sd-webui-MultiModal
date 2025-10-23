@@ -196,13 +196,11 @@ https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/sum
 50系显卡除外的用户下载我截图当中的模型
 <img width="1256" height="898" alt="QQ20251023-190930" src="https://github.com/user-attachments/assets/a430135c-dc93-4515-b69a-34fa0e4d751f" />
 <img width="1226" height="836" alt="QQ20251023-190809" src="https://github.com/user-attachments/assets/6db3520d-266e-4c75-9dbf-2cd972e572f4" />
-<img width="1474" height="960" alt="图层 2" src="https://github.com/user-attachments/assets/e6dcf697-2d5e-4612-80fd-732bf7afb4f9" />
-
-
 
 模型目录内的qwenimage与qwen-image-edit是主模型
 
 <img width="762" height="495" alt="24542525" src="https://github.com/user-attachments/assets/f8e58477-3e33-478c-ac0f-495da4adea4e" />
+<img width="1474" height="960" alt="图层 2" src="https://github.com/user-attachments/assets/e6dcf697-2d5e-4612-80fd-732bf7afb4f9" />
 
 
 ### 模型版本

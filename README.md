@@ -193,8 +193,12 @@ https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/sum
 模型分为适用于非 Blackwell GPU（50 系列之前的用户）适用于 Blackwell GPU（50 系列）的用户。
 
 我在网盘当中下载的模型是适合50系列模型，如果你是非50系显卡，需要自行下载主模型，其余模型组件不必重新下载
+50系显卡除外的用户下载我截图当中的模型
+<img width="1256" height="898" alt="QQ20251023-190930" src="https://github.com/user-attachments/assets/a430135c-dc93-4515-b69a-34fa0e4d751f" />
+<img width="1226" height="836" alt="QQ20251023-190809" src="https://github.com/user-attachments/assets/6db3520d-266e-4c75-9dbf-2cd972e572f4" />
+<img width="1474" height="960" alt="图层 2" src="https://github.com/user-attachments/assets/e6dcf697-2d5e-4612-80fd-732bf7afb4f9" />
 
-<img width="1102" height="834" alt="Snipaste_2025-10-18_18-55-07" src="https://github.com/user-attachments/assets/026ae2e7-8cb5-42d5-b3b4-d62912dbd031" />
+
 
 模型目录内的qwenimage与qwen-image-edit是主模型
 

@@ -71,7 +71,7 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 | `sd-webui-forge-aki-v4.2\models\`|`qwen-image\qwenimage` | qwen文生图模型目录 |
 | `sd-webui-forge-aki-v4.2\models\`|`qwen-image\ qwen-image-edit\` | qwen图像编辑模型目录 |
 | `sd-webui-forge-aki-v4.2\models\`|`ControlNet\ Qwen-Image-ControlNet-Union\`| qwen ControlNet模型目录 |
-| `C:\`|`ffmpeg\`| 语音与视频合成依赖文件模型目录 |
+| `C:\`|`ffmpeg\`| 语音与视频合成依赖文件目录 |
 - 安装ollama应用程序
 
 模型已存至网盘

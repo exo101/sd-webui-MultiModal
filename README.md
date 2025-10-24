@@ -81,13 +81,15 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 - 显示插件使用说明和更新日志<img width="1245" height="650" alt="1" src="https://github.com/user-attachments/assets/f9b99645-a76a-43ce-aa27-1d5774e9cfa3" />
 
 ### 2. 图像识别与语言交互
-- 支持多种视觉模型（Qwen-VL、LLaMA-Vision等）
+- 支持多种视觉模型（Qwen3VL、LLaMA-Vision等）
 - 支持多种语言模型（Qwen、DeepSeek等）
 - 提供快捷提示词模板
 - 支持单张和批量图像处理
 - 根据显存大小推荐合适的模型（8GB显存推荐1.7B/3B模型，16GB显存可选latest/7B模型），参数越大响应速度越慢质量越高
 - 安装ollama应用程序 https://ollama.com/search
 - 安装(qwen2.5vl)视觉模型与(qwen3)语言模型，在计算机开始菜单搜索栏输入CMD执行以下命令
+
+- 
 
 ollama run qwen2.5vl:3b
 ollama run qwen3:1.7b

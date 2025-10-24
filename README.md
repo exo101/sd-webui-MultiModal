@@ -41,7 +41,7 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
   https://github.com/exo101/sd-webui-forge-aki-v4.0/tree/main
 
 - 克隆本仓库到 extensions 目录： sd-webui-forge-aki-v4.4/extensions
-  
+- 2025/10/24 webui frogr 整合包更新之4.4版本
 - 2025/10/24 支持qwen3VL需要transformers==4.57.0，但会牺牲Index-TTS2语音合成功能使用，因为Index-TTS2需要的是transformers==4.52.1版本，两者存在冲突
 - 2025/10/24 更新完善qwen-image ControlNet实现多个变体预处理器
 - 2025/10/18 添加qwen-image ControlNet。同时实现了深度，姿势，线稿，软边缘

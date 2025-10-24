@@ -43,9 +43,9 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 - 克隆本仓库到 extensions 目录：
    sd-webui-forge-aki-v4.0/extensions
   
-## 2025/10/24更新 完善qwen-image ControlNet实现多个变体预处理器
-## 2025/10/18 添加qwen-image ControlNet。同时实现了深度，姿势，线稿，软边缘
-## 2025/10/12 更新多模态SD插件12版本：增加第八个功能标签页 qwen-image与 qwen-image-edit plus
+- 2025/10/24 更新完善qwen-image ControlNet实现多个变体预处理器
+- 2025/10/18 添加qwen-image ControlNet。同时实现了深度，姿势，线稿，软边缘
+- 2025/10/12 更新多模态SD插件12版本：增加第八个功能标签页 qwen-image与 qwen-image-edit plus
 
 ## 功能模块详细介绍
  ## 插件目录

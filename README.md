@@ -67,7 +67,7 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 | `sd-webui-forge-aki-v4.4\models\`|`ControlNet\ Qwen-Image-ControlNet-Union\`| qwen ControlNet模型目录 |
 | `sd-webui-forge-aki-v4.4\models\`|`Qwen3-VL-4B-Instruct\` | qwen3 VL模型文件目录 |
 | `sd-webui-forge-aki-v4.4\models\`|` Codeformer，faceswaplab，insightface，GFPGAN` | 换脸插件模型文件目录 |
-| `C:\`|`ffmpeg\`| 语音与视频合成依赖文件目录 |
+| `C:\`                            |`ffmpeg\`               | 语音与视频合成依赖文件目录 |
 
 - 安装OllamaSetup.exe应用程序
 

@@ -220,6 +220,9 @@ https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/sum
    qwen-image基本文字生成，中文理解，参数大的特点，qwen-image-edit plus具备编辑图像，实现多种编辑效果的模型
    之前一直部署不上webui是因为没有好的优化方法和策略，最近参考了comfyui的nunchaku优化方法，生成时间与配置压力大幅度减少
     为大家带来更加便利的的使用方式，生成成功时会记录配置与参数设置信息
+    ControINet在默认状态下是启用状态，只使用文生图需要关闭启用，这是一个bug
+
+    
    
  - qwen-image为例
    <img width="861" height="435" alt="122" src="https://github.com/user-attachments/assets/650e86f6-a822-424d-ae60-9fed1f1426aa" />

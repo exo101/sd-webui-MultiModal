@@ -211,11 +211,11 @@ https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/sum
 
 ### 模型版本
 
- lightning是加速 8steps 是8步就能生成图像，没有此类标识的模型需要增加推理步数和引导数
+ lightning是加速 8steps 是8步就能生成高质量图像了，当然步数越大时间越长，质量也高，没有此类标识的模型需要增加推理步数和引导数，
  
- svdq-fp4_r128-qwen-image-lightningv1.1-8steps 使用时就是 推理步数8，引导数是 1
+ svdq-fp4_r128-qwen-image-lightningv1.1-8steps 使用时就是 推理步数可从低到高 8或20，引导数是 1，
 
- svdq-fp4_r128-qwen-image.safetensors  使用时就是 推理步数至少15往上了，引导数是 4 
+ svdq-fp4_r128-qwen-image.safetensors  使用时就是 推理步数至少15往上，引导数是 4 
  
 生成信息（如配置参数、生成时间等）也会一并记录
  

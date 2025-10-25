@@ -248,8 +248,77 @@ https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/sum
   <img width="1776" height="941" alt="2344235" src="https://github.com/user-attachments/assets/45ef3c01-689c-44d4-b543-512fbbdf3c08" />
 
   <img width="1805" height="918" alt="23325" src="https://github.com/user-attachments/assets/2c6de0b0-7b72-4aba-aba7-2ff90368176e" />
+  
+  ControINet在默认状态下是启用状态，只使用文生图需要关闭启用
+  
+  在ControINet中上传图像不能上传超过1500像素的图像，超过后会爆显存，使用qq或微信截图，clit+v粘贴到上传图像的位置就行这样就不必在ps中处理尺寸的问题了
+  
+   <img width="875" height="549" alt="3254525" src="https://github.com/user-attachments/assets/82109fd1-62ed-4e8b-b7fb-13298db373b6" />
 
-     
+   在这些预处理器中只有属于pose，深度，线稿，以及属于他们的变体qwen ControINet才支持，其余不支持，这是qwen官方训练ControINet决定的
+   
+   <img width="871" height="515" alt="2545676" src="https://github.com/user-attachments/assets/2a2bf747-2035-4723-83e1-4bb18f7e42f0" />
+   ## ControlNet 预处理器支持说明
+
+本文档列出了本项目支持的 ControlNet 预处理器类型。只有属于以下分类的预处理器才被支持：
+
+### 支持的预处理器类别
+
+#### 1. 深度类 (Depth)
+用于从图像中提取深度信息的预处理器：
+- depth_midas
+- depth_leres
+- depth_leres++
+- depth_anything
+- depth_anything_v2
+- depth_hand_refiner
+- depth_marigold
+- depth_zoe
+
+#### 2. 姿态类 (Pose)
+用于检测和提取人体姿态关键点的预处理器：
+- openpose_full
+- openpose
+- openpose_face
+- openpose_faceonly
+- openpose_hand
+- dw_openpose_full
+- animal_openpose
+- densepose (pruple bg & purple torso)
+- densepose_parula (black bg & blue torso)
+
+#### 3. 线稿类 (Lineart)
+用于提取或生成线条画的预处理器：
+- lineart_standard (from white bg & black line)
+- lineart
+- lineart_coarse
+- lineart_anime
+- lineart_anime_denoise
+- invert (from white bg & black line)
+- scribble_pidinet
+- scribble_xdog
+- softedge_pidinet
+- softedge_pidinet_safe
+- softedge_pidinstruct
+- softedge_hed
+- softedge_hedsafe
+- mlsd
+
+#### 4. 其他变体
+包括以上三类的变体和增强版本，例如：
+- 各种组合形式（如同时包含姿态和手部检测）
+- 不同算法实现的相同功能预处理器
+- 带有特定后处理效果的变体
+
+### 不支持的预处理器类别
+
+除了上述三类（深度、姿态、线稿）及其变体外的其他预处理器均不支持，包括但不限于：
+- 颜色类预处理器
+- 语义分割类预处理器
+- 法线贴图类预处理器
+- 边缘检测类预处理器（除线稿类外）
+- 风格迁移类预处理器
+- 其他特殊用途预处理器
 
  重启 WebUI
 

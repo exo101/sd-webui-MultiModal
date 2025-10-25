@@ -210,7 +210,12 @@ https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/sum
 
 
 ### 模型版本
-不同版本的模型在文件名中有明确标识，如 `lightningv1.0`、`lightningv1.1`、`lightningv2.0` 等。
+
+ lightning是加速 8steps 是8步就能生成图像，没有此类标识的模型需要增加推理步数和引导数
+ 
+ svdq-fp4_r128-qwen-image-lightningv1.1-8steps 使用时就是 推理步数8，引导数是 1
+
+ svdq-fp4_r128-qwen-image.safetensors  使用时就是 推理步数至少15往上了，引导数是 4 
  
 生成信息（如配置参数、生成时间等）也会一并记录
  
@@ -221,9 +226,7 @@ https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/sum
    之前一直部署不上webui是因为没有好的优化方法和策略，最近参考了comfyui的nunchaku优化方法，生成时间与配置压力大幅度减少
     为大家带来更加便利的的使用方式，生成成功时会记录配置与参数设置信息
     ControINet在默认状态下是启用状态，只使用文生图需要关闭启用，这是一个bug
-
     
-   
  - qwen-image为例
    <img width="861" height="435" alt="122" src="https://github.com/user-attachments/assets/650e86f6-a822-424d-ae60-9fed1f1426aa" />
 

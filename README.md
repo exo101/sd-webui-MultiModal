@@ -242,25 +242,20 @@ https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/sum
    点击爆炸图标可预览预处理器结果，权重0.7-1之间，与处理器与模型都在网盘中 Qwen-Image-ControlNet-Union
 
    这是一个综合ControlNet模型，同时具备深度，姿势，线稿，软边缘
+    
+  ControINet在默认状态下是启用状态，只使用文生图需要关闭启用
+  
+  在ControINet中上传图像不能上传超过1500像素的图像，超过后会爆显存，使用qq或微信截图，clit+v粘贴到上传图像的位置就行这样就不必在ps中处理尺寸的问题了
      
    <img width="877" height="552" alt="1241214" src="https://github.com/user-attachments/assets/4807196b-3641-46de-b3c3-25d641e9373c" />
    
   <img width="1776" height="941" alt="2344235" src="https://github.com/user-attachments/assets/45ef3c01-689c-44d4-b543-512fbbdf3c08" />
 
   <img width="1805" height="918" alt="23325" src="https://github.com/user-attachments/assets/2c6de0b0-7b72-4aba-aba7-2ff90368176e" />
-  
-  ControINet在默认状态下是启用状态，只使用文生图需要关闭启用
-  
-  在ControINet中上传图像不能上传超过1500像素的图像，超过后会爆显存，使用qq或微信截图，clit+v粘贴到上传图像的位置就行这样就不必在ps中处理尺寸的问题了
-  
-   <img width="875" height="549" alt="3254525" src="https://github.com/user-attachments/assets/82109fd1-62ed-4e8b-b7fb-13298db373b6" />
-
+ 
    在这些预处理器中只有属于pose，深度，线稿，以及属于他们的变体qwen ControINet才支持，其余不支持，这是qwen官方训练ControINet决定的
    
    <img width="871" height="515" alt="2545676" src="https://github.com/user-attachments/assets/2a2bf747-2035-4723-83e1-4bb18f7e42f0" />
-   ## ControlNet 预处理器支持说明
-
-本文档列出了本项目支持的 ControlNet 预处理器类型。只有属于以下分类的预处理器才被支持：
 
 ### 支持的预处理器类别
 

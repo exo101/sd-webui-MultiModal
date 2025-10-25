@@ -16,15 +16,34 @@
 - 🖌️ **图像分割**: 集成 Segment Anything Model (SAM) 进行精确图像分割
 - 🧹 **图像清理**: 提供图像清理和修复功能
 - 🎬 **视频关键帧提取**: 从视频中提取关键帧用于进一步处理
-- 🤖 **数字人视频生成**: 基于 LatentSync 实现音频驱动的数字人视频生成
+- 🤖 **数字人视频生成**: 基于 LatentSync 实现音频驱动的数字人唇形同步视频生成
 - 🔊 **TTS语音合成**: 集成 Index-TTS 实现高质量文本转语音
 - 🌟 **FLUX.1 图像编辑**: 集成 FLUX.1-Kontext 进行上下文感知的图像编辑
 - 🌟 **Qwen-Image复杂文本渲染和qwen-image-edit-2509精确图像编辑
-- 
-  插件支持：
+
+## 各项目配置显存要求
+
+### Qwen-Image (qwen-image)
+- **显存要求**: 8GB以上
+
+- ### Qwen3vL 
+- **显存要求**: 8GB以上
   
-| `qwen-image-edit2509\qwen-image\` | `qwen-image ControlNet` | `qwen3VL` | `Index-TTS2` | `LatentSync` | `Ollama` |
-| `deepseek` | `Segment Anything` | `FLUX.1-Kontext` | `FLUX` | `XL` | `XL ControlNet` |`不支持FLUX ControlNet` |
+### LatentSync
+- **显存要求**: 12GB
+  
+### Index-TTS
+- **显存要求**: 6GB以上
+- 
+### FLUX.1-Kontext
+- **显存要求**: 12GB以上
+- 
+### Cleaner
+- **显存要求**: 4GB以上
+- 
+### Segment Anything 
+- **显存要求**: 4GB以上
+ 
 
 个人主页：[https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click ](https://space.bilibili.com/403361177?spm_id_from=333.40164.0.0) 
 

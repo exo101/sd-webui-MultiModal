@@ -58,17 +58,6 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
  
 <img width="660" height="387" alt="14" src="https://github.com/user-attachments/assets/32c734e4-e84f-4909-a020-3fee6abe35ad" />
 
-| 整合包目录 | 插件目录 | 插件子目录 |项目代码目录|说明 |
-|----------|-------|-----------|-----------|-----------|
-| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`cleaner`|图像分割插件配置文件|
-| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`index-tts2`| 图像清理插件配置文件|
-| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`FLUX.1-Kontext`|图像编辑插件配置文件|
-| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`index-tts2`| Index-TTS语音合成配置文件|
-| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`LatentSync`|数字人视频生成模型与配置文件|
-| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`qwen-image`|模型文件配置文件 |
-| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`scripts`| 主插件配置文件|
-| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`XYKC_AI`| 图像识别插件配置文件|
-
 ## 插件模型目录
 | 整合包目录 | 模型目录 | 子目录 |说明 |
 |----------|-----|-----------|-----------|

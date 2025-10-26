@@ -61,7 +61,7 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 ## 插件模型目录
 
 | 主目录 | 子目录 | 说明 |
-|-------|-------|------|
+|----------|-----------|------|
 | `sd-webui-forge-aki-v4.4\`|`models\sam` | 图像分割模型目录 |
 | `sd-webui-forge-aki-v4.4\`|`models\cleaner\`| 图像清理模型目录 |
 | `sd-webui-forge-aki-v4.4\`|`extensions\sd-webui-MultiModal\LatentSync\` | 数字人视频生成模型目录 |

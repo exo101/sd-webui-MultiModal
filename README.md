@@ -61,20 +61,20 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 ## 插件模型目录
 
 | 整合包目录 | 模型目录 | 子目录 |说明 |
-|----------|-----------|-----------|-----------|
-| `sd-webui-forge-aki-v4.4`|`models`|`sam` | 图像分割模型目录 |
-| `sd-webui-forge-aki-v4.4`|`models`|`cleaner\`| 图像清理模型目录 |
-| `sd-webui-forge-aki-v4.4`|`models`|`index-tts2`| Index-TTS语音合成模型目录 |
-| `sd-webui-forge-aki-v4.4`|`models`|`FLUX.1-Kontext-dev` | 图像编辑模型目录 |
-| `sd-webui-forge-aki-v4.4`|`models`|`lora`|`FLUX.1-Kontext`| LoRA微调模型目录 |
-| `sd-webui-forge-aki-v4.4`|`models`|`qwen-image`| qwen模型文件目录 |
-| `sd-webui-forge-aki-v4.4`|`models`|`qwen-image`|`qwenimage`| qwen文生图主模型目录 |
-| `sd-webui-forge-aki-v4.4`|`models`|`qwen-image`|`qwen-image-edit\`| qwen图像编辑主模型目录 |
-| `sd-webui-forge-aki-v4.4`|`models`|`ControlNet`|` Qwen-Image-ControlNet-Union`| qwen ControlNet模型目录 |
-| `sd-webui-forge-aki-v4.4`|`models`|`Qwen3-VL-4B-Instruct` | qwen3 VL模型文件目录 |
-| `sd-webui-forge-aki-v4.4`|`models`|` Codeformer，faceswaplab，insightface，GFPGAN`| 换脸插件模型文件目录 |
-| `sd-webui-forge-aki-v4.4`|`extensions\|sd-webui-MultiModal\LatentSync\` | 数字人视频生成模型目录 |
-| `C:`                     |`ffmpeg\`| 语音与视频合成依赖文件目录 |
+|----------|-----|-----------|-----------|
+| `sd-webui-forge-aki`|`models`|`sam` | 图像分割模型目录 |
+| `sd-webui-forge-aki`|`models`|`cleaner\`| 图像清理模型目录 |
+| `sd-webui-forge-aki`|`models`|`index-tts2`| Index-TTS语音合成模型目录 |
+| `sd-webui-forge-aki`|`models`|`FLUX.1-Kontext-dev` | 图像编辑模型目录 |
+| `sd-webui-forge-aki`|`models`|`lora`|`FLUX.1-Kontext`| LoRA微调模型目录 |
+| `sd-webui-forge-aki`|`models`|`qwen-image`| qwen模型文件目录 |
+| `sd-webui-forge-aki`|`models`|`qwen-image`|`qwenimage`| qwen文生图主模型目录 |
+| `sd-webui-forge-aki`|`models`|`qwen-image`|`qwen-image-edit\`| qwen图像编辑主模型目录 |
+| `sd-webui-forge-aki`|`models`|`ControlNet`|` Qwen-Image-ControlNet-Union`| qwen ControlNet模型目录 |
+| `sd-webui-forge-aki`|`models`|`Qwen3-VL-4B-Instruct` | qwen3 VL模型文件目录 |
+| `sd-webui-forge-aki`|`models`|` Codeformer，faceswaplab，insightface，GFPGAN`| 换脸插件模型文件目录 |
+| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`LatentSync`| 数字人视频生成模型目录 |
+| `C:`                |`ffmpeg\`| 语音与视频合成依赖文件目录 |
 
 - 安装OllamaSetup.exe应用程序
 

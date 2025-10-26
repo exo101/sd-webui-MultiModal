@@ -65,7 +65,7 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 | `sd-webui-forge-aki`|`models`|`cleaner`| 图像清理模型目录 |
 | `sd-webui-forge-aki`|`models`|`index-tts2`| Index-TTS语音合成模型目录 |
 | `sd-webui-forge-aki`|`models`|`FLUX.1-Kontext-dev`| 图像编辑模型目录 |
-| `sd-webui-forge-aki`|`models`|`lora`|Kontext LoRA微调模型目录 |
+| `sd-webui-forge-aki`|`models`|`lora`|qwen LoRA微调模型目录 |
 | `sd-webui-forge-aki`|`models`|`qwen-image`| qwen模型文件目录 |
 | `sd-webui-forge-aki`|`models`|`qwen-image\qwenimage`| qwen文生图主模型目录 |
 | `sd-webui-forge-aki`|`models`|`qwen-image\qwen-image-edit`| qwen图像编辑主模型目录 |

@@ -56,28 +56,38 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 
 ## 功能模块详细介绍
  ## 插件目录
+ 
 <img width="660" height="387" alt="14" src="https://github.com/user-attachments/assets/32c734e4-e84f-4909-a020-3fee6abe35ad" />
+| 整合包目录 | 插件目录 | 插件子目录 |项目代码目录 | 说明 |
+|----------|-------|-----------|-----------|-----------|
+| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|` cleaner`|图像分割插件配置文件|
+| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`index-tts2`| 图像清理插件配置文件|
+| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`FLUX.1-Kontext`|图像编辑插件配置文件|
+| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`index-tts2`| Index-TTS语音合成配置文件|
+| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`LatentSync`|数字人视频生成模型与配置文件|
+| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`qwen-image`|模型文件配置文件 |
+| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`scripts`| 主插件配置文件|
+| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`XYKC_AI`| 图像识别插件配置文件|
 
 ## 插件模型目录
-
 | 整合包目录 | 模型目录 | 子目录 |说明 |
 |----------|-----|-----------|-----------|
-| `sd-webui-forge-aki`|`models`|`sam` | 图像分割模型目录 |
-| `sd-webui-forge-aki`|`models`|`cleaner\`| 图像清理模型目录 |
+| `sd-webui-forge-aki`|`models`|`sam`| 图像分割模型目录 |
+| `sd-webui-forge-aki`|`models`|`cleaner`| 图像清理模型目录 |
 | `sd-webui-forge-aki`|`models`|`index-tts2`| Index-TTS语音合成模型目录 |
-| `sd-webui-forge-aki`|`models`|`FLUX.1-Kontext-dev` | 图像编辑模型目录 |
-| `sd-webui-forge-aki`|`models`|`lora`|`FLUX.1-Kontext`| LoRA微调模型目录 |
+| `sd-webui-forge-aki`|`models`|`FLUX.1-Kontext-dev`| 图像编辑模型目录 |
+| `sd-webui-forge-aki`|`models`|`lora`|Kontext LoRA微调模型目录 |
 | `sd-webui-forge-aki`|`models`|`qwen-image`| qwen模型文件目录 |
-| `sd-webui-forge-aki`|`models`|`qwen-image`|`qwenimage`| qwen文生图主模型目录 |
-| `sd-webui-forge-aki`|`models`|`qwen-image`|`qwen-image-edit\`| qwen图像编辑主模型目录 |
-| `sd-webui-forge-aki`|`models`|`ControlNet`|` Qwen-Image-ControlNet-Union`| qwen ControlNet模型目录 |
+| `sd-webui-forge-aki`|`models`|`qwen-image\qwenimage`| qwen文生图主模型目录 |
+| `sd-webui-forge-aki`|`models`|`qwen-image\qwen-image-edit`| qwen图像编辑主模型目录 |
+| `sd-webui-forge-aki`|`models`|`ControlNet\ Qwen-Image-ControlNet-Union`| qwen ControlNet模型目录 |
 | `sd-webui-forge-aki`|`models`|`Qwen3-VL-4B-Instruct` | qwen3 VL模型文件目录 |
 | `sd-webui-forge-aki`|`models`|` Codeformer，faceswaplab，insightface，GFPGAN`| 换脸插件模型文件目录 |
-| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`LatentSync`| 数字人视频生成模型目录 |
-| `C:`                |`ffmpeg\`| 语音与视频合成依赖文件目录 |
+| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal\LatentSync`| 数字人视频生成模型目录 |
 
-- 安装OllamaSetup.exe应用程序
-
+- 安装OllamaSetup.exe应用程序至C盘
+- | `C:`|`ffmpeg\`| 语音与视频合成依赖文件放置c盘根目录 |
+  
 模型已存至网盘
 <img width="1128" height="587" alt="QQ20251023-180519" src="https://github.com/user-attachments/assets/9edfb153-9351-4da5-a30b-685ad9c8891e" />
 

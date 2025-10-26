@@ -54,13 +54,13 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 - 2025/10/18 添加qwen-image ControlNet。同时实现了深度，姿势，线稿，软边缘
 - 2025/10/12 更新多模态SD插件12版本：增加第八个功能标签页 qwen-image与 qwen-image-edit plus
 
-## 功能模块详细介绍
  ## 插件目录
  
 <img width="660" height="387" alt="14" src="https://github.com/user-attachments/assets/32c734e4-e84f-4909-a020-3fee6abe35ad" />
-| 整合包目录 | 插件目录 | 插件子目录 |项目代码目录 | 说明 |
+
+| 整合包目录 | 插件目录 | 插件子目录 |项目代码目录|说明 |
 |----------|-------|-----------|-----------|-----------|
-| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|` cleaner`|图像分割插件配置文件|
+| `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`cleaner`|图像分割插件配置文件|
 | `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`index-tts2`| 图像清理插件配置文件|
 | `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`FLUX.1-Kontext`|图像编辑插件配置文件|
 | `sd-webui-forge-aki`|`extensions`|`sd-webui-MultiModal`|`index-tts2`| Index-TTS语音合成配置文件|

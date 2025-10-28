@@ -95,7 +95,10 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 - 根据显存大小推荐合适的模型（8GB显存推荐1.7B/3B模型，16GB显存可选latest/7B模型），参数越大响应速度越慢质量越高
 - 安装ollama应用程序 https://ollama.com/search
 - 安装(qwen2.5vl)视觉模型与(qwen3)语言模型，在计算机开始菜单搜索栏输入CMD执行以下命令
-ollama run qwen2.5vl:3b    ollama run qwen3:1.7b
+  
+ ollama run qwen2.5vl:3b   
+ 
+ ollama run qwen3:1.7b
 
 <img width="1107" height="385" alt="123" src="https://github.com/user-attachments/assets/454cc34a-ca0a-4f4d-a816-539859c484de" />
 <img width="1851" height="953" alt="3" src="https://github.com/user-attachments/assets/aaaedc60-8b8a-4d13-85e1-64599e71d5b1" />

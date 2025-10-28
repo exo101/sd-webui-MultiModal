@@ -179,11 +179,10 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 - GGUF量化模型优化使用门槛12g显存可用
 - 单图编辑
 - <img width="729" height="485" alt="22" src="https://github.com/user-attachments/assets/564199b4-bad1-4cfb-9629-88632482c6fa" />
- <img width="864" height="1200" alt="generated_image_1756609759_img1_var2" src="https://github.com/user-attachments/assets/93b6c6a8-a8cd-424c-bf4a-2b02a83ca495" />
-
- 双图编辑
- <img width="1813" height="571" alt="21" src="https://github.com/user-attachments/assets/4df0079b-ff8d-4290-ae16-7e367eb90881" />
- <img width="1024" height="1024" alt="dual_context_image_1756582213_var1" src="https://github.com/user-attachments/assets/1bf91812-70a9-4662-aed1-ac6839a274ab" />
+- <img width="864" height="1200" alt="generated_image_1756609759_img1_var2" src="https://github.com/user-attachments/assets/93b6c6a8-a8cd-424c-bf4a-2b02a83ca495" />
+- 双图编辑
+- <img width="1813" height="571" alt="21" src="https://github.com/user-attachments/assets/4df0079b-ff8d-4290-ae16-7e367eb90881" />
+- <img width="1024" height="1024" alt="dual_context_image_1756582213_var1" src="https://github.com/user-attachments/assets/1bf91812-70a9-4662-aed1-ac6839a274ab" />
 
  ### 8. qwen-image图像生成介绍
  

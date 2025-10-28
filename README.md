@@ -50,7 +50,7 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
     
 ### 更新内容
 
-- 2025/10/29 添加nunchaku qwen lora 功能支持，修复ControlNet应用启用框bug，更新完善qwen-image ControlNet实现多个变体预处理器
+- 2025/10/29 添加nunchaku qwen lora 功能支持，增加随机种子，生成批次，修复ControlNet应用启用框bug，更新完善qwen-image ControlNet实现多个变体预处理器
 - 2025/10/24 webui frogr 整合包更新之4.4版本，支持了qwen3VL，更新了transformers==4.57.0
 - 但会牺牲Index-TTS2语音合成功能使用，因为Index-TTS2需要的是transformers==4.52.1版本，两者存在冲突
 - 2025/10/18 添加qwen-image ControlNet。同时实现了深度，姿势，线稿，软边缘
@@ -258,10 +258,6 @@ https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/sum
   
   在ControINet中上传图像不能上传超过1500像素的图像，超过后会爆显存，使用qq或微信截图，clit+v粘贴到上传图像的位置就行这样就不必在ps中处理尺寸的问题了
      
-   <img width="877" height="552" alt="1241214" src="https://github.com/user-attachments/assets/4807196b-3641-46de-b3c3-25d641e9373c" />
-   
-  <img width="1776" height="941" alt="2344235" src="https://github.com/user-attachments/assets/45ef3c01-689c-44d4-b543-512fbbdf3c08" />
-
   <img width="1805" height="918" alt="23325" src="https://github.com/user-attachments/assets/2c6de0b0-7b72-4aba-aba7-2ff90368176e" />
  
    在这些预处理器中只有属于pose，深度，线稿，以及属于他们的变体qwen ControINet才支持，其余不支持，这是qwen官方训练ControINet决定的

@@ -47,6 +47,8 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
   旧整合包已不适用日益更新的AI应用与50系显卡，我为此更新了新整合包环境，补充落后的webui生态
   https://github.com/exo101/sd-webui-forge-aki-v4.0/tree/main
 
+### 更新内容
+
 - 克隆本仓库到 extensions 目录： sd-webui-forge-aki-v4.4/extensions
 - 2025/10/24 webui frogr 整合包更新之4.4版本
 - 2025/10/24 支持qwen3VL需要transformers==4.57.0，但会牺牲Index-TTS2语音合成功能使用，因为Index-TTS2需要的是transformers==4.52.1版本，两者存在冲突

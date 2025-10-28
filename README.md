@@ -60,7 +60,7 @@ WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_fr
 
 ## 插件模型目录
 | 整合包目录 | 模型目录 | 子目录 |说明 |
-|----------|-----|-----------|-----------|
+|---------------------|--------|-----------|-----------|
 | `sd-webui-forge-aki`|`models`|`sam`| 图像分割模型目录 |
 | `sd-webui-forge-aki`|`models`|`cleaner`| 图像清理模型目录 |
 | `sd-webui-forge-aki`|`models`|`index-tts2`| Index-TTS语音合成模型目录 |
@@ -297,25 +297,18 @@ https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/sum
 #### 3. 线稿类 (Lineart)
 用于提取或生成线条画的预处理器：
 - lineart_standard (from white bg & black line)
-- lineart
+- lineart_realistic
 - lineart_coarse
 - lineart_anime
 - lineart_anime_denoise
 - invert (from white bg & black line)
-- scribble_pidinet
-- scribble_xdog
+- 
+ #### 4. 软边缘类 (softedge)
 - softedge_pidinet
 - softedge_pidinet_safe
 - softedge_pidinstruct
 - softedge_hed
 - softedge_hedsafe
-- mlsd
-
-#### 4. 其他变体
-包括以上三类的变体和增强版本，例如：
-- 各种组合形式（如同时包含姿态和手部检测）
-- 不同算法实现的相同功能预处理器
-- 带有特定后处理效果的变体
 
 ### 不支持的预处理器类别
 
@@ -326,7 +319,7 @@ https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/sum
 - 边缘检测类预处理器（除线稿类外）
 - 风格迁移类预处理器
 - 其他特殊用途预处理器
-
+- 带有特定后处理效果的变体
  重启 WebUI
 
 ## 使用须知

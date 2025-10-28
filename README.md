@@ -123,9 +123,8 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 #### 智能抠图
 - 基于 rembg 实现高质量背景移除<img width="1782" height="896" alt="7" src="https://github.com/user-attachments/assets/63e9293d-09b2-494a-8ea9-8eaa46aef287" />
 
-- 支持透明背景和自定义背景色
+- 支持透明背景和自定义背景色， 实时预览效果
 - 批量处理功能<img width="1798" height="679" alt="8" src="https://github.com/user-attachments/assets/9450ffa8-f8ac-4ca0-bccd-7e709f873369" />
-- 实时预览效果
 
 #### 图像分割
 - 集成 Segment Anything Model (SAM)
@@ -135,34 +134,28 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 <img width="1816" height="909" alt="9" src="https://github.com/user-attachments/assets/08b633ba-7ed8-4886-a6f3-e22a3bd7cb8e" />
 
 #### 图像清理
-- 图像去噪和修复功能
-- 简单易用的界面<img width="1835" height="741" alt="11" src="https://github.com/user-attachments/assets/4ac7c40d-971c-4364-8cc1-73a872fcec79" />
 
-- 支持多种清理模式
+- 图像去噪和修复功能，支持多种清理模式
+- 简单易用的界面<img width="1835" height="741" alt="11" src="https://github.com/user-attachments/assets/4ac7c40d-971c-4364-8cc1-73a872fcec79" />
 
 ### 4. 视频关键帧提取
 - 多种提取模式（关键帧/等间隔/场景变化）
-- 可调节提取质量
-- 支持多种视频格式
+- 可调节提取质量，支持多种视频格式
 - 可预览提取的帧<img width="1809" height="677" alt="12" src="https://github.com/user-attachments/assets/23b3cb3d-c763-4432-894f-fdc84b8c7b9f" />
-
 
 ### 5. 数字人视频生成 
 - 基于 LatentSync 的音频驱动视频生成
-- 支持自定义推理步数和引导尺度
 - 需要清晰正面人脸的视频作为输入
-- 支持多种音频格式
--  使用语音合成或视频处理功能需将ffmpeg放置c盘根目录
+- 使用语音合成或视频处理功能需将ffmpeg放置c盘根目录
 - 开始菜单搜索环境变量， 添加C:\ffmpeg\bin到环境变量
-<img width="1831" height="925" alt="18" src="https://github.com/user-attachments/assets/4b380e69-3814-4078-ac3e-9f228d83bcde" />
-https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
+ <img width="1831" height="925" alt="18" src="https://github.com/user-attachments/assets/4b380e69-3814-4078-ac3e-9f228d83bcde" />
+ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 
 ### 6. Index-TTS语音合成
 
 - 集成 Index-TTS 实现高质量语音合成
-- 支持多种语音风格
-- 可调节语速、音调等参数
 - 支持中文和多语言合成
+- 可调节语速、音调等参数
 - 使用语音合成或视频处理功能需将ffmpeg放置c盘根目录
 - 开始菜单搜索环境变量， 添加C:\ffmpeg\bin到环境变量
 - <img width="722" height="479" alt="QQ20251018-013019" src="https://github.com/user-attachments/assets/4fe32403-16bd-47c2-9639-59390b7cd741" />
@@ -173,9 +166,7 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 
 
 ### 7. FLUX.1-Kontext图像编辑
-- 上下文感知的图像编辑功能
-- 支持基于文本的图像修改
-- 保持图像上下文一致性
+- 上下文感知的图像编辑功能，基于文本的图像修改
 - GGUF量化模型优化使用门槛12g显存可用
 - 单图编辑
 - <img width="729" height="485" alt="22" src="https://github.com/user-attachments/assets/564199b4-bad1-4cfb-9629-88632482c6fa" />
@@ -187,21 +178,22 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
  ### 8. qwen-image图像生成介绍
  
  - qwen-image基本文字生成，中文理解，参数大的特点，
- - qwen-image-edit plus具备编辑图像，实现多种编辑效果的模型，
- - 之前一直部署不上webui是因为没有好的优化方法和策略，参考了comfyui的nunchaku优化方法，生成时间与配置压力大幅度减少  
+ - qwen-image-edit plus具备编辑图像，实现多种编辑效果的模型
+ - 之前一直部署不上webui是因为没有好的优化方法和策略，参考了comfyui的nunchaku优化方法，生成时间与配置压力大幅度减少
+ - 在高配置的电脑上体现不出明显的时间差距，迭代步数越高时间越长，质量越高，最高不超过40 
  - <img width="1825" height="765" alt="88" src="https://github.com/user-attachments/assets/03327093-bb00-4a5f-ad11-a3ed31aaa90b" />
  - 模型分为适用于非 Blackwell GPU（50 系列之前的用户）适用于 Blackwell GPU（50 系列）的用户。
  - qwen-image文生图加速主模型详情页介绍
  - https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
  - qwen-image-edit编辑加速主模型详情页介绍
  - https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
+ - qwen模型演示教程https://www.bilibili.com/video/BV1zn4TzKEdW/?spm_id_from=333.1387.homepage.video_card.click&vd_source=343e49b703fb5b4137cd6c1987846f37
 
 ### 模型版本
    
  - lightning是加速 8steps 是8步就能生成高质量图像了，当然步数越大时间越长，质量也高，没有此类标识的模型需要增加推理步数和引导数，
  - svdq-fp4_r128-qwen-image-lightningv1.1-8steps 使用时就是 推理步数可从低到高 8或20，引导数是 1
  - svdq-fp4_r128-qwen-image.safetensors  使用时就是 推理步数至少15往上，引导数是 4
- - 
  - 我在网盘当中下载的模型是适合50系列模型，如果你是非50系显卡，需要自行下载主模型，其余模型组件不必重新下载，50系显卡除外的用户下载我截图当中的模型
  - <img width="1256" height="898" alt="QQ20251023-190930" src="https://github.com/user-attachments/assets/a430135c-dc93-4515-b69a-34fa0e4d751f" /> 
  - <img width="1226" height="836" alt="QQ20251023-190809" src="https://github.com/user-attachments/assets/6db3520d-266e-4c75-9dbf-2cd972e572f4" />
@@ -209,22 +201,14 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
  - 模型目录内的qwenimage与qwen-image-edit是主模型
  - <img width="762" height="495" alt="24542525" src="https://github.com/user-attachments/assets/f8e58477-3e33-478c-ac0f-495da4adea4e" />
  - <img width="1474" height="960" alt="图层 2" src="https://github.com/user-attachments/assets/e6dcf697-2d5e-4612-80fd-732bf7afb4f9" />
-
- 
- - qwen模型演示教程https://www.bilibili.com/video/BV1zn4TzKEdW/?spm_id_from=333.1387.homepage.video_card.click&vd_source=343e49b703fb5b4137cd6c1987846f37
-    
- - qwen-image为例
-   <img width="861" height="435" alt="122" src="https://github.com/user-attachments/assets/650e86f6-a822-424d-ae60-9fed1f1426aa" />
-
+ - qwen-image为例 <img width="861" height="435" alt="122" src="https://github.com/user-attachments/assets/650e86f6-a822-424d-ae60-9fed1f1426aa" /> 
  - 以编辑模型为例，不融合lightning的 svdq-fp4_r128-qwen-image-edit-2509.safetensors质量最高，生成时间最长
+ - 模型最多支持上传三张图像，但多图编辑能力弱于单图编辑能力
  - <img width="1815" height="854" alt="333" src="https://github.com/user-attachments/assets/37e5f859-263d-478d-ab63-b9d41a682217" />
  - <img width="866" height="375" alt="111" src="https://github.com/user-attachments/assets/f0601d64-fec4-4efd-b841-e44b3277e246" />
  - 融合lightning的8步模型 svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors 质量较好，生成时间中等
  - <img width="859" height="359" alt="222" src="https://github.com/user-attachments/assets/b6935a43-1868-4b0b-b8a5-cd0cd3bf4ff2" /> 
- - 在高配置的电脑上体现不出明显的时间差距，迭代步数越高时间越长，质量越高，最高不超过40，
- - 模型最多支持上传三张图像，但多图编辑能力弱于单图编辑能力
- - mg width="1842" height="947" alt="4444" src="https://github.com/user-attachments/assets/e2329e50-db48-4f1a-9cec-c293933f4993" />
-     
+   
 ### 8. qwen-image ControlNet 模型
    
   - qwen 使用方式与XL ControlNet并无差别，得益于qwen模型的优化能力生成效果与质量要远比XL好的多 

@@ -91,7 +91,7 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 - 显示插件使用说明和更新日志<img width="1245" height="650" alt="1" src="https://github.com/user-attachments/assets/f9b99645-a76a-43ce-aa27-1d5774e9cfa3" />
 
 ### 2. 图像识别与语言交互
-- 示例教程：https://www.bilibili.com/video/BV1xkMHzkE6n?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
+- 示例教程：[https://www.bilibili.com/video/BV1xkMHzkE6n?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37](https://www.bilibili.com/video/BV1NSTKzfEq7?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37)
 - 支持多种视觉模型（Qwen3VL、LLaMA-Vision等）
 - 支持多种语言模型（Qwen、DeepSeek等）
 - 提供快捷提示词模板

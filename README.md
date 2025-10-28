@@ -35,9 +35,11 @@
 
 个人主页：[https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click ](https://space.bilibili.com/403361177?spm_id_from=333.40164.0.0) 
 
-WebUI Forge使用介绍：[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37  ](https://www.bilibili.com/video/BV1FWtBzbEiR?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37)
+WebUI Forge使用介绍：
+[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37  ](https://www.bilibili.com/video/BV1FWtBzbEiR?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37)
 
-多模态插件使用介绍：[https://www.bilibili.com/video/BV16Ta3zFEpn?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37](https://www.bilibili.com/video/BV1B6xCzNEAT/?spm_id_from=333.1387.homepage.video_card.click&vd_source=343e49b703fb5b4137cd6c1987846f37)
+多模态插件使用介绍：
+[https://www.bilibili.com/video/BV1DSW4zTEGR?spm_id_from=333.788.player.switch&vd_source=343e49b703fb5b4137cd6c1987846f37&p=2](https://www.bilibili.com/video/BV1DSW4zTEGR?spm_id_from=333.788.player.switch&vd_source=343e49b703fb5b4137cd6c1987846f37&p=2)
 
 WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 
@@ -82,7 +84,6 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 模型已存至网盘
 <img width="1128" height="587" alt="QQ20251023-180519" src="https://github.com/user-attachments/assets/9edfb153-9351-4da5-a30b-685ad9c8891e" />
 
-
 ### 1. 资源汇总
 
 - 集中展示重要公告和资源信息
@@ -90,6 +91,7 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 - 显示插件使用说明和更新日志<img width="1245" height="650" alt="1" src="https://github.com/user-attachments/assets/f9b99645-a76a-43ce-aa27-1d5774e9cfa3" />
 
 ### 2. 图像识别与语言交互
+- 示例教程：https://www.bilibili.com/video/BV1xkMHzkE6n?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
 - 支持多种视觉模型（Qwen3VL、LLaMA-Vision等）
 - 支持多种语言模型（Qwen、DeepSeek等）
 - 提供快捷提示词模板
@@ -97,9 +99,8 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 - 根据显存大小推荐合适的模型（8GB显存推荐1.7B/3B模型，16GB显存可选latest/7B模型），参数越大响应速度越慢质量越高
 - 安装ollama应用程序 https://ollama.com/search
 - 安装(qwen2.5vl)视觉模型与(qwen3)语言模型，在计算机开始菜单搜索栏输入CMD执行以下命令
-  
+
  ollama run qwen2.5vl:3b   
- 
  ollama run qwen3:1.7b
 
 <img width="1107" height="385" alt="123" src="https://github.com/user-attachments/assets/454cc34a-ca0a-4f4d-a816-539859c484de" />
@@ -121,29 +122,31 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 ### 3. 图像处理工具集
 
 #### 智能抠图
-- 基于 rembg 实现高质量背景移除<img width="1782" height="896" alt="7" src="https://github.com/user-attachments/assets/63e9293d-09b2-494a-8ea9-8eaa46aef287" />
-
-- 支持透明背景和自定义背景色， 实时预览效果
-- 批量处理功能<img width="1798" height="679" alt="8" src="https://github.com/user-attachments/assets/9450ffa8-f8ac-4ca0-bccd-7e709f873369" />
+- 基于 rembg 实现高质量背景移除
+- 支持透明背景和自定义背景色，批量处理功能
+- <img width="1782" height="896" alt="7" src="https://github.com/user-attachments/assets/63e9293d-09b2-494a-8ea9-8eaa46aef287" />
+- <img width="1798" height="679" alt="8" src="https://github.com/user-attachments/assets/9450ffa8-f8ac-4ca0-bccd-7e709f873369" />
 
 #### 图像分割
-- 集成 Segment Anything Model (SAM)
-- 精确的图像分割功能
-- 支持点选和自动分割方式
+
+- 示例教程：https://www.bilibili.com/video/BV143YtzsE1j?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
+- 精确的图像分割功能，支持点选和自动分割方式
 <img width="1812" height="917" alt="10" src="https://github.com/user-attachments/assets/c0ca0f59-be6e-408c-bb4c-a117d718e588" />
 <img width="1816" height="909" alt="9" src="https://github.com/user-attachments/assets/08b633ba-7ed8-4886-a6f3-e22a3bd7cb8e" />
 
 #### 图像清理
-
+- 示例教程：https://www.bilibili.com/video/BV1YRehz1EBz?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
 - 图像去噪和修复功能，支持多种清理模式
 - 简单易用的界面<img width="1835" height="741" alt="11" src="https://github.com/user-attachments/assets/4ac7c40d-971c-4364-8cc1-73a872fcec79" />
 
 ### 4. 视频关键帧提取
+- 示例教程：https://www.bilibili.com/video/BV1nFarzjExK?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
 - 多种提取模式（关键帧/等间隔/场景变化）
 - 可调节提取质量，支持多种视频格式
 - 可预览提取的帧<img width="1809" height="677" alt="12" src="https://github.com/user-attachments/assets/23b3cb3d-c763-4432-894f-fdc84b8c7b9f" />
 
 ### 5. 数字人视频生成 
+- 示例教程：https://www.bilibili.com/video/BV1Vr8XzcE2a?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
 - 基于 LatentSync 的音频驱动视频生成
 - 需要清晰正面人脸的视频作为输入
 - 使用语音合成或视频处理功能需将ffmpeg放置c盘根目录
@@ -153,6 +156,7 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 
 ### 6. Index-TTS语音合成
 
+- 示例教程：https://www.bilibili.com/video/BV1ngpHzvETn?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
 - 集成 Index-TTS 实现高质量语音合成
 - 支持中文和多语言合成
 - 可调节语速、音调等参数
@@ -166,18 +170,16 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 
 
 ### 7. FLUX.1-Kontext图像编辑
+- 示例教程：https://www.bilibili.com/video/BV1BeaGz8EEC?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
 - 上下文感知的图像编辑功能，基于文本的图像修改
 - GGUF量化模型优化使用门槛12g显存可用
-- 单图编辑
-- <img width="729" height="485" alt="22" src="https://github.com/user-attachments/assets/564199b4-bad1-4cfb-9629-88632482c6fa" />
-- <img width="864" height="1200" alt="generated_image_1756609759_img1_var2" src="https://github.com/user-attachments/assets/93b6c6a8-a8cd-424c-bf4a-2b02a83ca495" />
-- 双图编辑
 - <img width="1813" height="571" alt="21" src="https://github.com/user-attachments/assets/4df0079b-ff8d-4290-ae16-7e367eb90881" />
 - <img width="1024" height="1024" alt="dual_context_image_1756582213_var1" src="https://github.com/user-attachments/assets/1bf91812-70a9-4662-aed1-ac6839a274ab" />
 
  ### 8. qwen-image图像生成介绍
  
- - qwen-image基本文字生成，中文理解，参数大的特点，
+ - qwen模型演示教程https://www.bilibili.com/video/BV1zn4TzKEdW/?spm_id_from=333.1387.homepage.video_card.click&vd_source=343e49b703fb5b4137cd6c1987846f37
+ - qwen-image基本文字生成，中文理解，参数大的特点
  - qwen-image-edit plus具备编辑图像，实现多种编辑效果的模型
  - 之前一直部署不上webui是因为没有好的优化方法和策略，参考了comfyui的nunchaku优化方法，生成时间与配置压力大幅度减少
  - 在高配置的电脑上体现不出明显的时间差距，迭代步数越高时间越长，质量越高，最高不超过40 
@@ -187,7 +189,7 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
  - https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
  - qwen-image-edit编辑加速主模型详情页介绍
  - https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
- - qwen模型演示教程https://www.bilibili.com/video/BV1zn4TzKEdW/?spm_id_from=333.1387.homepage.video_card.click&vd_source=343e49b703fb5b4137cd6c1987846f37
+
 
 ### 模型版本
    
@@ -210,9 +212,10 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
  - <img width="859" height="359" alt="222" src="https://github.com/user-attachments/assets/b6935a43-1868-4b0b-b8a5-cd0cd3bf4ff2" /> 
    
 ### 8. qwen-image ControlNet 模型
-   
+
+  - 示例教程：https://www.bilibili.com/video/BV13PsHz4E2C/?spm_id_from=333.1387.homepage.video_card.click&vd_source=343e49b703fb5b4137cd6c1987846f37
   - qwen 使用方式与XL ControlNet并无差别，得益于qwen模型的优化能力生成效果与质量要远比XL好的多 
-  - 点击爆炸图标可预览预处理器结果，权重0.7-1之间，与处理器与模型都在网盘中 Qwen-Image-ControlNet-Union
+  - 点击爆炸图标可预览预处理器结果，权重0.7-1之间，预处理器与模型都在网盘中 Qwen-Image-ControlNet-Union
   - 这是一个综合ControlNet模型，同时具备深度，姿势，线稿，软边缘
   - 在ControINet中上传图像不能上传超过1500像素的图像，超过后会爆显存，使用qq或微信截图，clit+v粘贴到上传图像的位置就行这样就不必在ps中处理尺寸的问题了
   - <img width="1805" height="918" alt="23325" src="https://github.com/user-attachments/assets/2c6de0b0-7b72-4aba-aba7-2ff90368176e" />

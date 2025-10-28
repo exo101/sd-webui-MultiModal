@@ -185,85 +185,57 @@ https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
  <img width="1813" height="571" alt="21" src="https://github.com/user-attachments/assets/4df0079b-ff8d-4290-ae16-7e367eb90881" />
  <img width="1024" height="1024" alt="dual_context_image_1756582213_var1" src="https://github.com/user-attachments/assets/1bf91812-70a9-4662-aed1-ac6839a274ab" />
 
- ### 8. qwen-image图像生成
+ ### 8. qwen-image图像生成介绍
+ 
+ - qwen-image基本文字生成，中文理解，参数大的特点，
+ - qwen-image-edit plus具备编辑图像，实现多种编辑效果的模型，
+ - 之前一直部署不上webui是因为没有好的优化方法和策略，参考了comfyui的nunchaku优化方法，生成时间与配置压力大幅度减少  
  - <img width="1825" height="765" alt="88" src="https://github.com/user-attachments/assets/03327093-bb00-4a5f-ad11-a3ed31aaa90b" />
-
-qwen-image文生图加速主模型详情页介绍
-https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
-
-qwen-image-edit编辑加速主模型详情页介绍
-https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
-
-模型分为适用于非 Blackwell GPU（50 系列之前的用户）适用于 Blackwell GPU（50 系列）的用户。
-
-我在网盘当中下载的模型是适合50系列模型，如果你是非50系显卡，需要自行下载主模型，其余模型组件不必重新下载
-50系显卡除外的用户下载我截图当中的模型
-<img width="1256" height="898" alt="QQ20251023-190930" src="https://github.com/user-attachments/assets/a430135c-dc93-4515-b69a-34fa0e4d751f" />
-<img width="1226" height="836" alt="QQ20251023-190809" src="https://github.com/user-attachments/assets/6db3520d-266e-4c75-9dbf-2cd972e572f4" />
-
-模型目录内的qwenimage与qwen-image-edit是主模型
-
-<img width="762" height="495" alt="24542525" src="https://github.com/user-attachments/assets/f8e58477-3e33-478c-ac0f-495da4adea4e" />
-<img width="1474" height="960" alt="图层 2" src="https://github.com/user-attachments/assets/e6dcf697-2d5e-4612-80fd-732bf7afb4f9" />
-
+ - 模型分为适用于非 Blackwell GPU（50 系列之前的用户）适用于 Blackwell GPU（50 系列）的用户。
+ - qwen-image文生图加速主模型详情页介绍
+ - https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
+ - qwen-image-edit编辑加速主模型详情页介绍
+ - https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
 
 ### 模型版本
+   
+ - lightning是加速 8steps 是8步就能生成高质量图像了，当然步数越大时间越长，质量也高，没有此类标识的模型需要增加推理步数和引导数，
+ - svdq-fp4_r128-qwen-image-lightningv1.1-8steps 使用时就是 推理步数可从低到高 8或20，引导数是 1
+ - svdq-fp4_r128-qwen-image.safetensors  使用时就是 推理步数至少15往上，引导数是 4
+ - 
+ - 我在网盘当中下载的模型是适合50系列模型，如果你是非50系显卡，需要自行下载主模型，其余模型组件不必重新下载，50系显卡除外的用户下载我截图当中的模型
+ - <img width="1256" height="898" alt="QQ20251023-190930" src="https://github.com/user-attachments/assets/a430135c-dc93-4515-b69a-34fa0e4d751f" /> 
+ - <img width="1226" height="836" alt="QQ20251023-190809" src="https://github.com/user-attachments/assets/6db3520d-266e-4c75-9dbf-2cd972e572f4" />
 
- lightning是加速 8steps 是8步就能生成高质量图像了，当然步数越大时间越长，质量也高，没有此类标识的模型需要增加推理步数和引导数，
- 
- svdq-fp4_r128-qwen-image-lightningv1.1-8steps 使用时就是 推理步数可从低到高 8或20，引导数是 1，
+ - 模型目录内的qwenimage与qwen-image-edit是主模型
+ - <img width="762" height="495" alt="24542525" src="https://github.com/user-attachments/assets/f8e58477-3e33-478c-ac0f-495da4adea4e" />
+ - <img width="1474" height="960" alt="图层 2" src="https://github.com/user-attachments/assets/e6dcf697-2d5e-4612-80fd-732bf7afb4f9" />
 
- svdq-fp4_r128-qwen-image.safetensors  使用时就是 推理步数至少15往上，引导数是 4 
  
-生成信息（如配置参数、生成时间等）也会一并记录
- 
- qwen模型演示教程
- https://www.bilibili.com/video/BV1zn4TzKEdW/?spm_id_from=333.1387.homepage.video_card.click&vd_source=343e49b703fb5b4137cd6c1987846f37
-
-   qwen-image基本文字生成，中文理解，参数大的特点，qwen-image-edit plus具备编辑图像，实现多种编辑效果的模型
-   之前一直部署不上webui是因为没有好的优化方法和策略，最近参考了comfyui的nunchaku优化方法，生成时间与配置压力大幅度减少
-    为大家带来更加便利的的使用方式，生成成功时会记录配置与参数设置信息
-    ControINet在默认状态下是启用状态，只使用文生图需要关闭启用，这是一个bug
+ - qwen模型演示教程https://www.bilibili.com/video/BV1zn4TzKEdW/?spm_id_from=333.1387.homepage.video_card.click&vd_source=343e49b703fb5b4137cd6c1987846f37
     
  - qwen-image为例
    <img width="861" height="435" alt="122" src="https://github.com/user-attachments/assets/650e86f6-a822-424d-ae60-9fed1f1426aa" />
 
- - 以编辑模型为例
-
-    <img width="1815" height="854" alt="333" src="https://github.com/user-attachments/assets/37e5f859-263d-478d-ab63-b9d41a682217" />
-
- -  不融合lightning的 svdq-fp4_r128-qwen-image-edit-2509.safetensors质量最高，生成时间最长
-
-    <img width="866" height="375" alt="111" src="https://github.com/user-attachments/assets/f0601d64-fec4-4efd-b841-e44b3277e246" />
-   
+ - 以编辑模型为例，不融合lightning的 svdq-fp4_r128-qwen-image-edit-2509.safetensors质量最高，生成时间最长
+ - <img width="1815" height="854" alt="333" src="https://github.com/user-attachments/assets/37e5f859-263d-478d-ab63-b9d41a682217" />
+ - <img width="866" height="375" alt="111" src="https://github.com/user-attachments/assets/f0601d64-fec4-4efd-b841-e44b3277e246" />
  - 融合lightning的8步模型 svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors 质量较好，生成时间中等
-
-    <img width="859" height="359" alt="222" src="https://github.com/user-attachments/assets/b6935a43-1868-4b0b-b8a5-cd0cd3bf4ff2" />
-   
- -   在高配置的电脑上体现不出明显的时间差距，迭代步数越高时间越长，质量越高，最高不超过40，
-    
-     编辑模型最多支持上传三张图像，但多图编辑能力弱于单图编辑能力
-    
-     <img width="1842" height="947" alt="4444" src="https://github.com/user-attachments/assets/e2329e50-db48-4f1a-9cec-c293933f4993" />
+ - <img width="859" height="359" alt="222" src="https://github.com/user-attachments/assets/b6935a43-1868-4b0b-b8a5-cd0cd3bf4ff2" /> 
+ - 在高配置的电脑上体现不出明显的时间差距，迭代步数越高时间越长，质量越高，最高不超过40，
+ - 模型最多支持上传三张图像，但多图编辑能力弱于单图编辑能力
+ - mg width="1842" height="947" alt="4444" src="https://github.com/user-attachments/assets/e2329e50-db48-4f1a-9cec-c293933f4993" />
      
-   ### 8. qwen-image ControlNet
+### 8. qwen-image ControlNet 模型
    
-   qwen 使用方式与XL ControlNet并无差别，得益于qwen模型的优化能力生成效果与质量要远比XL好的多
-   
-   点击爆炸图标可预览预处理器结果，权重0.7-1之间，与处理器与模型都在网盘中 Qwen-Image-ControlNet-Union
-
-   这是一个综合ControlNet模型，同时具备深度，姿势，线稿，软边缘
-    
-  ControINet在默认状态下是启用状态，只使用文生图需要关闭启用
+  - qwen 使用方式与XL ControlNet并无差别，得益于qwen模型的优化能力生成效果与质量要远比XL好的多 
+  - 点击爆炸图标可预览预处理器结果，权重0.7-1之间，与处理器与模型都在网盘中 Qwen-Image-ControlNet-Union
+  - 这是一个综合ControlNet模型，同时具备深度，姿势，线稿，软边缘
+  - 在ControINet中上传图像不能上传超过1500像素的图像，超过后会爆显存，使用qq或微信截图，clit+v粘贴到上传图像的位置就行这样就不必在ps中处理尺寸的问题了
+  - <img width="1805" height="918" alt="23325" src="https://github.com/user-attachments/assets/2c6de0b0-7b72-4aba-aba7-2ff90368176e" />
+  - 在这些预处理器中只有属于pose，深度，线稿，以及属于他们的变体qwen ControINet才支持，其余不支持，这是qwen官方训练ControINet决定的
+  - <img width="871" height="515" alt="2545676" src="https://github.com/user-attachments/assets/2a2bf747-2035-4723-83e1-4bb18f7e42f0" />
   
-  在ControINet中上传图像不能上传超过1500像素的图像，超过后会爆显存，使用qq或微信截图，clit+v粘贴到上传图像的位置就行这样就不必在ps中处理尺寸的问题了
-     
-  <img width="1805" height="918" alt="23325" src="https://github.com/user-attachments/assets/2c6de0b0-7b72-4aba-aba7-2ff90368176e" />
- 
-   在这些预处理器中只有属于pose，深度，线稿，以及属于他们的变体qwen ControINet才支持，其余不支持，这是qwen官方训练ControINet决定的
-   
-   <img width="871" height="515" alt="2545676" src="https://github.com/user-attachments/assets/2a2bf747-2035-4723-83e1-4bb18f7e42f0" />
-
 ### 支持的预处理器类别
 
 #### 1. 深度类 (Depth)

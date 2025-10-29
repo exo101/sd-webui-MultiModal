@@ -53,7 +53,7 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 ### 更新内容
 
 - 2025/10/29 添加nunchaku qwen lora 功能支持，增加随机种子，生成批次，
-- 修复ControlNet启用框bug，更新完善qwen-image ControlNet实现多个变体预处理器
+- 修复ControlNet启用框bug，完善qwen-image ControlNet实现多个变体预处理器，排除不支持的预处理器防止误触
 - 修复qwen3VL图像识别返回文本首字符缺失的问题bug
 - 2025/10/24 webui frogr 整合包更新之4.4版本，支持了qwen3VL，更新了transformers==4.57.0
 - 但会牺牲Index-TTS2语音合成功能使用，因为Index-TTS2需要的是transformers==4.52.1版本，两者存在冲突

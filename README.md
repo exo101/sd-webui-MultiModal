@@ -197,34 +197,32 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
  - qwen模型演示教程https://www.bilibili.com/video/BV1zn4TzKEdW/?spm_id_from=333.1387.homepage.video_card.click&vd_source=343e49b703fb5b4137cd6c1987846f37
  - qwen-image基本文字生成，中文理解，参数大的特点
  - qwen-image-edit plus具备编辑图像，实现多种编辑效果的模型
- - 之前一直部署不上webui是因为没有好的优化方法和策略，参考了comfyui的nunchaku优化方法，生成时间与配置压力大幅度减少
- - 在高配置的电脑上体现不出明显的时间差距，迭代步数越高时间越长，质量越高，最高不超过40 
- - <img width="1825" height="765" alt="88" src="https://github.com/user-attachments/assets/03327093-bb00-4a5f-ad11-a3ed31aaa90b" />
+ - 参考了的nunchaku优化方法，生成时间与配置压力大幅度减少
+ - 在高配置的电脑上体现不出明显的时间差距，迭代步数越高时间越长，质量越高，最高不超过40
  - 模型分为适用于非 Blackwell GPU（50 系列之前的用户）适用于 Blackwell GPU（50 系列）的用户。
  - qwen-image文生图加速主模型详情页介绍
  - https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
  - qwen-image-edit编辑加速主模型详情页介绍
  - https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image-edit-2509/summary
-
+   <img width="1825" height="765" alt="88" src="https://github.com/user-attachments/assets/03327093-bb00-4a5f-ad11-a3ed31aaa90b" />
 
 ### 模型版本
-   
- - lightning是加速 8steps 是8步就能生成高质量图像了，当然步数越大时间越长，质量也高，没有此类标识的模型需要增加推理步数和引导数，
- - svdq-fp4_r128-qwen-image-lightningv1.1-8steps 使用时就是 推理步数可从低到高 8或20，引导数是 1
+
+ - Lightning模型是专门为快速推理设计的，训练时使用了特定的CFG设置。，Lightning模型设置为1，普通模型是完整训练的模型，对CFG参数更宽容，可以使用较高的CFG值为4，
+ - svdq-fp4_r128-qwen-image-lightningv1.1-8steps 使用时就是 推理步数10，引导数是 1
  - svdq-fp4_r128-qwen-image.safetensors  使用时就是 推理步数至少15往上，引导数是 4
+ - 由于nunchaku qwen模型是一种量化的优化策略模型，完整版模型有20B参数，qwen lora 模型权重需要调整为1.5才能生效
  - 我在网盘当中下载的模型是适合50系列模型，如果你是非50系显卡，需要自行下载主模型，其余模型组件不必重新下载，50系显卡除外的用户下载我截图当中的模型
  - <img width="1256" height="898" alt="QQ20251023-190930" src="https://github.com/user-attachments/assets/a430135c-dc93-4515-b69a-34fa0e4d751f" /> 
  - <img width="1226" height="836" alt="QQ20251023-190809" src="https://github.com/user-attachments/assets/6db3520d-266e-4c75-9dbf-2cd972e572f4" />
 
  - 模型目录内的qwenimage与qwen-image-edit是主模型
+ - 编辑模型最多支持上传三张图像，但多图编辑能力弱于单图编辑能力
  - <img width="762" height="495" alt="24542525" src="https://github.com/user-attachments/assets/f8e58477-3e33-478c-ac0f-495da4adea4e" />
  - <img width="1474" height="960" alt="图层 2" src="https://github.com/user-attachments/assets/e6dcf697-2d5e-4612-80fd-732bf7afb4f9" />
  - qwen-image为例 <img width="861" height="435" alt="122" src="https://github.com/user-attachments/assets/650e86f6-a822-424d-ae60-9fed1f1426aa" /> 
- - 以编辑模型为例，不融合lightning的 svdq-fp4_r128-qwen-image-edit-2509.safetensors质量最高，生成时间最长
- - 模型最多支持上传三张图像，但多图编辑能力弱于单图编辑能力
  - <img width="1815" height="854" alt="333" src="https://github.com/user-attachments/assets/37e5f859-263d-478d-ab63-b9d41a682217" />
  - <img width="866" height="375" alt="111" src="https://github.com/user-attachments/assets/f0601d64-fec4-4efd-b841-e44b3277e246" />
- - 融合lightning的8步模型 svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors 质量较好，生成时间中等
  - <img width="859" height="359" alt="222" src="https://github.com/user-attachments/assets/b6935a43-1868-4b0b-b8a5-cd0cd3bf4ff2" /> 
    
 ### 8. qwen-image ControlNet 模型

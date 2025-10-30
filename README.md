@@ -43,7 +43,6 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 
 ### 前置要求
 
-  - Stable Diffusion WebUI Forge 环境  
   - 旧整合包已不适用日益更新的AI应用与50系显卡，我为此更新了新整合包环境，补充落后的webui生态
   - https://github.com/exo101/sd-webui-forge-aki-v4.5
   - 下载插件文件到sd-webui-forge-aki-v4.5/extensions目录
@@ -52,7 +51,7 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 
 2025/10/29
   
-- 添加nunchaku qwen lora 功能支持，增加随机种子，生成批次，
+- 添加nunchaku qwen lora 功能支持，增加随机种子，生成批次
 - 修复ControlNet启用框bug，完善qwen-image ControlNet实现多个变体预处理器，排除不支持的预处理器防止误触
 - 修复qwen3VL图像识别返回文本首字符缺失的问题bug
   

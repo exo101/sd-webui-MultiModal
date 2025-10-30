@@ -56,11 +56,10 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 - 修复qwen3VL图像识别返回文本首字符缺失的问题bug
   
 2025/10/24
-  
-- webui frogr 整合包更新之4.4版本，支持了qwen3VL，更新了transformers==4.57.0
-- transformers==4.57.0会牺牲Index-TTS2语音合成功能使用，transformers==4.52.1版本会牺牲qwen3VL
+
+- webui frogr 整合包更新之4.4版本，添加qwen3VL图像识别模型
 - 如果使用Index-TTS2，更改整合包根目录配置requirements_versions文件，降级到transformers==4.52.1版本
-- 如果使用qwen3VL，请保持整合包根目录配置requirements_versions文件，transformers==4.57.0
+- 如果使用qwen3VL，请维持整合包根目录配置requirements_versions文件，transformers==4.57.0版本
 - qwen3VL与Index-TTS2环境库transformers版本两者存在冲突
 
 2025/10/18

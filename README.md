@@ -1,6 +1,4 @@
-# 多模态SD插件
-
-一个为 Stable Diffusion WebUI Forge 设计的多功能集成插件
+# Stable Diffusion WebUI Forge 多模态集成插件
 
 ## 系统要求
 
@@ -76,7 +74,8 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 
  ## 插件目录
  
-<img width="660" height="387" alt="14" src="https://github.com/user-attachments/assets/32c734e4-e84f-4909-a020-3fee6abe35ad" />
+<img width="685" height="477" alt="QQ20251030-223846" src="https://github.com/user-attachments/assets/a1ded7d7-3311-4d15-98b7-34dc3dbcd108" />
+
 
 ## 插件模型目录
 | 整合包目录 | 模型目录 | 子目录 |说明 |

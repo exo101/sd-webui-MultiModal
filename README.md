@@ -90,8 +90,8 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 | `sd-webui-forge-aki`|`models`|`qwen-image\qwenimage`| qwen文生图主模型目录 |
 | `sd-webui-forge-aki`|`models`|`qwen-image\qwen-image-edit`| qwen图像编辑主模型目录 |
 | `sd-webui-forge-aki`|`models`|`ControlNet\ Qwen-Image-ControlNet-Union`| qwen ControlNet模型目录 |
-| `sd-webui-forge-aki`|`models`|`Qwen3-VL-4B-Instruct` | qwen3 VL模型文件目录 |
-| `sd-webui-forge-aki`|`models`|` Codeformer，GFPGAN `| 换脸插件模型文件目录 |
+| `sd-webui-forge-aki`|`models`|`Qwen3-VL-4B-Instruct`|qwen3 VL模型文件目录|
+| `sd-webui-forge-aki`|`models`|` Codeformer`| 换脸插件模型文件目录 |
 | `sd-webui-forge-aki`|`models`|`faceswaplab`|换脸插件模型文件目录|
 | `sd-webui-forge-aki`|`models`|`insightface`|换脸插件模型文件目录|
 | `sd-webui-forge-aki`|`models`|`GFPGAN`|换脸插件模型文件目录 |

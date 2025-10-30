@@ -51,8 +51,9 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 
 2025/10/31
 - 添加nunchaku-qwen-image-edit-2509 lora功能加载
-- 添加一致性场景lora模型pytorch_lora_weights.safetensors
-
+- 添加一致性场景lora模型，pytorch_lora_weights.safetensors
+- qwen-image文生图模型lora，也可以应用到编辑模型当中
+  
 2025/10/29
   
 - 添加nunchaku qwen lora 功能支持，增加随机种子，生成批次

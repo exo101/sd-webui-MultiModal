@@ -166,10 +166,7 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 
 ### 5. 数字人视频生成 
 - 示例教程：https://www.bilibili.com/video/BV1Vr8XzcE2a?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
-- 基于 LatentSync 的音频驱动视频生成
-- 需要清晰正面人脸的视频作为输入
-- 使用语音合成或视频处理功能需将ffmpeg放置c盘根目录
-- 开始菜单搜索环境变量， 添加C:\ffmpeg\bin到环境变量
+- 基于 LatentSync 的音频驱动视频生成， 需要清晰人脸的视频作为输入，唇形同步
  <img width="1831" height="925" alt="18" src="https://github.com/user-attachments/assets/4b380e69-3814-4078-ac3e-9f228d83bcde" />
  https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 
@@ -177,9 +174,7 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 
 - 示例教程：https://www.bilibili.com/video/BV1ngpHzvETn?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
 - 集成 Index-TTS 实现高质量语音合成
-- 支持中文和多语言合成
-- 可调节语速、音调等参数
-- 使用语音合成或视频处理功能需将ffmpeg放置c盘根目录
+- 支持中文和多语言合成，可调节语速、音调等参数
 - 开始菜单搜索环境变量， 添加C:\ffmpeg\bin到环境变量
 - <img width="722" height="479" alt="QQ20251018-013019" src="https://github.com/user-attachments/assets/4fe32403-16bd-47c2-9639-59390b7cd741" />
 - <img width="1693" height="734" alt="QQ20251011-134442" src="https://github.com/user-attachments/assets/651fa968-f16d-4084-b6af-db12ac26632d" />

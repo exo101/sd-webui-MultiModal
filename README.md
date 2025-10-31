@@ -39,7 +39,7 @@ WebUI Forge安装使用介绍：
 多模态插件安装使用介绍：
 [https://www.bilibili.com/video/BV1DSW4zTEGR?spm_id_from=333.788.player.switch&vd_source=343e49b703fb5b4137cd6c1987846f37&p=2](https://www.bilibili.com/video/BV1DSW4zTEGR?spm_id_from=333.788.player.switch&vd_source=343e49b703fb5b4137cd6c1987846f37&p=2)
 
-最新WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
+最新WebUI Forge整合包与插件模型下载链接可在视频简介下方查看由百度网盘地址
 
 ### 前置要求
 
@@ -73,7 +73,8 @@ WebUI Forge安装使用介绍：
 | `C:`|`ffmpeg\`| 语音与视频合成依赖文件 |
   
 模型已存至网盘
-<img width="1128" height="587" alt="QQ20251023-180519" src="https://github.com/user-attachments/assets/9edfb153-9351-4da5-a30b-685ad9c8891e" />
+<img width="1440" height="781" alt="555555" src="https://github.com/user-attachments/assets/ac43e986-4108-48f0-a336-85ea4771f5d2" />
+
 
 ### 更新内容
 

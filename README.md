@@ -70,9 +70,7 @@ WebUI Forge安装使用介绍：
 | `sd-webui-forge-aki`|`models`|`insightface`|换脸插件模型文件目录|
 | `sd-webui-forge-aki`|`models`|`GFPGAN`|换脸插件模型文件目录 |
 | `sd-webui-forge-aki`|`models`|`LatentSync`| 数字人视频生成模型目录 |
-
-- 安装OllamaSetup.exe应用程序至C盘
-- | `C:`|`ffmpeg\`| 语音与视频合成依赖文件放置c盘根目录 |
+| `C:`|`ffmpeg\`| 语音与视频合成依赖文件 |
   
 模型已存至网盘
 <img width="1128" height="587" alt="QQ20251023-180519" src="https://github.com/user-attachments/assets/9edfb153-9351-4da5-a30b-685ad9c8891e" />

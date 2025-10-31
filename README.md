@@ -40,7 +40,7 @@ WebUI Forge安装使用介绍：
 [https://www.bilibili.com/video/BV1DSW4zTEGR?spm_id_from=333.788.player.switch&vd_source=343e49b703fb5b4137cd6c1987846f37&p=2](https://www.bilibili.com/video/BV1DSW4zTEGR?spm_id_from=333.788.player.switch&vd_source=343e49b703fb5b4137cd6c1987846f37&p=2)
 
 WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
-<img width="1195" height="894" alt="QQ20251031-144127" src="https://github.com/user-attachments/assets/c52a1768-6734-4c3a-a15e-35f57b56d48c" />
+
 
 
 ### 前置要求

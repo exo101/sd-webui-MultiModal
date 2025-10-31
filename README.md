@@ -39,44 +39,14 @@ WebUI Forge安装使用介绍：
 多模态插件安装使用介绍：
 [https://www.bilibili.com/video/BV1DSW4zTEGR?spm_id_from=333.788.player.switch&vd_source=343e49b703fb5b4137cd6c1987846f37&p=2](https://www.bilibili.com/video/BV1DSW4zTEGR?spm_id_from=333.788.player.switch&vd_source=343e49b703fb5b4137cd6c1987846f37&p=2)
 
-WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
-
-
+最新WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
 
 ### 前置要求
 
-  - 旧整合包已不适用日益更新的AI应用与50系显卡，我为此更新了新整合包环境，补充落后的webui生态
+  - 旧整合包已不适用日益更新的AI应用与50系显卡，我为此更新了新整合包环境，补充落后的webui forge生态
   - https://github.com/exo101/sd-webui-forge-aki-v4.5
   - 下载sd-webui-MultiModal插件文件到sd-webui-forge-aki-v4.5/extensions目录
     
-### 更新内容
-
-2025/10/31
-- 添加nunchaku-qwen-image-edit-2509 lora功能加载
-- 添加一致性场景lora模型，pytorch_lora_weights.safetensors
-- qwen-image文生图模型lora，也可以应用到编辑模型当中
-  
-2025/10/29
-  
-- 添加nunchaku qwen lora 功能支持，增加随机种子，生成批次
-- 修复ControlNet启用框bug，完善qwen-image ControlNet实现多个变体预处理器，排除不支持的预处理器防止误触
-- 修复qwen3VL图像识别返回文本首字符缺失的问题bug
-  
-2025/10/24
-
-- webui frogr 整合包更新之4.4版本，添加qwen3VL图像识别模型
-- 如果使用Index-TTS2，更改整合包根目录配置requirements_versions文件降级到，transformers==4.52.1版本
-- 如果使用qwen3VL，更改整合包根目录配置requirements_versions文件升级到，transformers==4.57.0版本
-- qwen3VL与Index-TTS2环境库transformers版本两者存在冲突
-
-2025/10/18
- 
-- 添加qwen-image ControlNet模块，同时实现了深度，姿势，线稿，软边缘
-  
-2025/10/12
-  
-- 更新多模态SD插件12版本：增加第八个功能标签页nunchaku qwen-image与 qwen-image-edit 2509
-
  ## 插件目录
  
 <img width="685" height="477" alt="QQ20251030-223846" src="https://github.com/user-attachments/assets/a1ded7d7-3311-4d15-98b7-34dc3dbcd108" />
@@ -106,6 +76,34 @@ WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
   
 模型已存至网盘
 <img width="1128" height="587" alt="QQ20251023-180519" src="https://github.com/user-attachments/assets/9edfb153-9351-4da5-a30b-685ad9c8891e" />
+
+### 更新内容
+
+2025/10/31
+- 添加nunchaku-qwen-image-edit-2509 lora功能加载
+- 添加一致性场景lora模型，pytorch_lora_weights.safetensors
+- qwen-image文生图模型lora，也可以应用到编辑模型当中
+  
+2025/10/29
+  
+- 添加nunchaku qwen lora 功能支持，增加随机种子，生成批次
+- 修复ControlNet启用框bug，完善qwen-image ControlNet实现多个变体预处理器，排除不支持的预处理器防止误触
+- 修复qwen3VL图像识别返回文本首字符缺失的问题bug
+  
+2025/10/24
+
+- webui frogr 整合包更新之4.4版本，添加qwen3VL图像识别模型
+- 如果使用Index-TTS2，更改整合包根目录配置requirements_versions文件降级到，transformers==4.52.1版本
+- 如果使用qwen3VL，更改整合包根目录配置requirements_versions文件升级到，transformers==4.57.0版本
+- qwen3VL与Index-TTS2环境库transformers版本两者存在冲突
+
+2025/10/18
+ 
+- 添加qwen-image ControlNet模块，同时实现了深度，姿势，线稿，软边缘
+  
+2025/10/12
+  
+- 更新多模态SD插件12版本：增加第八个功能标签页nunchaku qwen-image与 qwen-image-edit 2509
 
 ### 1. 资源汇总
 

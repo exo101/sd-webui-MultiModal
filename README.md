@@ -40,12 +40,14 @@ WebUI Forge安装使用介绍：
 [https://www.bilibili.com/video/BV1DSW4zTEGR?spm_id_from=333.788.player.switch&vd_source=343e49b703fb5b4137cd6c1987846f37&p=2](https://www.bilibili.com/video/BV1DSW4zTEGR?spm_id_from=333.788.player.switch&vd_source=343e49b703fb5b4137cd6c1987846f37&p=2)
 
 WebUI Forge整合包与插件模型下载链接可在视频简介下方查看
+<img width="1195" height="894" alt="QQ20251031-144127" src="https://github.com/user-attachments/assets/c52a1768-6734-4c3a-a15e-35f57b56d48c" />
+
 
 ### 前置要求
 
   - 旧整合包已不适用日益更新的AI应用与50系显卡，我为此更新了新整合包环境，补充落后的webui生态
   - https://github.com/exo101/sd-webui-forge-aki-v4.5
-  - 下载插件文件到sd-webui-forge-aki-v4.5/extensions目录
+  - 下载sd-webui-MultiModal插件文件到sd-webui-forge-aki-v4.5/extensions目录
     
 ### 更新内容
 

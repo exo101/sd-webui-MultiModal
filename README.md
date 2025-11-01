@@ -116,13 +116,21 @@ WebUI Forge安装使用介绍：
 - 支持多种语言模型（Qwen、DeepSeek等）
 - 提供快捷提示词模板
 - 支持单张和批量图像处理
-- 根据显存大小推荐合适的模型（8GB显存推荐1.7B/3B模型，16GB显存可选latest/7B模型），参数越大响应速度越慢质量越高
 - 安装ollama应用程序 https://ollama.com/search
-- 安装(qwen2.5vl)视觉模型与(qwen3)语言模型，在计算机开始菜单搜索栏输入CMD执行以下命令
+- 安装QwenVL视觉模型或Qwen3语言模型，在计算机开始菜单搜索栏输入CMD执行以下命令
 
- ollama run qwen2.5vl:3b   
- ollama run qwen3:1.7b
+  | 命令 | 模型 |说明 |
+  | `安装命令`|`ollama run qwen3-vl:8b`|视觉模型|
+  | `安装命令`|`ollama run qwen3-vl:4b`|视觉模型|
+  | `安装命令`|`ollama run qwen3-vl:2b`|视觉模型|
+  | `安装命令`|`ollama run qwen2.5vl:3b`|视觉模型|
+  | `安装命令`|`ollama run qwen3:1.7b`|语言模型|
+  | `查看模命令`|`ollama list`|模型列表|
+  | `删除命令`|`ollama rm 模型名称`|删除模型|
 
+  质量，速度，配置呈对应关系，参数大速度慢质量好，参数小速度快质量差
+  qwen3VL依次是16g选择8b或4b，12g选择4b或2b
+ 
 <img width="1107" height="385" alt="123" src="https://github.com/user-attachments/assets/454cc34a-ca0a-4f4d-a816-539859c484de" />
 <img width="1851" height="953" alt="3" src="https://github.com/user-attachments/assets/aaaedc60-8b8a-4d13-85e1-64599e71d5b1" />
 <img width="1829" height="965" alt="2" src="https://github.com/user-attachments/assets/606bfe39-5b26-4c4a-a400-6aa496a75cb4" />

@@ -127,8 +127,8 @@ WebUI Forge安装使用介绍：
 - | `删除命令`|`ollama rm 模型名称`|删除模型|
 
   质量，速度，配置呈对应关系，参数大速度慢质量好，参数小速度快质量差
-  qwen3VL依次是16g选择8b或4b，12g选择4b或2b
- 
+  16g选择8b或4b，12g选择4b或2b
+ <img width="1105" height="390" alt="QQ20251101-185455" src="https://github.com/user-attachments/assets/d431810c-ba48-473a-99c8-a8ea90d408d0" />
 <img width="1107" height="385" alt="123" src="https://github.com/user-attachments/assets/454cc34a-ca0a-4f4d-a816-539859c484de" />
 <img width="1851" height="953" alt="3" src="https://github.com/user-attachments/assets/aaaedc60-8b8a-4d13-85e1-64599e71d5b1" />
 <img width="1829" height="965" alt="2" src="https://github.com/user-attachments/assets/606bfe39-5b26-4c4a-a400-6aa496a75cb4" />

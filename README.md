@@ -119,13 +119,12 @@ WebUI Forge安装使用介绍：
 - 安装ollama应用程序 https://ollama.com/search
 - 安装QwenVL视觉模型或Qwen3语言模型，在计算机开始菜单搜索栏输入CMD执行以下命令
 
-  | 命令 | 模型 |说明 |
   | `安装命令`|`ollama run qwen3-vl:8b`|视觉模型|
   | `安装命令`|`ollama run qwen3-vl:4b`|视觉模型|
   | `安装命令`|`ollama run qwen3-vl:2b`|视觉模型|
   | `安装命令`|`ollama run qwen2.5vl:3b`|视觉模型|
   | `安装命令`|`ollama run qwen3:1.7b`|语言模型|
-  | `查看模命令`|`ollama list`|模型列表|
+  | `查看命令`|`ollama list`|模型列表|
   | `删除命令`|`ollama rm 模型名称`|删除模型|
 
   质量，速度，配置呈对应关系，参数大速度慢质量好，参数小速度快质量差

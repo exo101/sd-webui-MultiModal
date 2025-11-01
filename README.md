@@ -98,7 +98,7 @@ WebUI Forge安装使用介绍：
 
 2025/10/18
  
-- 添加qwen-image ControlNet模块，同时实现了深度，姿势，线稿，软边缘
+- 添加qwen-image文生图 ControlNet模块，同时实现了深度，姿势，线稿，软边缘
   
 2025/10/12
   

@@ -205,7 +205,7 @@ WebUI Forge安装使用介绍：
  - qwen-image-edit plus具备编辑图像，实现多种编辑效果的模型
  - 参考了的nunchaku优化方法，生成时间与配置压力大幅度减少
  - 在高配置的电脑上体现不出明显的时间差距，迭代步数越高时间越长，质量越高，最高不超过40
- - 模型分为适用于非 Blackwell GPU（50 系列之前的用户）适用于 Blackwell GPU（50 系列）的用户。
+ - 模型分为适用于（非50系列显卡之前的用户）适用于（50系列显卡）的用户。
  - qwen-image文生图加速主模型详情页介绍
  - https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
  - qwen-image-edit编辑加速主模型详情页介绍

@@ -228,11 +228,10 @@ WebUI Forge安装使用介绍：
  - 编辑模型最多支持上传三张图像，但多图编辑能力弱于单图编辑能力
  - <img width="762" height="495" alt="24542525" src="https://github.com/user-attachments/assets/f8e58477-3e33-478c-ac0f-495da4adea4e" />
  - <img width="1474" height="960" alt="图层 2" src="https://github.com/user-attachments/assets/e6dcf697-2d5e-4612-80fd-732bf7afb4f9" />
- - qwen-image为例 <img width="861" height="435" alt="122" src="https://github.com/user-attachments/assets/650e86f6-a822-424d-ae60-9fed1f1426aa" /> 
- - <img width="866" height="375" alt="111" src="https://github.com/user-attachments/assets/f0601d64-fec4-4efd-b841-e44b3277e246" />
- - <img width="859" height="359" alt="222" src="https://github.com/user-attachments/assets/b6935a43-1868-4b0b-b8a5-cd0cd3bf4ff2" /> 
+ - qwen-image为例5070ti显卡，迭代步数10，生成时间为30-50秒之间
    
-### 8. qwen-image ControlNet 模型
+   
+### qwen-image ControlNet 模型
 
   - 示例教程：https://www.bilibili.com/video/BV13PsHz4E2C/?spm_id_from=333.1387.homepage.video_card.click&vd_source=343e49b703fb5b4137cd6c1987846f37
   - qwen 使用方式与XL ControlNet并无差别，得益于qwen模型的优化能力生成效果与质量要远比XL好的多 
@@ -243,6 +242,10 @@ WebUI Forge安装使用介绍：
   - 在这些预处理器中只有属于pose，深度，线稿，以及属于他们的变体qwen ControINet才支持，其余不支持，这是qwen官方训练ControINet决定的
   - <img width="871" height="515" alt="2545676" src="https://github.com/user-attachments/assets/2a2bf747-2035-4723-83e1-4bb18f7e42f0" />
   
+### qwen-image-edit-2509 ControlNet
+  - 编辑模型自带ControlNet只需加载预处理器就可以控制图像，保持人物一致性，变化姿态，转换场景构图，编辑文字是个强大的多功能模型
+  - 编辑模型可以同时使用自身的微调lora模型和qwen-image lora模型，可保持人物不变的情况下载改变风格
+
 ### 支持的预处理器类别
 
 #### 1. 深度类 (Depth)

@@ -64,10 +64,6 @@ WebUI Forge安装使用介绍：
 | `sd-webui-forge-aki`|`models`|`qwen-image\qwenimage`| qwen文生图主模型目录 |
 | `sd-webui-forge-aki`|`models`|`qwen-image\qwen-image-edit`| qwen图像编辑主模型目录 |
 | `sd-webui-forge-aki`|`models`|`ControlNet\ Qwen-Image-ControlNet-Union`| qwen ControlNet模型目录 |
-| `sd-webui-forge-aki`|`models`|` Codeformer`| 换脸插件模型文件目录 |
-| `sd-webui-forge-aki`|`models`|`faceswaplab`|换脸插件模型文件目录|
-| `sd-webui-forge-aki`|`models`|`insightface`|换脸插件模型文件目录|
-| `sd-webui-forge-aki`|`models`|`GFPGAN`|换脸插件模型文件目录 |
 | `sd-webui-forge-aki`|`models`|`LatentSync`| 数字人视频生成模型目录 |
 | `C:`|`ffmpeg\`| 语音与视频合成依赖文件 |
   

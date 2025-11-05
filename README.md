@@ -64,7 +64,6 @@ WebUI Forge安装使用介绍：
 | `sd-webui-forge-aki`|`models`|`qwen-image\qwenimage`| qwen文生图主模型目录 |
 | `sd-webui-forge-aki`|`models`|`qwen-image\qwen-image-edit`| qwen图像编辑主模型目录 |
 | `sd-webui-forge-aki`|`models`|`ControlNet\ Qwen-Image-ControlNet-Union`| qwen ControlNet模型目录 |
-| `sd-webui-forge-aki`|`models`|`Qwen3-VL-4B-Instruct`|qwen3VL图像识别模型文件目录|
 | `sd-webui-forge-aki`|`models`|` Codeformer`| 换脸插件模型文件目录 |
 | `sd-webui-forge-aki`|`models`|`faceswaplab`|换脸插件模型文件目录|
 | `sd-webui-forge-aki`|`models`|`insightface`|换脸插件模型文件目录|
@@ -77,7 +76,10 @@ WebUI Forge安装使用介绍：
 
 
 ### 更新内容
-
+2025/11/6
+- 添加nunchaku-qwen-image-edit-2509 ControlNet功能实现，深度，线稿，姿势，局部编辑
+- 图像识别功能增加模型列表：qwen3VL8b，qwen3VL4b，qwen3VL2b
+ 
 2025/10/31
 - 添加nunchaku-qwen-image-edit-2509 lora功能加载
 - 添加一致性场景lora模型，pytorch_lora_weights.safetensors

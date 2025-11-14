@@ -1,0 +1,15 @@
+/* 解决Cleaner组件中Sketchpad被遮挡的问题 */
+#xykc_cleanup_img2maskimg {
+    overflow: visible !important;
+    z-index: 10;
+}
+
+#xykc_cleanup_img2maskimg .cleaner-canvas {
+    overflow: visible !important;
+}
+
+/* 确保画布工具栏不会被遮挡 */
+#xykc_cleanup_img2maskimg .brush-tools-container {
+    z-index: 20 !important;
+    position: relative;
+}

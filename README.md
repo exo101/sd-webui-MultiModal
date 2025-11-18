@@ -177,7 +177,6 @@ WebUI Forge安装使用介绍：
 ### 5. 数字人视频生成 
 - 示例教程：https://www.bilibili.com/video/BV1Vr8XzcE2a?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
 - 基于 LatentSync 的音频驱动视频生成， 需要清晰人脸的视频作为输入，唇形同步
- https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 
 ### 6. Index-TTS语音合成
 

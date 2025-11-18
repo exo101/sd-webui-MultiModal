@@ -2,7 +2,7 @@
 
 ## 系统要求
 
-- 显卡：最低推荐 NVIDIA RTX 3060 /中端NVIDIA RTX 4070/中高端NVIDIA RTX 5070ti
+- 显卡：中端NVIDIA RTX 4070/中高端NVIDIA RTX 5070ti
 - 显存：至少 12GB
 - 内存：推荐 32/64GB 
      

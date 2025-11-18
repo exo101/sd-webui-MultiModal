@@ -154,8 +154,8 @@ WebUI Forge安装使用介绍：
 #### 智能抠图
 - 基于 rembg 实现高质量背景移除
 - 支持透明背景和自定义背景色，批量处理功能
-- <img width="1782" height="896" alt="7" src="https://github.com/user-attachments/assets/63e9293d-09b2-494a-8ea9-8eaa46aef287" />
-- <img width="1798" height="679" alt="8" src="https://github.com/user-attachments/assets/9450ffa8-f8ac-4ca0-bccd-7e709f873369" />
+<img width="1828" height="817" alt="43534534" src="https://github.com/user-attachments/assets/913abe19-d8b1-4229-b18d-44f7d3930508" />
+
 
 #### 图像分割
 
@@ -173,12 +173,10 @@ WebUI Forge安装使用介绍：
 - 示例教程：https://www.bilibili.com/video/BV1nFarzjExK?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
 - 多种提取模式（关键帧/等间隔/场景变化）
 - 可调节提取质量，支持多种视频格式
-- 可预览提取的帧<img width="1809" height="677" alt="12" src="https://github.com/user-attachments/assets/23b3cb3d-c763-4432-894f-fdc84b8c7b9f" />
 
 ### 5. 数字人视频生成 
 - 示例教程：https://www.bilibili.com/video/BV1Vr8XzcE2a?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
 - 基于 LatentSync 的音频驱动视频生成， 需要清晰人脸的视频作为输入，唇形同步
- <img width="1831" height="925" alt="18" src="https://github.com/user-attachments/assets/4b380e69-3814-4078-ac3e-9f228d83bcde" />
  https://github.com/user-attachments/assets/587086f5-5204-4953-b37b-5c1c72a97f61
 
 ### 6. Index-TTS语音合成

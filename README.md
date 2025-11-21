@@ -21,7 +21,7 @@
 
 ## 各项目配置显存要求
 
-- Qwen-Image: 8GB以上
+- Qwen-Image: 12GB以上
 - Qwen3vL:    8GB以上
 - LatentSync: 12GB
 - Index-TTS: 10GB以上
@@ -29,7 +29,7 @@
 - FLUX:10GB
 - XL: 8GB
 - Cleaner: 4GB以上
-- Segment Anything: 8GB
+- Segment Anything: 10GB
 
 个人主页：[https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click ](https://space.bilibili.com/403361177?spm_id_from=333.40164.0.0) 
 

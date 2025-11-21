@@ -21,10 +21,10 @@
 
 ## 各项目配置显存要求
 
-- Qwen-Image: 12GB以上
-- Qwen3vL:    8GB以上
+- Qwen-Image: 12GB
+- Qwen3vL:    10GB
 - LatentSync: 12GB
-- Index-TTS: 10GB以上
+- Index-TTS: 12GB
 - FLUX.1-Kontext: 12GB
 - FLUX:10GB
 - XL: 8GB

@@ -204,7 +204,6 @@ WebUI Forge安装使用介绍：
  - qwen-image基本文字生成，中文理解，参数大的特点
  - qwen-image-edit plus具备编辑图像，实现多种编辑效果的模型
  - 参考了的nunchaku优化方法，生成时间与配置压力大幅度减少
- - 在高配置的电脑上体现不出明显的时间差距，迭代步数越高时间越长，质量越高，最高不超过40
  - 模型分为适用于（非50系列显卡之前的用户）适用于（50系列显卡）的用户。
  - qwen-image文生图加速主模型详情页介绍
  - https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image/summary
@@ -214,11 +213,17 @@ WebUI Forge安装使用介绍：
 
 ### 模型版本
 
- - Lightning模型是专门为快速推理设计的，训练时使用了特定的CFG设置。，Lightning模型设置为1，普通模型是完整训练的模型，对CFG参数更宽容，可以使用较高的CFG值为4，
- - svdq-fp4_r128-qwen-image-lightningv1.1-8steps 使用时就是 推理步数10，引导数是 1
- - svdq-fp4_r128-qwen-image.safetensors  使用时就是 推理步数至少15往上，引导数是 4
+ - Lightning模型是专门为快速推理设计的，训练时使用了特定的CFG设置，Lightning模型设置为1，普通模型是完整训练的模型，对CFG参数更宽容，可以使用较高的CFG值为4
+   
+ - 50系模型
+ - svdq-fp4_r128-qwen-image-lightningv1.1-8steps  
+ - svdq-fp4_r128-qwen-image.safetensors   推理步数至少15往上，引导数是 4
+   
+ - 非50系模型
+ - svdq-int4_r128-qwen-image-edit-2509.safetensors 推理步数至少15往上，引导数是 4
+ - svdq-int4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors 非50系模型 推理步数10，引导数是 1
  - 由于nunchaku qwen模型是一种量化的优化策略模型，完整版模型有20B参数，qwen lora 模型权重需要调整为1.5才能生效
- - 我在网盘当中下载的模型是适合50系列模型，如果你是非50系显卡，需要自行下载主模型，其余模型组件不必重新下载，50系显卡除外的用户下载我截图当中的模型
+ - 我在网盘当中下载的模型是适合50系列模型，如果你是非50系显卡，需要自行下载主模型，其余是模型的必备组件，50系显卡除外的用户下载我截图当中的模型
  - <img width="1256" height="898" alt="QQ20251023-190930" src="https://github.com/user-attachments/assets/a430135c-dc93-4515-b69a-34fa0e4d751f" /> 
  - <img width="1226" height="836" alt="QQ20251023-190809" src="https://github.com/user-attachments/assets/6db3520d-266e-4c75-9dbf-2cd972e572f4" />
 

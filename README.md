@@ -71,6 +71,12 @@ WebUI Forge安装使用介绍：
 | `sd-webui-forge-aki`|`models`|`GFPGAN`| 换脸插件放大模型 |
 | `sd-webui-forge-aki`|`models`|`Codeformer`| 换脸插件放大模型 |
 | `C:`|`ffmpeg\`| 语音与视频合成依赖文件 |
+
+## ps插件
+| ps目录 | 插件目录 | 子目录 |说明 |
+|---------------------|--------|-----------|-----------|
+| `Adobe Photoshop 2024`|`Plug-ins`|`sd-ppp_PS`| ps插件目录 |
+| `Adobe Photoshop 2024`|`Plug-ins`|`Auto.Photoshop.SD.plugin_v1.4.1`| ps插件目录  |
   
 模型已存至网盘
 <img width="1440" height="781" alt="555555" src="https://github.com/user-attachments/assets/ac43e986-4108-48f0-a336-85ea4771f5d2" />

@@ -447,50 +447,62 @@ def save_processed_image(processed_image):
 def preprocess_control_image(image_input, preprocessor_display_name):
     """预处理控制图像"""
     try:
-        image_path = None
+        # 检查是否有有效图像输入
+        has_image = image_input is not None and not (isinstance(image_input, np.ndarray) and image_input.size == 0)
         
-        # 处理输入是numpy数组的情况
-        if isinstance(image_input, np.ndarray):
+        # 如果没有图像或者选择了"none"预处理器，则直接返回None
+        if not has_image or preprocessor_display_name in ["none", "None"]:
+            return None
+            
+        print(f"开始预处理控制图像，预处理器: {preprocessor_display_name}")
+        
+        # 获取当前脚本目录和qwen-image目录
+        current_dir = Path(__file__).parent
+        qwen_image_dir = current_dir.parent / "qwen-image"
+        
+        # 处理不同类型的输入
+        image_path = None
+        if isinstance(image_input, str):  # 文件路径
+            image_path = image_input
+        elif isinstance(image_input, np.ndarray):  # numpy数组
             # 为numpy数组创建临时文件
             temp_dir = qwen_image_dir / "temp"
             temp_dir.mkdir(exist_ok=True)
-            image_path = temp_dir / f"preprocess_input_{int(time.time() * 1000)}.png"
-            save_result = save_numpy_image(image_input, image_path)
-            if not save_result:
-                print(f"无法保存numpy数组为图像文件")
-                return None
-            image_path = str(image_path)
-        elif isinstance(image_input, str):
-            image_path = image_input
+            temp_path = temp_dir / f"control_image_temp_{int(time.time() * 1000)}.png"
+            saved_path = save_numpy_image(image_input, temp_path)
+            if saved_path:
+                image_path = saved_path
         else:
             print(f"不支持的图像输入类型: {type(image_input)}")
             return None
-            
+        
         if not image_path or not os.path.exists(image_path):
-            print(f"预处理图像路径无效: {image_path}")
+            print("无效的图像路径")
             return None
         
-        # 加载图像
-        from PIL import Image
-        image = Image.open(image_path).convert("RGB")
+        # 将UI显示名称转换为内部标识符
+        mapped_preprocessor_type = CONTROLNET_PREPROCESSOR_DISPLAY_TO_INTERNAL.get(preprocessor_display_name, "none")
+        print(f"开始使用预处理器 {preprocessor_display_name} ({mapped_preprocessor_type}) 处理图像: {image_path}")
         
-        # 调整图像尺寸以匹配模型要求（确保是64的倍数）
-        # 这可以解决"mat1 and mat2 shapes cannot be multiplied"错误
-        original_width, original_height = image.size
-        print(f"原始控制图像尺寸: {original_width}x{original_height}")
+        # 构造参数字典
+        args = {
+            "image_path": str(image_path),
+            "preprocessor_type": mapped_preprocessor_type
+        }
         
-        # 将尺寸调整为64的倍数
-        target_width = ((original_width + 31) // 64) * 64  # 向上取整到最接近的64倍数
-        target_height = ((original_height + 31) // 64) * 64
+        # 创建临时参数文件
+        args_file = qwen_image_dir / "temp_preprocess_args.json"
+        with open(args_file, 'w', encoding='utf-8') as f:
+            json.dump(args, f, ensure_ascii=False, indent=2)
         
-        # 但也要确保不超过合理范围
-        target_width = max(256, min(2048, target_width))
-        target_height = max(256, min(2048, target_height))
-        
-        # 如果尺寸发生了变化，则调整图像
-        if target_width != original_width or target_height != original_height:
-            print(f"调整控制图像尺寸: {original_width}x{original_height} -> {target_width}x{target_height}")
-            image = image.resize((target_width, target_height), Image.Resampling.LANCZOS)
+        # 构造命令 - 使用Python模块方式执行，更稳定
+        cmd = [
+            main_python,
+            str(qwen_image_dir / "qwen_image_scripts.py"),
+            "--preprocess",
+            "--args_file",
+            str(args_file)
+        ]
         
         # 将UI显示名称转换为内部标识符
         mapped_preprocessor_type = CONTROLNET_PREPROCESSOR_DISPLAY_TO_INTERNAL.get(preprocessor_display_name, "none")
@@ -506,36 +518,22 @@ def preprocess_control_image(image_input, preprocessor_display_name):
         with open(args_file, "w", encoding="utf-8") as f:
             json.dump(args, f, ensure_ascii=False, indent=2)
         
-        # 构建命令
-        args_file_str = str(args_file).replace('\\', '/')
-        scripts_dir_str = str(scripts_dir).replace('\\', '/')
-        
-        cmd = [
-            main_python,
-            "-c",
-            f"import sys; sys.path.append('{scripts_dir_str}'); from qwen_image_scripts import run_preprocess_control_image; run_preprocess_control_image('{args_file_str}')"
-        ]
-        
-        print(f"执行预处理命令: {' '.join(cmd)}")
-        
-        # 执行命令
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(qwen_image_dir), timeout=120)
+        print(f"执行命令: {' '.join(cmd)}")
+        print(f"工作目录: {qwen_image_dir}")
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(qwen_image_dir), timeout=300)
         
         # 删除临时参数文件
         if args_file.exists():
             args_file.unlink()
         
-        print(f"预处理命令返回码: {result.returncode}")
-        if result.stdout:
-            print(f"预处理命令输出: {result.stdout}")
-        if result.stderr:
-            print(f"预处理命令错误: {result.stderr}")
+        print(f"预处理返回码: {result.returncode}")
+        print(f"预处理标准输出: {result.stdout}")
+        print(f"预处理错误输出: {result.stderr}")
         
         if result.returncode != 0:
             print(f"预处理失败: {result.stderr}")
-            # 即使预处理失败，也尝试返回原始图像
-            return image
-        
+            return None
+            
         # 解析输出，查找处理后的图像路径
         output_lines = result.stdout.strip().split('\n')
         processed_image_path = None
@@ -550,19 +548,12 @@ def preprocess_control_image(image_input, preprocessor_display_name):
             processed_image = Image.open(processed_image_path)
             return processed_image
         else:
-            print("未找到有效的预处理图像，返回原始图像")
-            return image
+            print("未找到有效的预处理图像")
+            return None
             
     except Exception as e:
         print(f"预处理控制图像时出错: {e}")
         traceback.print_exc()
-        # 出错时返回原始图像
-        try:
-            if image_path and os.path.exists(image_path):
-                from PIL import Image
-                return Image.open(image_path).convert("RGB")
-        except:
-            pass
         return None
 
 # ==================== 核心功能函数 ====================

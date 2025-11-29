@@ -554,15 +554,20 @@ def preprocess_control_image(image_path, preprocessor_type, mask_path=None):
                     # RGBA转RGB
                     processed_image = cv2.cvtColor(processed_image_array, cv2.COLOR_RGBA2RGB)
                 else:
-                    # 其他情况，默认使用原始输出
+                    # 其他情况，假定已经是正确的RGB格式
                     processed_image = processed_image_array
                 
-                # 确保输出数组是非空的
-                if processed_image is not None and processed_image.size > 0:
-                    return processed_image
-                else:
-                    print("预处理器返回了空结果")
-                    return None
+                # 转换为PIL Image对象
+                processed_image_pil = Image.fromarray(processed_image, 'RGB')
+                
+                # 修复：保持原始图像的宽高比，避免裁剪
+                # 获取原始图像尺寸
+                orig_width, orig_height = processed_image_pil.size
+                
+                # 不改变图像内容，只确保格式正确
+                print(f"预处理完成，图像尺寸: {orig_width}x{orig_height}")
+                
+                return processed_image
             except Exception as process_error:
                 print(f"使用WebUI预处理器时出错: {process_error}")
                 # 出错时不再回退，直接抛出异常
@@ -1307,7 +1312,8 @@ def run_image_editing(args_file):
         if input_image_path and os.path.exists(input_image_path):
             try:
                 init_image = Image.open(input_image_path)
-                width, height = init_image.size
+                orig_width, orig_height = init_image.size
+                width, height = orig_width, orig_height
                 print(f"从输入图像 {input_image_path} 获取尺寸: {width}x{height}")
             except Exception as e:
                 print(f"无法加载输入图像以获取尺寸，使用默认尺寸 1024x1024: {e}")
@@ -1336,6 +1342,7 @@ def run_image_editing(args_file):
         print(f"控制图像存在: {has_control_image}")
         print(f"选择的ControlNet模型: {controlnet_model_selected}")
         print(f"用户选择步数: {args['steps']}")
+
         
         # 验证输入图像参数
         if not isinstance(input_images, list):
@@ -1669,10 +1676,6 @@ def run_image_editing(args_file):
         
         if not input_image_path:
             print("错误: 未提供输入图像")
-            print(f"input_images变量详情: {input_images}")
-            print(f"input_images长度: {len(input_images) if input_images else 'None'}")
-            for i, img_path in enumerate(input_images or []):
-                print(f"input_images[{i}]的值: '{img_path}' 类型: {type(img_path)}")
             return
             
         try:
@@ -1683,10 +1686,14 @@ def run_image_editing(args_file):
                 print("错误: 无法加载输入图像")
                 return
                 
+            # 严格按照官方示例方式处理图像
             # 确保图像是RGB模式
-            if init_image.mode != 'RGB':
-                init_image = init_image.convert('RGB')
-            print(f"输入图像加载成功，尺寸: {init_image.size}")
+            init_image = init_image.convert("RGB")
+            
+            # 获取原始尺寸
+            orig_width, orig_height = init_image.size
+            width, height = orig_width, orig_height
+            print(f"输入图像原始尺寸: {orig_width}x{orig_height}")
         except Exception as e:
             print(f"加载输入图像失败: {e}")
             import traceback
@@ -1695,90 +1702,31 @@ def run_image_editing(args_file):
                 
         # 生成图像
         print("开始生成图像...")
-        # 使用官方推荐的参数
-        generation_params = {
-            "prompt": prompt,
-            "negative_prompt": negative_prompt,
-            "num_inference_steps": steps,
-            "true_cfg_scale": cfg_scale,
-            "generator": torch.Generator(device="cuda" if torch.cuda.is_available() else "cpu").manual_seed(args.get("seed", -1))
-        }
+        
         # 获取生成批次大小
         batch_size = args.get("batch_size", 1)
         
         # 创建生成器
         generator = torch.Generator(device="cuda" if torch.cuda.is_available() else "cpu").manual_seed(args.get("seed", -1))
         
-        # 准备生成参数
+        # 准备生成参数 - 严格按照官方示例方式准备
         generation_params = {
+            "image": init_image,
             "prompt": prompt,
-            "negative_prompt": negative_prompt,
-            "width": width,
-            "height": height,
-            "num_inference_steps": steps,
             "true_cfg_scale": cfg_scale,
+            "negative_prompt": negative_prompt if negative_prompt else " ",
+            "num_inference_steps": steps,
             "generator": generator,
-            "num_images_per_prompt": batch_size,  # 添加批次大小参数以支持批量生成
+            "num_images_per_prompt": batch_size,
         }
         
         # 根据使用的Pipeline类型和是否启用ControlNet来处理图像输入
         if controlnet_enable and processed_control_image is not None:
-            # 对于启用了ControlNet的情况，将参考图像和控制图像进行串联作为输入
-            # Qwen-Image-Edit-2509支持通过图像串联实现多图像编辑
-            from PIL import Image
-            import numpy as np
-            
-            try:
-                print(f"开始处理参考图像和控制图像的串联，参考图像类型: {type(init_image)}, 控制图像类型: {type(processed_control_image)}")
-                
-                # 确保两个图像都是PIL图像
-                if not isinstance(init_image, Image.Image):
-                    if isinstance(init_image, np.ndarray):
-                        init_image = Image.fromarray(init_image)
-                    else:
-                        raise ValueError(f"参考图像格式不支持: {type(init_image)}")
-                
-                if not isinstance(processed_control_image, Image.Image):
-                    if isinstance(processed_control_image, np.ndarray):
-                        processed_control_image = Image.fromarray(processed_control_image)
-                    else:
-                        raise ValueError(f"控制图像格式不支持: {type(processed_control_image)}")
-                
-                # 确保图像是RGB模式
-                if init_image.mode != 'RGB':
-                    init_image = init_image.convert('RGB')
-                if processed_control_image.mode != 'RGB':
-                    processed_control_image = processed_control_image.convert('RGB')
-                
-                print(f"图像转换完成，参考图像尺寸: {init_image.size}，控制图像尺寸: {processed_control_image.size}")
-                
-                # 根据使用的Pipeline类型和是否启用ControlNet来处理图像输入
-                if controlnet_enable and processed_control_image is not None:
-                    # 对于启用了ControlNet的情况，将参考图像和控制图像作为列表传递
-                    print(f"使用ControlNet功能，传递参考图像和控制图像")
-                    print(f"参考图像尺寸: {init_image.size if hasattr(init_image, 'size') else 'N/A'}")
-                    print(f"控制图像尺寸: {processed_control_image.size if hasattr(processed_control_image, 'size') else 'N/A'}")
-                    # QwenImageEditPlusPipeline支持同时传递参考图像和控制图像作为列表
-                    generation_params["image"] = [init_image, processed_control_image]
-                else:
-                    # 对于普通编辑模式，只传递输入图像
-                    print(f"使用普通编辑模式，图像类型: {type(init_image)}")
-                    generation_params["image"] = init_image
-                    if hasattr(init_image, 'size'):
-                        print(f"输入图像尺寸: {init_image.size}")
-            except Exception as e:
-                print(f"处理ControlNet图像时出错: {e}")
-                import traceback
-                traceback.print_exc()
-                # 如果无法处理为组合图像，则回退到仅使用参考图像
-                print("回退到仅使用参考图像")
-                generation_params["image"] = init_image
+            # 对于启用了ControlNet的情况，将参考图像和控制图像作为列表传递
+            generation_params["image"] = [init_image, processed_control_image]
         else:
             # 对于普通编辑模式，只传递输入图像
-            print(f"使用普通编辑模式，图像类型: {type(init_image)}")
             generation_params["image"] = init_image
-            if hasattr(init_image, 'size'):
-                print(f"输入图像尺寸: {init_image.size}")
             
         images = pipeline(**generation_params).images
         
@@ -1788,7 +1736,7 @@ def run_image_editing(args_file):
         timestamp = int(time.time() * 1000)  # 毫秒级时间戳
         output_paths = []
         
-        # 处理输出图像
+        # 处理输出图像 - 严格按照官方示例方式处理
         for i, image in enumerate(images):
             # 确保图像是PIL Image对象
             if not isinstance(image, Image.Image):
@@ -1796,24 +1744,11 @@ def run_image_editing(args_file):
                 if isinstance(image, np.ndarray):
                     image = Image.fromarray(image)
             
+            # 严格按照官方示例方式处理图像
             # 确保图像是RGB模式
-            if image.mode != 'RGB':
-                image = image.convert('RGB')
+            image = image.convert("RGB")
             
-            # 根据项目规范，如果输出图像宽度约为高度的两倍，则为拼接图像，需要提取右半部分
-            try:
-                if image.width >= image.height * 1.8 and image.width <= image.height * 2.2:
-                    # 这是一个拼接图像，提取右半部分作为最终编辑结果
-                    width = image.width
-                    height = image.height
-                    # 计算右半部分的边界框
-                    right_image = image.crop((width // 2, 0, width, height))
-                    image = right_image
-                    print(f"检测到拼接图像，已提取右半部分作为编辑结果，尺寸: {image.size}")
-            except Exception as e:
-                print(f"处理输出图像时出错: {e}")
-                # 继续使用原图像
-                
+            # 直接保存图像，不做任何额外处理
             output_path = Path(args["output_dir"]) / f"qwen_image_edit_{timestamp}_{i}.png"
             image.save(output_path)
             output_paths.append(output_path)

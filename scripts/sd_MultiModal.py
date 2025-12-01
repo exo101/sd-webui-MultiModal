@@ -83,6 +83,13 @@ def import_modules():
             create_sam_ui = None
             SAM_AVAILABLE = False
         
+        # 添加Z-Image模块导入
+        try: 
+            from z_image_ui import create_z_image_ui as z_image_create_func, Z_IMAGE_MODULE_AVAILABLE
+        except ImportError: 
+            z_image_create_func = None
+            Z_IMAGE_MODULE_AVAILABLE = False
+            
         # 返回命名空间对象
         import types
         namespace = types.SimpleNamespace()
@@ -106,6 +113,10 @@ def import_modules():
         namespace.QWEN_IMAGE_EDIT_MODULE_AVAILABLE = QWEN_IMAGE_EDIT_MODULE_AVAILABLE
         namespace.create_sam_ui = create_sam_ui
         namespace.SAM_AVAILABLE = SAM_AVAILABLE
+        
+        # 添加 Z-Image 模块到命名空间
+        namespace.create_z_image_ui = z_image_create_func
+        namespace.Z_IMAGE_MODULE_AVAILABLE = Z_IMAGE_MODULE_AVAILABLE
         
         return namespace
     
@@ -136,7 +147,6 @@ FLUX_KONTEXT_AVAILABLE = imported_modules.FLUX_KONTEXT_AVAILABLE
 create_cleaner_module = imported_modules.create_cleaner_module
 CLEANER_AVAILABLE = imported_modules.CLEANER_AVAILABLE
 
-
 # 确保 SAM、Cleaner 和 Qwen Image 模块变量正确赋值
 create_sam_ui = imported_modules.create_sam_ui
 SAM_AVAILABLE = imported_modules.SAM_AVAILABLE
@@ -146,6 +156,10 @@ create_qwen_image_ui = imported_modules.create_qwen_image_ui
 QWEN_IMAGE_MODULE_AVAILABLE = imported_modules.QWEN_IMAGE_MODULE_AVAILABLE
 create_qwen_image_edit_ui = imported_modules.create_qwen_image_edit_ui
 QWEN_IMAGE_EDIT_MODULE_AVAILABLE = imported_modules.QWEN_IMAGE_EDIT_MODULE_AVAILABLE
+
+# 添加 Z-Image 模块变量赋值
+create_z_image_ui = imported_modules.create_z_image_ui
+Z_IMAGE_MODULE_AVAILABLE = imported_modules.Z_IMAGE_MODULE_AVAILABLE
 
 current_dir = os.path.abspath(os.getcwd())
 python_interpreter = sys.executable
@@ -735,8 +749,27 @@ def XYKC_tab():
             elif 'QWEN_IMAGE_MODULE_AVAILABLE' in globals() and not QWEN_IMAGE_MODULE_AVAILABLE:
                 with gr.TabItem("8.Qwen Image图像生成"):
                     gr.Markdown("Qwen Image模块当前不可用，可能是因为缺少模型文件或依赖项。")
-               
-        
+            
+            # 添加 Z-Image-Turbo 标签页（如果可用）
+            if 'Z_IMAGE_MODULE_AVAILABLE' in globals() and Z_IMAGE_MODULE_AVAILABLE:
+                with gr.TabItem("9.Z-Image-Turbo图像生成"):
+                    try:
+                        with gr.Tabs():
+                            with gr.TabItem("文生图"):
+                                # 创建 Z-Image-Turbo 文生图 UI 组件
+                                z_image_components = create_z_image_ui()
+                                
+                                # 组件已经自动显示，无需额外处理
+                                if not z_image_components:
+                                    gr.Markdown("Z-Image-Turbo文生图模块加载失败")
+                    except Exception as e:
+                        gr.Markdown(f"Z-Image-Turbo模块初始化错误: {e}")
+                        import traceback
+                        traceback.print_exc()
+            elif 'Z_IMAGE_MODULE_AVAILABLE' in globals() and not Z_IMAGE_MODULE_AVAILABLE:
+                with gr.TabItem("9.Z-Image-Turbo图像生成"):
+                    gr.Markdown("Z-Image-Turbo模块当前不可用，可能是因为缺少模型文件或依赖项。")
+
     return [(ui, "多模态插件12", "XYKC_vision_tab")]
 
 script_callbacks.on_ui_tabs(XYKC_tab)
@@ -776,4 +809,5 @@ modules_status = {
     'flux_kontext': FLUX_KONTEXT_AVAILABLE,
     'cleaner': CLEANER_AVAILABLE,
     'sam': SAM_AVAILABLE,
+    'z_image': Z_IMAGE_MODULE_AVAILABLE
 }

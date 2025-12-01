@@ -162,7 +162,131 @@ def save_image(image_np, seed, index=0):
         traceback.print_exc()
         return None
 
-def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, seed, sampler, batch_size=1):
+def create_z_image_ui():
+    """创建Z-Image-Turbo UI界面"""
+    print("Z-Image-Turbo: 开始创建 UI...")
+    
+    # 检查ModelScope是否可用
+    if not MODELScope_AVAILABLE:
+        print("Z-Image-Turbo: ModelScope 不可用，创建错误提示界面")
+        with gr.Blocks() as demo:
+            gr.Markdown("# Z-Image-Turbo 图像生成 (不可用)")
+            gr.Markdown("错误：ModelScope 不可用，请检查安装")
+        print("Z-Image-Turbo: ModelScope 不可用，返回简化UI")
+        return demo
+    
+    print("Z-Image-Turbo: 创建主界面")
+    with gr.Blocks() as demo:
+        gr.Markdown("# Z-Image-Turbo 图像生成")
+        gr.Markdown("基于 ModelScope 的超快速文生图模型")
+        
+        with gr.Row():
+            with gr.Column():
+                prompt = gr.Textbox(
+                    label="提示词",
+                    placeholder="输入您的提示词，例如：一只可爱的猫"
+                )
+                
+                negative_prompt = gr.Textbox(
+                    label="负面提示词",
+                    placeholder="输入您不希望出现在图像中的内容"
+                )
+                
+                with gr.Row():
+                    width = gr.Slider(
+                        minimum=256, maximum=2048, step=64, value=1024, label="宽度"
+                    )
+                    height = gr.Slider(
+                        minimum=256, maximum=2048, step=64, value=1024, label="高度"
+                    )
+                
+                with gr.Row():
+                    steps = gr.Slider(
+                        minimum=1, maximum=50, step=1, value=8, label="推理步数"
+                    )
+                    cfg_scale = gr.Slider(
+                        minimum=0.0, maximum=20.0, step=0.1, value=0.0, label="CFG Scale"
+                    )
+                
+                with gr.Row():
+                    seed = gr.Number(
+                        label="随机种子 (-1为随机)", value=-1, precision=0
+                    )
+                    batch_size = gr.Slider(
+                        minimum=1, maximum=8, step=1, value=1, label="生成批次"
+                    )
+                
+                sampler = gr.Dropdown(
+                    choices=[
+                        ("Euler", "euler"),
+                        ("Euler Ancestral", "euler_ancestral"),
+                        ("Heun", "heun"),
+                        ("DPM++ 2M", "dpmpp_2m")
+                    ],
+                    value="euler",
+                    label="采样方法"
+                )
+                
+                # 添加高分辨率修复(Hires.fix)选项
+                with gr.Accordion("高分辨率修复", open=False):
+                    enable_hr = gr.Checkbox(label="启用高分辨率修复", value=False)
+                    with gr.Group(visible=False) as hr_options:
+                        hr_scale = gr.Slider(minimum=1.0, maximum=4.0, step=0.05, label="放大倍数", value=2.0)
+                        hr_upscaler = gr.Dropdown(
+                            label="放大算法",
+                            choices=[*shared.latent_upscale_modes, *[x.name for x in shared.sd_upscalers]],
+                            value=shared.latent_upscale_default_mode
+                        )
+                        hr_second_pass_steps = gr.Slider(minimum=0, maximum=150, step=1, label="高分辨率修复步数", value=0)
+                        denoising_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label="重绘幅度", value=0.7)
+                        
+                    enable_hr.change(
+                        fn=lambda x: gr.update(visible=x),
+                        inputs=[enable_hr],
+                        outputs=[hr_options]
+                    )
+                
+                generate_btn = gr.Button("生成图像")
+            
+            with gr.Column():
+                # 使用Gallery组件支持多图像显示
+                output_images = gr.Gallery(
+                    label="生成结果", 
+                    interactive=False, 
+                    height=512, 
+                    object_fit="contain",
+                    columns=3
+                )
+                output_info = gr.Textbox(label="生成信息", interactive=False)
+        
+        print("Z-Image-Turbo: 设置事件处理器")
+        generate_btn.click(
+            fn=generate_image,
+            inputs=[
+                prompt, negative_prompt, width, height, 
+                steps, cfg_scale, seed, sampler, batch_size,
+                enable_hr, hr_scale, hr_upscaler, hr_second_pass_steps, denoising_strength
+            ],
+            outputs=[output_info, output_images]
+        )
+    
+    print("Z-Image-Turbo: UI 创建完成")
+    return demo
+
+# 模块是否可用的标志
+Z_IMAGE_MODULE_AVAILABLE = MODELScope_AVAILABLE
+print(f"Z-Image-Turbo: 模块可用性: {Z_IMAGE_MODULE_AVAILABLE}")
+
+# 确保模块可以被正确导入
+if __name__ != "__main__":
+    # 当作为模块导入时，进行简单的初始化检查
+    if Z_IMAGE_MODULE_AVAILABLE:
+        print("Z-Image-Turbo: 模块初始化完成，准备就绪")
+    else:
+        print("Z-Image-Turbo: 模块初始化失败，功能不可用")
+
+def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, seed, sampler, batch_size=1,
+                   enable_hr=False, hr_scale=2.0, hr_upscaler=None, hr_second_pass_steps=0, denoising_strength=0.7):
     """使用Z-Image-Turbo生成图像"""
     global pipe, model_loaded
     
@@ -246,6 +370,16 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
             image_np = np.clip(image_np, 0, 1) * 255 if image_np.max() <= 1 else image_np
             image_np = image_np.astype(np.uint8)
             
+            # 如果启用了高分辨率修复，则进行处理
+            if enable_hr and hr_scale > 1.0:
+                # 使用WebUI的上采样器来处理图像放大
+                upscaler = next(iter([x for x in shared.sd_upscalers if x.name == hr_upscaler]), None)
+                if upscaler:
+                    hr_image = Image.fromarray(image_np) if isinstance(image_np, np.ndarray) else image_np
+                    # 使用上采样器放大图像
+                    upsampled_image = upscaler.scaler.upscale(hr_image, hr_scale, upscaler.data_path)
+                    image_np = np.array(upsampled_image)
+            
             images.append(image_np)
             
             # 保存图像
@@ -263,6 +397,7 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
 - CFG: {actual_guidance}
 - {'种子: ' + str(seeds[0]) if batch_size == 1 else '种子范围: ' + str(seeds[0]) + '-' + str(seeds[-1])}
 - 采样方法: {sampler}
+- 高分辨率修复: {'启用' if enable_hr else '禁用'}
 - 保存路径: {saved_paths[0] if saved_paths else '未保存'}"""
         
         # Gradio Gallery 组件可以自动处理单张图像的列表
@@ -272,105 +407,3 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
         error_details = traceback.format_exc()
         return f"图像生成失败: {str(e)}\n详细错误信息:\n{error_details}", None
 
-def create_z_image_ui():
-    """创建Z-Image-Turbo UI界面"""
-    print("Z-Image-Turbo: 开始创建 UI...")
-    
-    # 检查ModelScope是否可用
-    if not MODELScope_AVAILABLE:
-        print("Z-Image-Turbo: ModelScope 不可用，创建错误提示界面")
-        with gr.Blocks() as demo:
-            gr.Markdown("# Z-Image-Turbo 图像生成 (不可用)")
-            gr.Markdown("错误：ModelScope 不可用，请检查安装")
-        print("Z-Image-Turbo: ModelScope 不可用，返回简化UI")
-        return demo
-    
-    print("Z-Image-Turbo: 创建主界面")
-    with gr.Blocks() as demo:
-        gr.Markdown("# Z-Image-Turbo 图像生成")
-        gr.Markdown("基于 ModelScope 的超快速文生图模型")
-        
-        with gr.Row():
-            with gr.Column():
-                prompt = gr.Textbox(
-                    label="提示词",
-                    placeholder="输入您的提示词，例如：一只可爱的猫"
-                )
-                
-                negative_prompt = gr.Textbox(
-                    label="负面提示词",
-                    placeholder="输入您不希望出现在图像中的内容"
-                )
-                
-                with gr.Row():
-                    width = gr.Slider(
-                        minimum=256, maximum=2048, step=64, value=1024, label="宽度"
-                    )
-                    height = gr.Slider(
-                        minimum=256, maximum=2048, step=64, value=1024, label="高度"
-                    )
-                
-                with gr.Row():
-                    steps = gr.Slider(
-                        minimum=1, maximum=50, step=1, value=8, label="推理步数"
-                    )
-                    cfg_scale = gr.Slider(
-                        minimum=0.0, maximum=20.0, step=0.1, value=0.0, label="CFG Scale"
-                    )
-                
-                with gr.Row():
-                    seed = gr.Number(
-                        label="随机种子 (-1为随机)", value=-1, precision=0
-                    )
-                    batch_size = gr.Slider(
-                        minimum=1, maximum=8, step=1, value=1, label="生成批次"
-                    )
-                
-                sampler = gr.Dropdown(
-                    choices=[
-                        ("Euler", "euler"),
-                        ("Euler Ancestral", "euler_ancestral"),
-                        ("Heun", "heun"),
-                        ("DPM++ 2M", "dpmpp_2m")
-                    ],
-                    value="euler",
-                    label="采样方法"
-                )
-                
-                generate_btn = gr.Button("生成图像")
-            
-            with gr.Column():
-                # 使用Gallery组件支持多图像显示
-                output_images = gr.Gallery(
-                    label="生成结果", 
-                    interactive=False, 
-                    height=512, 
-                    object_fit="contain",
-                    columns=3
-                )
-                output_info = gr.Textbox(label="生成信息", interactive=False)
-        
-        print("Z-Image-Turbo: 设置事件处理器")
-        generate_btn.click(
-            fn=generate_image,
-            inputs=[
-                prompt, negative_prompt, width, height, 
-                steps, cfg_scale, seed, sampler, batch_size
-            ],
-            outputs=[output_info, output_images]
-        )
-    
-    print("Z-Image-Turbo: UI 创建完成")
-    return demo
-
-# 模块是否可用的标志
-Z_IMAGE_MODULE_AVAILABLE = MODELScope_AVAILABLE
-print(f"Z-Image-Turbo: 模块可用性: {Z_IMAGE_MODULE_AVAILABLE}")
-
-# 确保模块可以被正确导入
-if __name__ != "__main__":
-    # 当作为模块导入时，进行简单的初始化检查
-    if Z_IMAGE_MODULE_AVAILABLE:
-        print("Z-Image-Turbo: 模块初始化完成，准备就绪")
-    else:
-        print("Z-Image-Turbo: 模块初始化失败，功能不可用")

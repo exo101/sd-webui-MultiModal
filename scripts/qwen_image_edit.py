@@ -585,8 +585,7 @@ def preprocess_control_image(image_input, preprocessor_display_name):
 # ==================== 核心功能函数 ====================
 def edit_images(prompt, negative_prompt, image1, image2, image3, steps, cfg_scale,
                model_file, scheduler, scheduler_type, lora_model_1="", lora_model_2="", 
-               lora_weight_1=1.0, lora_weight_2=1.0, seed=-1, enable_hr=False,
-               hr_scale=2.0, hr_upscaler="bilinear", denoising_strength=0.7,
+               lora_weight_1=1.0, lora_weight_2=1.0, seed=-1,
                original_image=None, mask_image=None, control_mask=None,
                controlnet_model=None, controlnet_start=0.0, controlnet_end=1.0,
                # 添加 ControlNet 参数
@@ -1003,17 +1002,6 @@ def create_qwen_image_edit_ui():
                                 min_width=150
                             )
                             
-                            # High-Res Fix 选项
-                            with gr.Accordion("High-Res Fix", open=False):
-                                edit_enable_hr = gr.Checkbox(label="启用高分辨率修复", value=False)
-                                edit_hr_scale = gr.Slider(minimum=1.0, maximum=4.0, step=0.1, value=2.0, label="上采样倍数")
-                                edit_hr_upscaler = gr.Dropdown(
-                                    choices=["bilinear", "bicubic", "lanczos"],
-                                    value="bilinear",
-                                    label="上采样方法"
-                                )
-                                edit_denoising_strength = gr.Slider(minimum=0.1, maximum=1.0, step=0.05, value=0.7, label="去噪强度")
-                                
                             # Additional image inputs for advanced features
                             original_image = gr.Image(type="filepath", label="原始图像", visible=False)
                             mask_image = gr.Image(type="filepath", label="蒙版图像", visible=False)
@@ -1243,10 +1231,6 @@ def create_qwen_image_edit_ui():
                 edit_lora_weight_1,
                 edit_lora_weight_2,
                 edit_seed,
-                edit_enable_hr,
-                edit_hr_scale,
-                edit_hr_upscaler,
-                edit_denoising_strength,
                 original_image,
                 mask_image,
                 control_image.background,
@@ -1274,10 +1258,6 @@ def create_qwen_image_edit_ui():
             "edit_lora_weight_1": edit_lora_weight_1,
             "edit_lora_weight_2": edit_lora_weight_2,
             "edit_seed": edit_seed,
-            "edit_enable_hr": edit_enable_hr,
-            "edit_hr_scale": edit_hr_scale,
-            "edit_hr_upscaler": edit_hr_upscaler,
-            "edit_denoising_strength": edit_denoising_strength,
             "original_image": original_image,
             "mask_image": mask_image,
             "control_image": control_image,

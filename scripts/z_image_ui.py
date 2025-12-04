@@ -21,6 +21,20 @@ except ImportError as e:
     MODELScope_AVAILABLE = False
     print(f"Z-Image-Turbo: ModelScope库不可用: {e}")
 
+# 尝试导入WebUI的采样器模块
+try:
+    from modules import sd_samplers
+    WEBUI_SAMPLERS_AVAILABLE = True
+except ImportError:
+    WEBUI_SAMPLERS_AVAILABLE = False
+
+# 尝试导入WebUI的调度器模块
+try:
+    from modules import sd_schedulers
+    WEBUI_SCHEDULERS_AVAILABLE = True
+except ImportError:
+    WEBUI_SCHEDULERS_AVAILABLE = False
+
 # 模型和输出目录
 models_dir = Path(shared.models_path) / "Tongyi-MAI" / "Z-Image-Turbo"
 output_dir = Path(shared.data_path) / "outputs" / "z-image-turbo"
@@ -216,15 +230,60 @@ def create_z_image_ui():
                         minimum=1, maximum=8, step=1, value=1, label="生成批次"
                     )
                 
-                sampler = gr.Dropdown(
-                    choices=[
+                # 获取WebUI内置的采样器选项
+                if WEBUI_SAMPLERS_AVAILABLE:
+                    try:
+                        sampler_choices = [(sampler.name, sampler.name) for sampler in sd_samplers.visible_samplers()]
+                    except:
+                        sampler_choices = [
+                            ("Euler", "euler"),
+                            ("Euler Ancestral", "euler_ancestral"),
+                            ("Heun", "heun"),
+                            ("DPM++ 2M", "dpmpp_2m")
+                        ]
+                else:
+                    sampler_choices = [
                         ("Euler", "euler"),
                         ("Euler Ancestral", "euler_ancestral"),
                         ("Heun", "heun"),
                         ("DPM++ 2M", "dpmpp_2m")
-                    ],
-                    value="euler",
+                    ]
+                
+                sampler = gr.Dropdown(
+                    choices=sampler_choices,
+                    value=sampler_choices[0][1] if sampler_choices else "euler",
                     label="采样方法"
+                )
+                
+                # 添加调度器选项
+                if WEBUI_SCHEDULERS_AVAILABLE:
+                    try:
+                        scheduler_choices = [(scheduler.label, scheduler.name) for scheduler in sd_schedulers.schedulers]
+                    except:
+                        scheduler_choices = [
+                            ("Automatic", "automatic"),
+                            ("Karras", "karras"),
+                            ("Exponential", "exponential"),
+                            ("SGM Uniform", "sgm_uniform"),
+                            ("Simple", "simple"),
+                            ("Normal", "normal"),
+                            ("DDIM", "ddim_uniform")
+                        ]
+                else:
+                    scheduler_choices = [
+                        ("Automatic", "automatic"),
+                        ("Karras", "karras"),
+                        ("Exponential", "exponential"),
+                        ("SGM Uniform", "sgm_uniform"),
+                        ("Simple", "simple"),
+                        ("Normal", "normal"),
+                        ("DDIM", "ddim_uniform")
+                    ]
+                
+                scheduler = gr.Dropdown(
+                    choices=scheduler_choices,
+                    value=scheduler_choices[0][1] if scheduler_choices else "automatic",
+                    label="调度器"
                 )
                 
                 # 添加高分辨率修复(Hires.fix)选项
@@ -264,7 +323,7 @@ def create_z_image_ui():
             fn=generate_image,
             inputs=[
                 prompt, negative_prompt, width, height, 
-                steps, cfg_scale, seed, sampler, batch_size,
+                steps, cfg_scale, seed, sampler, scheduler, batch_size,
                 enable_hr, hr_scale, hr_upscaler, hr_second_pass_steps, denoising_strength
             ],
             outputs=[output_info, output_images]
@@ -285,7 +344,7 @@ if __name__ != "__main__":
     else:
         print("Z-Image-Turbo: 模块初始化失败，功能不可用")
 
-def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, seed, sampler, batch_size=1,
+def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, seed, sampler, scheduler, batch_size=1,
                    enable_hr=False, hr_scale=2.0, hr_upscaler=None, hr_second_pass_steps=0, denoising_strength=0.7):
     """使用Z-Image-Turbo生成图像"""
     global pipe, model_loaded
@@ -307,6 +366,26 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
         # 为Turbo模型设置合适的参数
         actual_steps = min(steps, 10)  # Turbo模型通常只需要很少的步数
         actual_guidance = 0.0  # 根据官方示例，Turbo模型应该使用0.0的guidance_scale
+        
+        # 尝试根据选择的调度器设置参数
+        scheduler_config = {}
+        try:
+            if scheduler == "karras":
+                scheduler_config["use_karras_sigmas"] = True
+            elif scheduler == "exponential":
+                scheduler_config["use_exponential_sigmas"] = True
+            elif scheduler == "sgm_uniform":
+                scheduler_config["use_beta_sigmas"] = True
+            # 其他调度器使用默认配置
+        except:
+            pass  # 如果有任何错误，使用默认配置
+            
+        # 创建调度器配置（如果模型支持）
+        if pipe and hasattr(pipe, 'scheduler') and scheduler_config:
+            try:
+                pipe.scheduler = pipe.scheduler.from_config(pipe.scheduler.config, **scheduler_config)
+            except:
+                pass  # 如果配置失败，继续使用默认调度器
             
         # 生成图像 - 使用ModelScope官方示例方式
         images = []  # 用于存储批量生成的图像
@@ -397,6 +476,7 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
 - CFG: {actual_guidance}
 - {'种子: ' + str(seeds[0]) if batch_size == 1 else '种子范围: ' + str(seeds[0]) + '-' + str(seeds[-1])}
 - 采样方法: {sampler}
+- 调度器: {scheduler}
 - 高分辨率修复: {'启用' if enable_hr else '禁用'}
 - 保存路径: {saved_paths[0] if saved_paths else '未保存'}"""
         

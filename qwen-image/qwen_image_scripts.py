@@ -758,8 +758,6 @@ def run_text_to_image(args_file):
             # 默认使用 Euler 调度器
             scheduler = FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
         
-        print(f"Scheduler配置完成: {scheduler_type}")
-        
         # 获取模型路径
         # 修复：使用传递的model_dir参数而不是硬编码路径
         model_dir = args.get("model_dir")
@@ -816,57 +814,41 @@ def run_text_to_image(args_file):
         print(f"控制图像路径: {control_image_path}")
         print(f"选择的ControlNet模型: {controlnet_model_selected}")
         
+        # 加载ControlNet模型
+        controlnet = None
         if controlnet_enable:
-            # 加载ControlNet模型
-            controlnet_model_path = controlnet_model_selected
-            if controlnet_model_path and controlnet_model_path != "无":
-                try:
-                    # 检查是否为本地路径 (使用新的路径: D:\sd-webui-forge-aki-v4.0\models\ControlNet)
+            try:
+                # 加载ControlNet模型
+                if controlnet_model_selected and controlnet_model_selected != "无":
+                    # 检查是否为本地路径
                     controlnet_base_path = Path(__file__).parent.parent.parent.parent / "models" / "ControlNet"
-                    model_name = controlnet_model_path.split('/')[-1] if '/' in controlnet_model_path else controlnet_model_path
+                    model_name = controlnet_model_selected.split('/')[-1] if '/' in controlnet_model_selected else controlnet_model_selected
                     controlnet_local_path = controlnet_base_path / model_name
                     
                     # 确保目录存在
                     controlnet_local_path.mkdir(parents=True, exist_ok=True)
                     
-                    # 只有在确实提供了控制图像的情况下才启用ControlNet
-                    control_image = args.get("control_image")
-                    if not control_image:
-                        print("未提供控制图像，跳过ControlNet")
-                        controlnet = None
-                        controlnet_enable = False
-                    elif controlnet_local_path and (controlnet_local_path / "config.json").exists():
+                    if controlnet_local_path and (controlnet_local_path / "config.json").exists():
                         print(f"从本地路径加载ControlNet模型: {controlnet_local_path}")
                         controlnet = QwenImageControlNetModel.from_pretrained(
                             str(controlnet_local_path),
-                            # 这些参数在配置文件中存在但不被模型期望，会显示警告但不影响功能
-                            # 保留torch_dtype以确保模型在正确的数据类型下运行
                             torch_dtype=torch_dtype
                         )
-                    elif controlnet_model_available:
-                        # 从HuggingFace下载
-                        print(f"从HuggingFace下载ControlNet模型: {controlnet_model_path}")
-                        # 只传递必要的参数，避免传递不支持的参数
-                        controlnet = QwenImageControlNetModel.from_pretrained(
-                            controlnet_model_path,
-                            torch_dtype=torch_dtype
-                        )
-                        # 保存到本地以便下次使用
-                        controlnet.save_pretrained(str(controlnet_local_path))
                     else:
+                        print(f"ControlNet模型不存在: {controlnet_local_path}")
                         controlnet = None
                         controlnet_enable = False
                         
                     if controlnet is not None:
                         print("ControlNet模型加载成功")
                         print(f"ControlNet模型类型: {type(controlnet)}")
-                except Exception as e:
-                    print(f"ControlNet模型加载失败: {e}")
-                    import traceback
-                    traceback.print_exc()
+                else:
                     controlnet = None
                     controlnet_enable = False
-            else:
+            except Exception as e:
+                print(f"ControlNet模型加载失败: {e}")
+                import traceback
+                traceback.print_exc()
                 controlnet = None
                 controlnet_enable = False
         else:
@@ -970,6 +952,7 @@ def run_text_to_image(args_file):
             return
         
         # 设置模型卸载
+        from nunchaku.utils import get_gpu_memory
         if get_gpu_memory() > 18:
             pipe.enable_model_cpu_offload()
             print("启用CPU卸载")
@@ -1172,12 +1155,12 @@ def run_text_to_image(args_file):
                         print(f"重新初始化CPU卸载管理器时出错: {e}")
                         import traceback
                         traceback.print_exc()
-                elif hasattr(pipeline, 'transformer'):
+                elif hasattr(pipe, 'transformer'):
                     # 如果没有启用卸载，确保所有模型参数在正确的设备上
                     try:
-                        device = pipeline.transformer.device
+                        device = pipe.transformer.device
                         # 将整个transformer模型移动到指定设备
-                        pipeline.transformer.to(device)
+                        pipe.transformer.to(device)
                         print(f"确保模型在设备 {device} 上")
                     except Exception as e:
                         print(f"移动模型到设备时出错: {e}")
@@ -1185,8 +1168,11 @@ def run_text_to_image(args_file):
                         traceback.print_exc()
                 else:
                     print("警告: pipe变量未定义，跳过LoRA模型加载")
+            else:
+                print("警告: pipe变量未定义，跳过LoRA模型加载")
         except Exception as e:
             print(f"LoRA加载过程中出现错误: {e}")
+
         # 生成图像
         print("开始生成图像...")
         # 使用官方推荐的参数
@@ -1216,7 +1202,7 @@ def run_text_to_image(args_file):
         import traceback
         traceback.print_exc()
         return
-    # ==================== 图像编辑功能 ====================
+# ==================== 图像编辑功能 ====================
 def run_image_editing(args_file):
     """运行图像编辑功能"""
     # 确保关键模块在作用域内可用

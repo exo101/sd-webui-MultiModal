@@ -11,6 +11,21 @@ import psutil
 import numpy as np
 from PIL import Image
 from modules import shared
+
+# 尝试导入WebUI的采样器模块
+try:
+    from modules import sd_samplers
+    WEBUI_SAMPLERS_AVAILABLE = True
+except ImportError:
+    WEBUI_SAMPLERS_AVAILABLE = False
+
+# 尝试导入WebUI的调度器模块
+try:
+    from modules import sd_schedulers
+    WEBUI_SCHEDULERS_AVAILABLE = True
+except ImportError:
+    WEBUI_SCHEDULERS_AVAILABLE = False
+
 import shutil
 import webbrowser
 
@@ -44,11 +59,16 @@ if str(scripts_dir) not in sys.path:
 def get_model_choices(model_dir):
     """获取指定目录下的模型文件列表"""
     try:
+        # 预先初始化choices变量
+        choices = []
+        
         if not model_dir.exists():
             print(f"警告: 模型目录不存在 {model_dir}")
             # 尝试创建目录
             model_dir.mkdir(parents=True, exist_ok=True)
-            return []
+            # 添加默认选项
+            choices.append(("未找到模型文件", ""))
+            return choices
         
         # 直接在指定目录查找模型文件，不深入子目录
         model_files = list(model_dir.glob("*.safetensors"))
@@ -59,12 +79,14 @@ def get_model_choices(model_dir):
             choices.append(("未找到模型文件", ""))
         else:
             # 返回 (显示名称, 文件名) 的元组列表
-            result = [(f.name, f.name) for f in model_files]
-            return result
+            choices = [(f.name, f.name) for f in model_files]
+        
+        return choices
     except Exception as e:
         print(f"获取模型列表时出错: {e}")
         traceback.print_exc()
-        return []
+        # 返回默认选项而不是空列表
+        return [("未找到模型文件", "")]
 
 # 获取LoRA模型文件列表
 def get_lora_choices(lora_dir):
@@ -1017,15 +1039,62 @@ def create_qwen_image_ui():
                         
                         with gr.Row():
                             # 添加采样方法选择组件
-                            text_to_image_scheduler = gr.Dropdown(
-                                choices=[
+                            # 获取WebUI内置的采样器选项
+                            if WEBUI_SAMPLERS_AVAILABLE:
+                                try:
+                                    sampler_choices = [(sampler.name, sampler.name) for sampler in sd_samplers.visible_samplers()]
+                                except:
+                                    sampler_choices = [
+                                        ("Euler", "euler"),
+                                        ("Euler Ancestral", "euler_ancestral"),
+                                        ("Heun", "heun"),
+                                        ("DPM++ 2M", "dpmpp_2m")
+                                    ]
+                            else:
+                                sampler_choices = [
                                     ("Euler", "euler"),
                                     ("Euler Ancestral", "euler_ancestral"),
                                     ("Heun", "heun"),
                                     ("DPM++ 2M", "dpmpp_2m")
-                                ],
-                                value="euler",
+                                ]
+                            
+                            text_to_image_scheduler = gr.Dropdown(
+                                choices=sampler_choices,
+                                value=sampler_choices[0][1] if sampler_choices else "euler",
                                 label="采样方法",
+                                min_width=120
+                            )
+                            
+                            # 添加调度器选项
+                            # 获取WebUI内置的调度器选项
+                            if WEBUI_SCHEDULERS_AVAILABLE:
+                                try:
+                                    scheduler_choices = [(scheduler.label, scheduler.name) for scheduler in sd_schedulers.schedulers]
+                                except:
+                                    scheduler_choices = [
+                                        ("Automatic", "automatic"),
+                                        ("Karras", "karras"),
+                                        ("Exponential", "exponential"),
+                                        ("SGM Uniform", "sgm_uniform"),
+                                        ("Simple", "simple"),
+                                        ("Normal", "normal"),
+                                        ("DDIM", "ddim_uniform")
+                                    ]
+                            else:
+                                scheduler_choices = [
+                                    ("Automatic", "automatic"),
+                                    ("Karras", "karras"),
+                                    ("Exponential", "exponential"),
+                                    ("SGM Uniform", "sgm_uniform"),
+                                    ("Simple", "simple"),
+                                    ("Normal", "normal"),
+                                    ("DDIM", "ddim_uniform")
+                                ]
+                            
+                            text_to_image_scheduler_type = gr.Dropdown(
+                                choices=scheduler_choices,
+                                value=scheduler_choices[0][1] if scheduler_choices else "automatic",
+                                label="调度器",
                                 min_width=120
                             )
                             
@@ -1271,14 +1340,18 @@ def create_qwen_image_ui():
                                 ### 常见问题及解决方案
                                 
                                 1. **显存要求**：推荐使用12GB及以上显存。低于12GB显存时生成时间会很漫长，且容易因显存不足而崩溃。
-                                
-                                2. **非50系显卡模型选择**：对于非RTX 50系列显卡，推荐下载以下模型版本以获得更好兼容性：
+
+                                2.下载完整的模型组件，而不是仅下载模型文件
+
+                                3. **非50系显卡模型选择**：对于非RTX 50系列显卡，推荐下载以下模型版本以获得更好兼容性：
                                    - `svdq-int4_r128-qwen-image.safetensors`
                                    - `svdq-int4_r128-qwen-image-lightningv1.1-8steps.safetensors`
-                                
-                                3. **ControlNet图像尺寸限制**：在ControlNet控制模块中请勿上传超过1500像素的图像，否则可能会因显存不足而报错。
-                                
-                                4. **模型下载地址**：
+
+                                4. 生成时间过长或爆显存可选择r32 lightningv1.1-4steps版本模型
+
+                                5. **ControlNet图像尺寸限制**：在ControlNet控制模块中请勿上传超过1500像素的图像，否则可能会因显存不足而报错。  
+                                                
+                                6. **模型下载地址**：
                                    - [Qwen Image Models on ModelScope](https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image)
                                 """
                             )
@@ -1339,6 +1412,7 @@ def create_qwen_image_ui():
                 text_to_image_cfg,
                 text_to_image_model,
                 text_to_image_scheduler,
+                text_to_image_scheduler_type,  # 添加调度器参数
                 text_to_image_lora_1,
                 text_to_image_lora_2,
                 text_to_image_lora_weight_1,
@@ -1365,6 +1439,7 @@ def create_qwen_image_ui():
             "text_to_image_model": text_to_image_model,
             "text_to_image_cfg": text_to_image_cfg,
             "text_to_image_scheduler": text_to_image_scheduler,
+            "text_to_image_scheduler_type": text_to_image_scheduler_type,  # 添加调度器组件
             "text_to_image_lora_1": text_to_image_lora_1,
             "text_to_image_lora_2": text_to_image_lora_2,
             "text_to_image_lora_weight_1": text_to_image_lora_weight_1,

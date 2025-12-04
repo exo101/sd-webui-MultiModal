@@ -11,6 +11,21 @@ import psutil
 import numpy as np
 from PIL import Image
 from modules import shared
+
+# 尝试导入WebUI的采样器模块
+try:
+    from modules import sd_samplers
+    WEBUI_SAMPLERS_AVAILABLE = True
+except ImportError:
+    WEBUI_SAMPLERS_AVAILABLE = False
+
+# 尝试导入WebUI的调度器模块
+try:
+    from modules import sd_schedulers
+    WEBUI_SCHEDULERS_AVAILABLE = True
+except ImportError:
+    WEBUI_SCHEDULERS_AVAILABLE = False
+
 import shutil
 import webbrowser
 
@@ -236,23 +251,34 @@ CONTROLNET_PREPROCESSOR_DISPLAY_TO_INTERNAL = get_preprocessor_display_to_intern
 def get_model_choices(model_dir):
     """获取指定目录下的模型文件列表"""
     try:
+        # 预先初始化choices变量
+        choices = []
+        
         if not model_dir.exists():
             print(f"警告: 模型目录不存在 {model_dir}")
             # 尝试创建目录
             model_dir.mkdir(parents=True, exist_ok=True)
-            return []
+            # 添加默认选项
+            choices.append(("未找到模型文件", ""))
+            return choices
         
         # 直接在指定目录查找模型文件，不深入子目录
         model_files = list(model_dir.glob("*.safetensors"))
         
+        # 如果仍然没有找到任何模型文件，添加默认选项
+        if not model_files:
+            # 添加默认选项，即使没有找到模型文件
+            choices.append(("未找到模型文件", ""))
+        else:
+            # 返回 (显示名称, 文件名) 的元组列表
+            choices = [(f.name, f.name) for f in model_files]
         
-        # 返回 (显示名称, 文件名) 的元组列表
-        result = [(f.name, f.name) for f in model_files]
-        return result
+        return choices
     except Exception as e:
         print(f"获取模型列表时出错: {e}")
         traceback.print_exc()
-        return []
+        # 返回默认选项而不是空列表
+        return [("未找到模型文件", "")]
 
 # 获取LoRA模型文件列表
 def get_lora_choices(lora_dir):
@@ -558,8 +584,11 @@ def preprocess_control_image(image_input, preprocessor_display_name):
 
 # ==================== 核心功能函数 ====================
 def edit_images(prompt, negative_prompt, image1, image2, image3, steps, cfg_scale,
-               model_file, scheduler, lora_model_1="", lora_model_2="", 
-               lora_weight_1=1.0, lora_weight_2=1.0, seed=-1,
+               model_file, scheduler, scheduler_type, lora_model_1="", lora_model_2="", 
+               lora_weight_1=1.0, lora_weight_2=1.0, seed=-1, enable_hr=False,
+               hr_scale=2.0, hr_upscaler="bilinear", denoising_strength=0.7,
+               original_image=None, mask_image=None, control_mask=None,
+               controlnet_model=None, controlnet_start=0.0, controlnet_end=1.0,
                # 添加 ControlNet 参数
                control_image=None, controlnet_conditioning_scale=1.0,
                controlnet_preprocessor="none"):
@@ -906,15 +935,62 @@ def create_qwen_image_edit_ui():
                             )
                             
                             # 添加采样方法选择组件
-                            edit_scheduler = gr.Dropdown(
-                                choices=[
+                            # 获取WebUI内置的采样器选项
+                            if WEBUI_SAMPLERS_AVAILABLE:
+                                try:
+                                    sampler_choices = [(sampler.name, sampler.name) for sampler in sd_samplers.visible_samplers()]
+                                except:
+                                    sampler_choices = [
+                                        ("Euler", "euler"),
+                                        ("Euler Ancestral", "euler_ancestral"),
+                                        ("Heun", "heun"),
+                                        ("DPM++ 2M", "dpmpp_2m")
+                                    ]
+                            else:
+                                sampler_choices = [
                                     ("Euler", "euler"),
                                     ("Euler Ancestral", "euler_ancestral"),
                                     ("Heun", "heun"),
                                     ("DPM++ 2M", "dpmpp_2m")
-                                ],
-                                value="euler",
+                                ]
+                            
+                            edit_scheduler = gr.Dropdown(
+                                choices=sampler_choices,
+                                value=sampler_choices[0][1] if sampler_choices else "euler",
                                 label="采样方法",
+                                min_width=120
+                            )
+                            
+                            # 添加调度器选项
+                            # 获取WebUI内置的调度器选项
+                            if WEBUI_SCHEDULERS_AVAILABLE:
+                                try:
+                                    scheduler_choices = [(scheduler.label, scheduler.name) for scheduler in sd_schedulers.schedulers]
+                                except:
+                                    scheduler_choices = [
+                                        ("Automatic", "automatic"),
+                                        ("Karras", "karras"),
+                                        ("Exponential", "exponential"),
+                                        ("SGM Uniform", "sgm_uniform"),
+                                        ("Simple", "simple"),
+                                        ("Normal", "normal"),
+                                        ("DDIM", "ddim_uniform")
+                                    ]
+                            else:
+                                scheduler_choices = [
+                                    ("Automatic", "automatic"),
+                                    ("Karras", "karras"),
+                                    ("Exponential", "exponential"),
+                                    ("SGM Uniform", "sgm_uniform"),
+                                    ("Simple", "simple"),
+                                    ("Normal", "normal"),
+                                    ("DDIM", "ddim_uniform")
+                                ]
+                            
+                            edit_scheduler_type = gr.Dropdown(
+                                choices=scheduler_choices,
+                                value=scheduler_choices[0][1] if scheduler_choices else "automatic",
+                                label="调度器",
                                 min_width=120
                             )
                             
@@ -926,6 +1002,25 @@ def create_qwen_image_edit_ui():
                                 interactive=True,
                                 min_width=150
                             )
+                            
+                            # High-Res Fix 选项
+                            with gr.Accordion("High-Res Fix", open=False):
+                                edit_enable_hr = gr.Checkbox(label="启用高分辨率修复", value=False)
+                                edit_hr_scale = gr.Slider(minimum=1.0, maximum=4.0, step=0.1, value=2.0, label="上采样倍数")
+                                edit_hr_upscaler = gr.Dropdown(
+                                    choices=["bilinear", "bicubic", "lanczos"],
+                                    value="bilinear",
+                                    label="上采样方法"
+                                )
+                                edit_denoising_strength = gr.Slider(minimum=0.1, maximum=1.0, step=0.05, value=0.7, label="去噪强度")
+                                
+                            # Additional image inputs for advanced features
+                            original_image = gr.Image(type="filepath", label="原始图像", visible=False)
+                            mask_image = gr.Image(type="filepath", label="蒙版图像", visible=False)
+                            control_mask = gr.Image(type="filepath", label="ControlNet蒙版", visible=False)
+                            controlnet_model = gr.Textbox(value="", label="ControlNet模型", visible=False)
+                            controlnet_start = gr.Slider(minimum=0.0, maximum=1.0, value=0.0, step=0.05, label="ControlNet开始步数比例", visible=False)
+                            controlnet_end = gr.Slider(minimum=0.0, maximum=1.0, value=1.0, step=0.05, label="ControlNet结束步数比例", visible=False)
                         
                         # 添加LoRA模型选择组件
                         with gr.Accordion("LoRA模型设置", open=False):
@@ -1142,15 +1237,25 @@ def create_qwen_image_edit_ui():
                 edit_cfg,
                 edit_model,
                 edit_scheduler,
+                edit_scheduler_type,
                 edit_lora_1,
                 edit_lora_2,
                 edit_lora_weight_1,
                 edit_lora_weight_2,
                 edit_seed,
-                # 添加 ControlNet 参数
+                edit_enable_hr,
+                edit_hr_scale,
+                edit_hr_upscaler,
+                edit_denoising_strength,
+                original_image,
+                mask_image,
                 control_image.background,
+                control_mask,
+                controlnet_model,
                 controlnet_conditioning_scale,
-                controlnet_preprocessor
+                controlnet_preprocessor,
+                controlnet_start,
+                controlnet_end
             ],
             outputs=[edit_output, edit_status]
         )
@@ -1158,24 +1263,33 @@ def create_qwen_image_edit_ui():
         # 返回UI组件字典，以便在主程序中引用
         result = {
             "edit_prompt": edit_prompt,
-            "edit_image1": edit_image1,
-            "edit_image2": edit_image2,
-            "edit_image3": edit_image3,
-            "edit_steps": edit_steps,
-            "edit_model": edit_model,
-            "edit_cfg": edit_cfg,
             "edit_negative_prompt": edit_negative_prompt,
+            "edit_steps": edit_steps,
+            "edit_cfg": edit_cfg,
+            "edit_model": edit_model,
             "edit_scheduler": edit_scheduler,
+            "edit_scheduler_type": edit_scheduler_type,
             "edit_lora_1": edit_lora_1,
             "edit_lora_2": edit_lora_2,
             "edit_lora_weight_1": edit_lora_weight_1,
             "edit_lora_weight_2": edit_lora_weight_2,
             "edit_seed": edit_seed,
+            "edit_enable_hr": edit_enable_hr,
+            "edit_hr_scale": edit_hr_scale,
+            "edit_hr_upscaler": edit_hr_upscaler,
+            "edit_denoising_strength": edit_denoising_strength,
+            "original_image": original_image,
+            "mask_image": mask_image,
+            "control_image": control_image,
+            "control_mask": control_mask,
+            "controlnet_model": controlnet_model,
+            "controlnet_conditioning_scale": controlnet_conditioning_scale,
+            "controlnet_preprocessor": controlnet_preprocessor,
+            "controlnet_start": controlnet_start,
+            "controlnet_end": controlnet_end,
             "edit_button": edit_button,
             "edit_output": edit_output,
             "edit_status": edit_status,
-            "edit_lora_url_1": edit_lora_url_1,  # 添加LoRA网址组件
-            "edit_lora_url_2": edit_lora_url_2   # 添加LoRA网址组件
         }
         
         # 添加刷新LoRA模型列表的函数

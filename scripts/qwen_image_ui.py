@@ -654,7 +654,7 @@ def get_qwen_image_controlnet_models():
 
 # ==================== 核心功能函数 ====================
 def run_text_to_image(prompt, negative_prompt, width, height, steps, cfg_scale, 
-                      model_file, scheduler, lora_model_1="", lora_model_2="", 
+                      model_file, scheduler, scheduler_type, lora_model_1="", lora_model_2="", 
                       lora_weight_1=1.0, lora_weight_2=1.0, seed=-1, batch_size=1,
                       controlnet_model=None,
                       control_image=None, control_mask=None, controlnet_conditioning_scale=1.0,

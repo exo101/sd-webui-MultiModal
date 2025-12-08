@@ -16,22 +16,10 @@ from modules import shared
 try:
     from modelscope import ZImagePipeline
     MODELScope_AVAILABLE = True
+    print("Z-Image-Turbo: ModelScope库可用")
 except ImportError as e:
     MODELScope_AVAILABLE = False
-
-# 尝试导入WebUI的采样器模块
-try:
-    from modules import sd_samplers
-    WEBUI_SAMPLERS_AVAILABLE = True
-except ImportError:
-    WEBUI_SAMPLERS_AVAILABLE = False
-
-# 尝试导入WebUI的调度器模块
-try:
-    from modules import sd_schedulers
-    WEBUI_SCHEDULERS_AVAILABLE = True
-except ImportError:
-    WEBUI_SCHEDULERS_AVAILABLE = False
+    print(f"Z-Image-Turbo: ModelScope库不可用: {e}")
 
 # 模型和输出目录
 models_dir = Path(shared.models_path) / "Tongyi-MAI" / "Z-Image-Turbo"
@@ -174,22 +162,54 @@ def save_image(image_np, seed, index=0):
         traceback.print_exc()
         return None
 
+def open_folder(folder_path):
+    """打开文件夹"""
+    try:
+        if sys.platform.startswith("win"):
+            os.startfile(folder_path)
+        elif sys.platform.startswith("darwin"):
+            os.system(f'open "{folder_path}"')
+        else:
+            os.system(f'xdg-open "{folder_path}"')
+        return f"已打开文件夹: {folder_path}"
+    except Exception as e:
+        print(f"打开文件夹时出错: {e}")
+        return f"打开文件夹失败: {e}"
+
 def create_z_image_ui():
     """创建Z-Image-Turbo UI界面"""
+    print("Z-Image-Turbo: 开始创建 UI...")
     
     # 检查ModelScope是否可用
     if not MODELScope_AVAILABLE:
+        print("Z-Image-Turbo: ModelScope 不可用，创建错误提示界面")
         with gr.Blocks() as demo:
             gr.Markdown("# Z-Image-Turbo 图像生成 (不可用)")
             gr.Markdown("错误：ModelScope 不可用，请检查安装")
+        print("Z-Image-Turbo: ModelScope 不可用，返回简化UI")
         return demo
     
+    # 导入采样器模块
+    try:
+        from modules import sd_samplers
+        sampler_names = [sampler.name for sampler in sd_samplers.visible_samplers()]
+        default_sampler = sampler_names[0] if sampler_names else "euler"
+    except:
+        sampler_names = [
+            "Euler", 
+            "Euler Ancestral", 
+            "Heun", 
+            "DPM++ 2M"
+        ]
+        default_sampler = "Euler"
+    
+    print("Z-Image-Turbo: 创建主界面")
     with gr.Blocks() as demo:
         gr.Markdown("# Z-Image-Turbo 图像生成")
         gr.Markdown("基于 ModelScope 的超快速文生图模型")
         
         with gr.Row():
-            with gr.Column(scale=3):
+            with gr.Column():
                 prompt = gr.Textbox(
                     label="提示词",
                     placeholder="输入您的提示词，例如：一只可爱的猫"
@@ -224,60 +244,10 @@ def create_z_image_ui():
                         minimum=1, maximum=8, step=1, value=1, label="生成批次"
                     )
                 
-                # 获取WebUI内置的采样器选项
-                if WEBUI_SAMPLERS_AVAILABLE:
-                    try:
-                        sampler_choices = [(sampler.name, sampler.name) for sampler in sd_samplers.visible_samplers()]
-                    except:
-                        sampler_choices = [
-                            ("Euler", "euler"),
-                            ("Euler Ancestral", "euler_ancestral"),
-                            ("Heun", "heun"),
-                            ("DPM++ 2M", "dpmpp_2m")
-                        ]
-                else:
-                    sampler_choices = [
-                        ("Euler", "euler"),
-                        ("Euler Ancestral", "euler_ancestral"),
-                        ("Heun", "heun"),
-                        ("DPM++ 2M", "dpmpp_2m")
-                    ]
-                
                 sampler = gr.Dropdown(
-                    choices=sampler_choices,
-                    value=sampler_choices[0][1] if sampler_choices else "euler",
+                    choices=sampler_names,
+                    value=default_sampler,
                     label="采样方法"
-                )
-                
-                # 添加调度器选项
-                if WEBUI_SCHEDULERS_AVAILABLE:
-                    try:
-                        scheduler_choices = [(scheduler.label, scheduler.name) for scheduler in sd_schedulers.schedulers]
-                    except:
-                        scheduler_choices = [
-                            ("Automatic", "automatic"),
-                            ("Karras", "karras"),
-                            ("Exponential", "exponential"),
-                            ("SGM Uniform", "sgm_uniform"),
-                            ("Simple", "simple"),
-                            ("Normal", "normal"),
-                            ("DDIM", "ddim_uniform")
-                        ]
-                else:
-                    scheduler_choices = [
-                        ("Automatic", "automatic"),
-                        ("Karras", "karras"),
-                        ("Exponential", "exponential"),
-                        ("SGM Uniform", "sgm_uniform"),
-                        ("Simple", "simple"),
-                        ("Normal", "normal"),
-                        ("DDIM", "ddim_uniform")
-                    ]
-                
-                scheduler = gr.Dropdown(
-                    choices=scheduler_choices,
-                    value=scheduler_choices[0][1] if scheduler_choices else "automatic",
-                    label="调度器"
                 )
                 
                 # 添加高分辨率修复(Hires.fix)选项
@@ -301,7 +271,7 @@ def create_z_image_ui():
                 
                 generate_btn = gr.Button("生成图像")
             
-            with gr.Column(scale=2):
+            with gr.Column():
                 # 使用Gallery组件支持多图像显示
                 output_images = gr.Gallery(
                     label="生成结果", 
@@ -314,29 +284,39 @@ def create_z_image_ui():
                 
                 # 添加打开输出目录按钮
                 open_folder_btn = gr.Button("打开输出目录", elem_id="open_zimage_folder")
-                open_folder_btn.click(fn=lambda: open_folder(str(output_dir)), inputs=[], outputs=[])
+                open_folder_btn.click(
+                    fn=lambda: open_folder(str(output_dir)),
+                    inputs=[],
+                    outputs=[]
+                )
         
+        print("Z-Image-Turbo: 设置事件处理器")
         generate_btn.click(
             fn=generate_image,
             inputs=[
                 prompt, negative_prompt, width, height, 
-                steps, cfg_scale, seed, sampler, scheduler, batch_size,
+                steps, cfg_scale, seed, sampler, batch_size,
                 enable_hr, hr_scale, hr_upscaler, hr_second_pass_steps, denoising_strength
             ],
             outputs=[output_info, output_images]
         )
     
+    print("Z-Image-Turbo: UI 创建完成")
     return demo
 
 # 模块是否可用的标志
 Z_IMAGE_MODULE_AVAILABLE = MODELScope_AVAILABLE
+print(f"Z-Image-Turbo: 模块可用性: {Z_IMAGE_MODULE_AVAILABLE}")
 
 # 确保模块可以被正确导入
 if __name__ != "__main__":
     # 当作为模块导入时，进行简单的初始化检查
-    pass
+    if Z_IMAGE_MODULE_AVAILABLE:
+        print("Z-Image-Turbo: 模块初始化完成，准备就绪")
+    else:
+        print("Z-Image-Turbo: 模块初始化失败，功能不可用")
 
-def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, seed, sampler, scheduler, batch_size=1,
+def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, seed, sampler, batch_size=1,
                    enable_hr=False, hr_scale=2.0, hr_upscaler=None, hr_second_pass_steps=0, denoising_strength=0.7):
     """使用Z-Image-Turbo生成图像"""
     global pipe, model_loaded
@@ -358,26 +338,6 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
         # 为Turbo模型设置合适的参数
         actual_steps = min(steps, 10)  # Turbo模型通常只需要很少的步数
         actual_guidance = 0.0  # 根据官方示例，Turbo模型应该使用0.0的guidance_scale
-        
-        # 尝试根据选择的调度器设置参数
-        scheduler_config = {}
-        try:
-            if scheduler == "karras":
-                scheduler_config["use_karras_sigmas"] = True
-            elif scheduler == "exponential":
-                scheduler_config["use_exponential_sigmas"] = True
-            elif scheduler == "sgm_uniform":
-                scheduler_config["use_beta_sigmas"] = True
-            # 其他调度器使用默认配置
-        except:
-            pass  # 如果有任何错误，使用默认配置
-            
-        # 创建调度器配置（如果模型支持）
-        if pipe and hasattr(pipe, 'scheduler') and scheduler_config:
-            try:
-                pipe.scheduler = pipe.scheduler.from_config(pipe.scheduler.config, **scheduler_config)
-            except:
-                pass  # 如果配置失败，继续使用默认调度器
             
         # 生成图像 - 使用ModelScope官方示例方式
         images = []  # 用于存储批量生成的图像
@@ -468,7 +428,6 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
 - CFG: {actual_guidance}
 - {'种子: ' + str(seeds[0]) if batch_size == 1 else '种子范围: ' + str(seeds[0]) + '-' + str(seeds[-1])}
 - 采样方法: {sampler}
-- 调度器: {scheduler}
 - 高分辨率修复: {'启用' if enable_hr else '禁用'}
 - 保存路径: {saved_paths[0] if saved_paths else '未保存'}"""
         
@@ -478,18 +437,3 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
     except Exception as e:
         error_details = traceback.format_exc()
         return f"图像生成失败: {str(e)}\n详细错误信息:\n{error_details}", None
-
-# 添加打开文件夹的函数
-def open_folder(path):
-    """打开指定路径的文件夹"""
-    try:
-        if sys.platform.startswith('win'):
-            os.startfile(path)
-        elif sys.platform.startswith('darwin'):
-            os.system(f'open "{path}"')
-        else:
-            os.system(f'xdg-open "{path}"')
-    except Exception as e:
-        print(f"无法打开文件夹: {e}")
-    
-    return None

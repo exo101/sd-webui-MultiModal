@@ -16,10 +16,8 @@ from modules import shared
 try:
     from modelscope import ZImagePipeline
     MODELScope_AVAILABLE = True
-    print("Z-Image-Turbo: ModelScope库可用")
 except ImportError as e:
     MODELScope_AVAILABLE = False
-    print(f"Z-Image-Turbo: ModelScope库不可用: {e}")
 
 # 尝试导入WebUI的采样器模块
 try:
@@ -178,24 +176,20 @@ def save_image(image_np, seed, index=0):
 
 def create_z_image_ui():
     """创建Z-Image-Turbo UI界面"""
-    print("Z-Image-Turbo: 开始创建 UI...")
     
     # 检查ModelScope是否可用
     if not MODELScope_AVAILABLE:
-        print("Z-Image-Turbo: ModelScope 不可用，创建错误提示界面")
         with gr.Blocks() as demo:
             gr.Markdown("# Z-Image-Turbo 图像生成 (不可用)")
             gr.Markdown("错误：ModelScope 不可用，请检查安装")
-        print("Z-Image-Turbo: ModelScope 不可用，返回简化UI")
         return demo
     
-    print("Z-Image-Turbo: 创建主界面")
     with gr.Blocks() as demo:
         gr.Markdown("# Z-Image-Turbo 图像生成")
         gr.Markdown("基于 ModelScope 的超快速文生图模型")
         
         with gr.Row():
-            with gr.Column():
+            with gr.Column(scale=3):
                 prompt = gr.Textbox(
                     label="提示词",
                     placeholder="输入您的提示词，例如：一只可爱的猫"
@@ -307,7 +301,7 @@ def create_z_image_ui():
                 
                 generate_btn = gr.Button("生成图像")
             
-            with gr.Column():
+            with gr.Column(scale=2):
                 # 使用Gallery组件支持多图像显示
                 output_images = gr.Gallery(
                     label="生成结果", 
@@ -317,8 +311,11 @@ def create_z_image_ui():
                     columns=3
                 )
                 output_info = gr.Textbox(label="生成信息", interactive=False)
+                
+                # 添加打开输出目录按钮
+                open_folder_btn = gr.Button("打开输出目录", elem_id="open_zimage_folder")
+                open_folder_btn.click(fn=lambda: open_folder(str(output_dir)), inputs=[], outputs=[])
         
-        print("Z-Image-Turbo: 设置事件处理器")
         generate_btn.click(
             fn=generate_image,
             inputs=[
@@ -329,20 +326,15 @@ def create_z_image_ui():
             outputs=[output_info, output_images]
         )
     
-    print("Z-Image-Turbo: UI 创建完成")
     return demo
 
 # 模块是否可用的标志
 Z_IMAGE_MODULE_AVAILABLE = MODELScope_AVAILABLE
-print(f"Z-Image-Turbo: 模块可用性: {Z_IMAGE_MODULE_AVAILABLE}")
 
 # 确保模块可以被正确导入
 if __name__ != "__main__":
     # 当作为模块导入时，进行简单的初始化检查
-    if Z_IMAGE_MODULE_AVAILABLE:
-        print("Z-Image-Turbo: 模块初始化完成，准备就绪")
-    else:
-        print("Z-Image-Turbo: 模块初始化失败，功能不可用")
+    pass
 
 def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, seed, sampler, scheduler, batch_size=1,
                    enable_hr=False, hr_scale=2.0, hr_upscaler=None, hr_second_pass_steps=0, denoising_strength=0.7):
@@ -487,3 +479,17 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
         error_details = traceback.format_exc()
         return f"图像生成失败: {str(e)}\n详细错误信息:\n{error_details}", None
 
+# 添加打开文件夹的函数
+def open_folder(path):
+    """打开指定路径的文件夹"""
+    try:
+        if sys.platform.startswith('win'):
+            os.startfile(path)
+        elif sys.platform.startswith('darwin'):
+            os.system(f'open "{path}"')
+        else:
+            os.system(f'xdg-open "{path}"')
+    except Exception as e:
+        print(f"无法打开文件夹: {e}")
+    
+    return None

@@ -57,6 +57,7 @@ WebUI Forge安装使用介绍：
 |---------------------|--------|-----------|-----------|
 | `sd-webui-forge-aki`|`models`|`sam`| 图像分割模型目录 |
 | `sd-webui-forge-aki`|`models`|`cleaner`| 图像清理模型目录 |
+| `sd-webui-forge-aki`|`models`|`Tongyi-MAl`| Z-Image模型目录 |
 | `sd-webui-forge-aki`|`models`|`index-tts2`| Index-TTS语音合成模型目录 |
 | `sd-webui-forge-aki`|`models`|`FLUX.1-Kontext-dev`| 图像编辑模型目录 |
 | `sd-webui-forge-aki`|`models`|`lora`|qwen LoRA微调模型目录 |
@@ -80,8 +81,11 @@ WebUI Forge安装使用介绍：
   
 模型已存至网盘
 <img width="1440" height="781" alt="555555" src="https://github.com/user-attachments/assets/ac43e986-4108-48f0-a336-85ea4771f5d2" />
-
-
+### 更新内容
+2025/12/8
+- 添加Z-Image-Turbo
+- 完善各类模型采样方法与调度器
+  
 ### 更新内容
 2025/11/14
 - 整合包增加ui交互指南，降低使用难度，科普参数，各类模型的加载方式

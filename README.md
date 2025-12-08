@@ -4,7 +4,7 @@
 
 - 显卡：中端NVIDIA RTX 4070/中高端NVIDIA RTX 5070ti
 - 显存：至少 12GB
-- 内存：推荐 32/64GB 
+- 内存：推荐 64GB 
      
 ## 核心功能
 
@@ -21,7 +21,7 @@
 
 ## 各项目配置显存要求
 
-- Qwen-Image: 12GB
+- Qwen-Image: 12GB 
 - Qwen3vL: 10GB
 - Z-Image-Turbo ：16g
 - LatentSync: 12GB

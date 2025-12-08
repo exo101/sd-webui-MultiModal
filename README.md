@@ -81,10 +81,12 @@ WebUI Forge安装使用介绍：
   
 模型已存至网盘
 <img width="1440" height="781" alt="555555" src="https://github.com/user-attachments/assets/ac43e986-4108-48f0-a336-85ea4771f5d2" />
+
 ### 更新内容
-2025/12/8
-- 添加Z-Image-Turbo
-- 完善各类模型采样方法与调度器
+2025/12/9
+- 添加Z-Image-Turbo 
+- 添加Z-Image-Turbo gguf量化模型
+- 完善各类模型采样方法
   
 ### 更新内容
 2025/11/14

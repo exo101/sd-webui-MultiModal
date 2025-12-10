@@ -1,9 +1,35 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import io
+import sys
+import warnings
+
+# 保存原始的标准输出和错误流
+original_stdout = sys.stdout
+original_stderr = sys.stderr
+original_showwarning = warnings.showwarning
+
+# 创建StringIO对象来捕获输出
+captured_stdout = io.StringIO()
+captured_stderr = io.StringIO()
+
+# 重定向标准输出和错误流
+sys.stdout = captured_stdout
+sys.stderr = captured_stderr
+
+# 重定向警告
+def ignore_warnings(*args, **kwargs):
+    pass
+
+warnings.showwarning = ignore_warnings
+
+# 设置日志级别以减少输出
+import logging
+logging.getLogger().setLevel(logging.CRITICAL)
+
 # ==================== 导入模块 ====================
 import json
-import sys
 import os
 import copy
 from pathlib import Path
@@ -41,7 +67,6 @@ try:
     for path in paths_to_add:
         if path not in sys.path:
             sys.path.append(path)
-            print(f"已添加路径到sys.path: {path}")
     
     # 尝试导入ControlNet预处理器
     try:
@@ -53,8 +78,7 @@ try:
         from annotator.lineart import LineartDetector as LineartDetectorImported
         from annotator.lineart_anime import LineartAnimeDetector as LineartAnimeDetectorImported
         PREPROCESSORS_AVAILABLE = True
-        print("ControlNet预处理器导入成功")
-    except ImportError as e:
+    except ImportError:
         # 尝试从forge_legacy_preprocessors导入
         try:
             from forge_legacy_preprocessors.annotator.hed import apply_hed as HEDdetectorImported
@@ -65,14 +89,10 @@ try:
             from forge_legacy_preprocessors.annotator.lineart import LineartDetector as LineartDetectorImported
             from forge_legacy_preprocessors.annotator.lineart_anime import LineartAnimeDetector as LineartAnimeDetectorImported
             PREPROCESSORS_AVAILABLE = True
-            # print("ControlNet预处理器从forge_legacy_preprocessors导入成功")  # 注释掉调试信息
-        except ImportError as e2:
-            # print(f"ControlNet预处理器导入失败: {e}")  # 注释掉调试信息
-            # print(f"尝试从forge_legacy_preprocessors导入也失败: {e2}")  # 注释掉调试信息
+        except ImportError:
             PREPROCESSORS_AVAILABLE = False
 
-except Exception as e:
-    # print(f"导入预处理器时出现未预期的错误: {e}")  # 注释掉调试信息
+except Exception:
     PREPROCESSORS_AVAILABLE = False
 
 # ==================== ControlNet 可用性检查 ====================
@@ -81,10 +101,9 @@ CONTROLNET_AVAILABLE = False
 try:
     from diffusers.models import QwenImageControlNetModel
     CONTROLNET_AVAILABLE = True
-    # print("ControlNet功能可用")  # 注释掉调试信息
 except ImportError:
     CONTROLNET_AVAILABLE = False
-    # print("ControlNet功能不可用: 无法导入QwenImageControlNetModel")  # 注释掉调试信息
+
 
 # ==================== 预处理器函数 ====================
 def apply_canny(image, low_threshold=100, high_threshold=200):
@@ -245,7 +264,6 @@ def preprocess_control_image(image_path, preprocessor_type, mask_path=None):
     """预处理控制图像，使用WebUI内置的ControlNet预处理器，支持蒙版"""
     try:
         if not image_path or not os.path.exists(image_path):
-            print(f"预处理图像路径无效: {image_path}")
             return None
         
         # 加载图像
@@ -267,7 +285,6 @@ def preprocess_control_image(image_path, preprocessor_type, mask_path=None):
             # 这里采用简单的混合方式：图像像素值乘以(蒙版值/255)
             masked_array = (image_array * (mask_array[:, :, np.newaxis] / 255.0)).astype(np.uint8)
             image = Image.fromarray(masked_array, mode="RGB")
-        print(f"开始使用预处理器 {preprocessor_type} 处理图像: {image_path}")
         
         # 使用WebUI的预处理器管理系统
         try:
@@ -284,7 +301,6 @@ def preprocess_control_image(image_path, preprocessor_type, mask_path=None):
             for path in paths_to_add:
                 if path not in sys.path:
                     sys.path.append(path)
-                    # print(f"已添加路径到sys.path: {path}")  # 注释掉调试信息
             
             # 导入WebUI的预处理器管理模块
             from modules_forge.shared import supported_preprocessors
@@ -296,9 +312,7 @@ def preprocess_control_image(image_path, preprocessor_type, mask_path=None):
             # 手动导入inpaint预处理器以确保预处理器被正确加载
             try:
                 import forge_preprocessor_inpaint.scripts.preprocessor_inpaint
-                # print("成功加载forge_preprocessor_inpaint模块")  # 注释掉调试信息
-            except Exception as e:
-                # print(f"加载forge_preprocessor_inpaint模块时出错: {e}")  # 注释掉调试信息
+            except Exception:
                 # 即使导入失败，也要确保预处理器在supported_preprocessors中
                 try:
                     # 尝试直接导入并注册inpaint预处理器
@@ -323,33 +337,23 @@ def preprocess_control_image(image_path, preprocessor_type, mask_path=None):
                     if not inpaint_only_registered:
                         inpaint_only_preprocessor = PreprocessorInpaintOnly()
                         add_supported_preprocessor(inpaint_only_preprocessor)
-                        # print("手动注册inpaint_only预处理器成功")
                     
                     if not inpaint_global_harmonious_registered:
                         inpaint_preprocessor = PreprocessorInpaint()
                         add_supported_preprocessor(inpaint_preprocessor)
-                        # print("手动注册inpaint_global_harmonious预处理器成功")
                     
                     if not inpaint_lama_registered:
                         inpaint_lama_preprocessor = PreprocessorInpaintLama()
                         add_supported_preprocessor(inpaint_lama_preprocessor)
-                        # print("手动注册inpaint_lama预处理器成功")
                         
-                except Exception as manual_register_error:
-                    # print(f"手动注册inpaint预处理器失败: {manual_register_error}")
+                except Exception:
                     pass
             
             # 手动导入legacy_preprocessors以确保预处理器被正确加载
             try:
                 import forge_legacy_preprocessors.scripts.legacy_preprocessors
-                # print("成功加载legacy_preprocessors模块")  # 注释掉调试信息
-            except Exception as e:
-                # print(f"加载legacy_preprocessors模块时出错: {e}")  # 注释掉调试信息
+            except Exception:
                 pass
-            
-            # 直接使用预处理器类型名称获取预处理器对象
-            # 根据WebUI源码，预处理器的名称就是其在supported_preprocessors中的键
-            # print(f"尝试查找预处理器: {preprocessor_type}")  # 注释掉调试信息
             
             # 特殊处理"none"预处理器 - 直接返回原始图像
             if preprocessor_type.lower() in ["none", "无", "none (default)"]:
@@ -408,7 +412,6 @@ def preprocess_control_image(image_path, preprocessor_type, mask_path=None):
             
             # 如果还是找不到，直接报错而不是回退到canny
             if preprocessor is None:
-                print(f"错误：未找到预处理器 {preprocessor_type}")
                 raise ValueError(f"未找到预处理器: {preprocessor_type}，请检查预处理器名称是否正确")
             
             # 使用预处理器处理图像
@@ -472,7 +475,6 @@ def preprocess_control_image(image_path, preprocessor_type, mask_path=None):
                                 mask_array = cv2.cvtColor(mask_array, cv2.COLOR_RGB2GRAY)
                             # 添加input_mask参数
                             kwargs['input_mask'] = mask_array
-                            print(f"为inpaint_only预处理器提供了蒙版图像: {mask_path}")
                         else:
                             # 检查是否是ForgeCanvas格式的图像（包含背景和前景）
                             # 如果image_path是包含蒙版信息的图像，则从中提取蒙版
@@ -483,20 +485,15 @@ def preprocess_control_image(image_path, preprocessor_type, mask_path=None):
                                     # 从alpha通道提取蒙版
                                     alpha_channel = np.array(pil_image)[:, :, 3]
                                     kwargs['input_mask'] = alpha_channel
-                                    print("从RGBA图像的alpha通道提取蒙版用于inpaint_only预处理器")
                                 else:
                                     # 检查是否是灰度图作为蒙版
                                     if len(np.array(pil_image).shape) == 2:
                                         kwargs['input_mask'] = np.array(pil_image)
-                                        print("使用灰度图作为蒙版用于inpaint_only预处理器")
                                     else:
                                         # 对于inpaint_only预处理器，直接返回原始图像，因为真正的处理在扩散过程中进行
-                                        print("inpaint_only预处理器直接返回原始图像，真正的处理将在扩散过程中进行")
                                         return image_array
-                            except Exception as e:
-                                print(f"尝试从图像提取蒙版时出错: {e}")
+                            except Exception:
                                 # 对于inpaint_only预处理器，如果没有蒙版，直接返回原始图像
-                                print("inpaint_only预处理器未提供有效蒙版，直接返回原始图像")
                                 return image_array
                     
                     # 确保所有数字参数都不是None
@@ -517,11 +514,6 @@ def preprocess_control_image(image_path, preprocessor_type, mask_path=None):
                             kwargs['slider_2'] = 0
                     
                     processed_image_array = preprocessor(image_array, **kwargs)
-                else:
-                    # 一些预处理器可能需要特殊的调用方式
-                    processed_image_array = preprocessor(image_array)
-                
-                # print("预处理器调用成功")  # 注释掉调试信息
                 
                 # 确保输出是正确的格式
                 if isinstance(processed_image_array, tuple):
@@ -565,25 +557,16 @@ def preprocess_control_image(image_path, preprocessor_type, mask_path=None):
                 orig_width, orig_height = processed_image_pil.size
                 
                 # 不改变图像内容，只确保格式正确
-                print(f"预处理完成，图像尺寸: {orig_width}x{orig_height}")
-                
                 return processed_image
-            except Exception as process_error:
-                print(f"使用WebUI预处理器时出错: {process_error}")
+            except Exception:
                 # 出错时不再回退，直接抛出异常
                 raise
             
-        except Exception as e:
-            print(f"使用WebUI预处理器时出错: {e}")
-            import traceback
-            traceback.print_exc()
+        except Exception:
             # 不再回退到默认处理，直接抛出异常
             raise
         
-    except Exception as e:
-        print(f"预处理控制图像时出错: {e}")
-        import traceback
-        traceback.print_exc()
+    except Exception:
         # 不再返回None，直接抛出异常
         raise
 
@@ -594,8 +577,6 @@ def run_preprocess_control_image(args_file):
         # 读取参数
         with open(args_file, 'r', encoding='utf-8') as f:
             args = json.load(f)
-        
-        print(f"开始执行控制图像预处理功能，参数文件: {args_file}")
         
         # 获取参数
         image_path = args.get('image_path')
@@ -610,12 +591,6 @@ def run_preprocess_control_image(args_file):
             if isinstance(result, np.ndarray):
                 # 检查数组是否非空
                 if result.size > 0:
-                    # 如果是全零数组，可能表示处理失败
-                    if not np.all(result == 0):
-                        print("检测到有效的预处理结果（非全零数组）")
-                    else:
-                        print("警告：预处理结果为全零数组，但仍视为有效结果")
-                    
                     # 保存并返回结果
                     outputs_dir = Path(__file__).parent / "outputs"
                     outputs_dir.mkdir(exist_ok=True)
@@ -639,10 +614,13 @@ def run_preprocess_control_image(args_file):
                         # 转换为PIL图像并保存
                         result_image = Image.fromarray(result)
                         result_image.save(output_path)
-                        print(f"SUCCESS:{output_path}")
-                        return str(output_path)
+                        
+                    # 准备成功信息
+                    success_msg = f"SUCCESS:{output_path}"
+                    # 在 finally 块之前，通过一个统一的位置输出所有消息
+                    _print_captured_output([success_msg])
+                    return str(output_path)
                 else:
-                    print("预处理结果为空数组")
                     return None
             # 如果返回的是PIL图像对象，保存它并输出路径
             elif isinstance(result, Image.Image):
@@ -653,31 +631,50 @@ def run_preprocess_control_image(args_file):
                 timestamp = int(time.time() * 1000)
                 output_path = outputs_dir / f"preprocess_preview_{timestamp}.png"
                 result.save(output_path)
-                print(f"SUCCESS:{output_path}")
+                # 准备成功信息
+                success_msg = f"SUCCESS:{output_path}"
+                # 在 finally 块之前，通过一个统一的位置输出所有消息
+                _print_captured_output([success_msg])
                 return str(output_path)
             else:
                 # 如果返回的是路径字符串
-                print(f"SUCCESS:{result}")
+                # 准备成功信息
+                success_msg = f"SUCCESS:{result}"
+                # 在 finally 块之前，通过一个统一的位置输出所有消息
+                _print_captured_output([success_msg])
                 return result
         else:
-            print("预处理失败，返回None")
             return None
             
     except Exception as e:
-        print(f"运行预处理控制图像时出错: {e}")
-        import traceback
-        traceback.print_exc()
+        # 将错误信息传递给统一的输出函数
+        _print_captured_output([f"运行预处理控制图像时出错: {e}"])
         return None
+    finally:
+        # 恢复原始的标准输出和错误流
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+        warnings.showwarning = original_showwarning
 
 # ==================== 文生图功能 ====================
+def _print_captured_output(messages):
+    """
+    统一处理被捕获的输出，仅在需要时恢复原始stdout进行打印。
+    :param messages: 要输出的消息列表
+    """
+    # 临时恢复原始stdout以打印消息
+    temp_stdout = sys.stdout
+    sys.stdout = original_stdout
+    try:
+        for msg in messages:
+            print(msg)
+    finally:
+        # 立刻将stdout重新定向回捕获对象
+        sys.stdout = temp_stdout
+
 def run_text_to_image(args_file):
     """运行文生图功能"""
     try:
-        print(f"开始执行文生图功能，参数文件: {args_file}")
-        
-        # 记录开始时间
-        start_time = time.time()
-        
         # 读取参数
         with open(args_file, 'r', encoding='utf-8') as f:
             args = json.load(f)
@@ -698,25 +695,18 @@ def run_text_to_image(args_file):
         try:
             # 首先尝试导入支持LoRA的nunchaku版本
             from nunchaku.models.transformers.transformer_qwenimage import NunchakuQwenImageTransformer2DModel as LightningTransformer
-            print("成功导入支持LoRA的NunchakuQwenImageTransformer2DModel")
-        except (ImportError, ModuleNotFoundError) as e:
-            print(f"无法导入支持LoRA的nunchaku版本: {e}")
+        except (ImportError, ModuleNotFoundError):
             try:
                 # 回退到diffusers标准版本
                 from diffusers.models.transformers.transformer_qwenimage import QwenImageTransformer2DModel as LightningTransformer
-                print("回退到diffusers标准版本的QwenImageTransformer2DModel")
-            except Exception as e2:
-                print(f"无法导入diffusers标准版本: {e2}")
+            except Exception:
                 LightningTransformer = None
         
         if LightningTransformer is None:
-            print("错误: 无法导入任何可用的Transformer模型")
             return
             
         from nunchaku.utils import get_gpu_memory, get_precision
         from PIL import Image
-        
-        print("依赖库导入成功")
         
         # 获取用户选择的采样方法
         scheduler_type = args.get("scheduler", "euler")
@@ -774,7 +764,6 @@ def run_text_to_image(args_file):
         
         # 获取用户选择的模型文件
         model_file = args.get("model_file")
-        print(f"用户选择的模型文件: {model_file}")
         if model_file:
             # 使用用户选择的模型文件
             model_path = qwenimage_models_dir / model_file
@@ -786,13 +775,8 @@ def run_text_to_image(args_file):
             else:
                 model_path = None
         
-        print(f"用户选择步数: {steps}")
-        if model_path:
-            print(f"模型路径: {model_path}")
-        
         # 检查模型文件是否存在
         if not model_path or not model_path.exists():
-            print(f"模型文件不存在: {model_path}")
             return
         
         # 添加ControlNet相关路径到系统路径
@@ -809,11 +793,7 @@ def run_text_to_image(args_file):
                            and control_image_path != "" 
                            and controlnet_model_selected != "无" 
                            and PREPROCESSORS_AVAILABLE)
-        
-        print(f"ControlNet启用状态: {controlnet_enable}")
-        print(f"控制图像路径: {control_image_path}")
-        print(f"选择的ControlNet模型: {controlnet_model_selected}")
-        
+
         # 加载ControlNet模型
         controlnet = None
         if controlnet_enable:
@@ -829,44 +809,35 @@ def run_text_to_image(args_file):
                     controlnet_local_path.mkdir(parents=True, exist_ok=True)
                     
                     if controlnet_local_path and (controlnet_local_path / "config.json").exists():
-                        print(f"从本地路径加载ControlNet模型: {controlnet_local_path}")
                         controlnet = QwenImageControlNetModel.from_pretrained(
                             str(controlnet_local_path),
                             torch_dtype=torch_dtype
                         )
                     else:
-                        print(f"ControlNet模型不存在: {controlnet_local_path}")
                         controlnet = None
                         controlnet_enable = False
                         
                     if controlnet is not None:
-                        print("ControlNet模型加载成功")
-                        print(f"ControlNet模型类型: {type(controlnet)}")
+                        pass
                 else:
                     controlnet = None
                     controlnet_enable = False
-            except Exception as e:
-                print(f"ControlNet模型加载失败: {e}")
-                import traceback
-                traceback.print_exc()
+            except Exception:
                 controlnet = None
                 controlnet_enable = False
         else:
             controlnet = None
 
         # 加载模型
-        print("开始加载模型...")
         transformer = None
         pipe = None
-        
+
         # 直接使用nunchaku的正确加载方式
         try:
-            print(f"尝试使用nunchaku加载模型...")
             # 导入相应的类
             from nunchaku.models.transformers.transformer_qwenimage import NunchakuQwenImageTransformer2DModel
             
             # 检查模型路径
-            print(f"正在从 {model_path} 加载transformer...")
             if model_path is None:
                 raise ValueError("模型路径为None")
             
@@ -874,30 +845,51 @@ def run_text_to_image(args_file):
             if not model_path.exists():
                 raise FileNotFoundError(f"模型文件不存在: {model_path}")
             
-            # 尝试加载transformer
-            transformer = NunchakuQwenImageTransformer2DModel.from_pretrained(
-                str(model_path),
-                torch_dtype=torch_dtype
-            )
-            print("Transformer加载成功")
+            # 检查是否为特殊的大模型文件 qwen_2.5_vl_7b_fp8_scaled.safetensors
+            if model_path.name == "qwen_2.5_vl_7b_fp8_scaled.safetensors":
+                # 对于这个特殊的大模型文件，我们使用不同的加载方式
+                transformer = NunchakuQwenImageTransformer2DModel.from_pretrained(
+                    str(model_path),  # 直接使用文件路径
+                    torch_dtype=torch_dtype,
+                    low_cpu_mem_usage=True,
+                    max_memory={0: "15GB"}  # 限制GPU内存使用
+                )
+            else:
+                # 尝试加载transformer
+                transformer = NunchakuQwenImageTransformer2DModel.from_pretrained(
+                    str(model_path),
+                    torch_dtype=torch_dtype
+                )
 
             # 添加ControlNet相关路径到系统路径
             controlnet_path = Path(__file__).parent / "ControlNet" / "Qwen-Image-ControlNet-Union"
             if str(controlnet_path) not in sys.path:
                 sys.path.append(str(controlnet_path))
-                print(f"已添加ControlNet路径到sys.path: {controlnet_path}")
             
             # 使用模型根目录作为基础路径，而不是模型文件所在子目录
             # 模型根目录包含model_index.json和其他必要组件
             base_model_path = str(model_path.parent.parent)  # models/qwen-image
             
+            # 检查text_encoder组件是否存在，如果不存在则尝试使用替代方案
+            text_encoder_path = Path(base_model_path) / "text_encoder"
+            text_encoder_missing = False
+            if not text_encoder_path.exists():
+                text_encoder_missing = True
+            elif not (text_encoder_path / "model-00001-of-00004.safetensors").exists():
+                text_encoder_missing = True
+            
+            # 如果text_encoder组件缺失，检查是否存在qwen_2.5_vl_7b_fp8_scaled.safetensors作为替代
+            use_alternative_text_encoder = False
+            alternative_text_encoder_model_path = None
+            if text_encoder_missing:
+                alternative_text_encoder = text_encoder_path / "qwen_2.5_vl_7b_fp8_scaled.safetensors"
+                if alternative_text_encoder.exists():
+                    use_alternative_text_encoder = True
+                    alternative_text_encoder_model_path = str(alternative_text_encoder)
+            
             if controlnet_enable and controlnet is not None:
-                print("尝试使用ControlNet管道")
                 try:
                     from diffusers import QwenImageControlNetPipeline
-                    print(f"ControlNet类类型: {type(controlnet)}")
-                    print(f"ControlNet设备: {next(controlnet.parameters()).device if hasattr(controlnet, 'parameters') else 'unknown'}")
-                    
                     # 创建ControlNet Pipeline，使用模型根目录作为基础路径
                     # 注意：from_pretrained 方法可能不直接接受 torch_dtype 参数
                     pipe = QwenImageControlNetPipeline.from_pretrained(
@@ -910,42 +902,106 @@ def run_text_to_image(args_file):
                     # 将整个pipeline移动到指定的数据类型
                     if torch_dtype != pipe.transformer.dtype:
                         pipe.to(torch_dtype)
-                    print("ControlNet管道创建成功")
-                except Exception as e:
-                    print(f"ControlNet管道创建失败: {e}")
-                    import traceback
-                    traceback.print_exc()
-                    print("回退到标准QwenImagePipeline管道")
+                except Exception:
+                    # 回退到标准QwenImagePipeline管道
                     from diffusers import QwenImagePipeline
+                    
+                    # 检查是否需要使用替代的text_encoder
+                    if use_alternative_text_encoder and alternative_text_encoder_model_path:
+                        # 手动加载各组件然后创建Pipeline
+                        # 从完整模型路径加载其他组件，但排除text_encoder
+                        pipe = QwenImagePipeline.from_pretrained(
+                            base_model_path,
+                            transformer=transformer,
+                            scheduler=scheduler,
+                            torch_dtype=torch_dtype,
+                            text_encoder=None  # 不加载text_encoder
+                        )
+                        
+                        # 手动加载替代的text_encoder
+                        from transformers import Qwen2_5_VLForConditionalGeneration, Qwen2Tokenizer
+                        
+                        # 根据项目规范，使用from_pretrained方法加载模型
+                        # 并使用父目录作为路径，同时启用内存优化参数
+                        text_encoder_alt = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+                            str(Path(alternative_text_encoder_model_path).parent),  # 使用父目录作为路径
+                            torch_dtype=torch_dtype,
+                            low_cpu_mem_usage=True,
+                            max_memory={0: "15GB"}
+                        )
+                        
+                        # 加载tokenizer（从原始路径）
+                        tokenizer = Qwen2Tokenizer.from_pretrained(
+                            base_model_path,
+                            subfolder="tokenizer"
+                        )
+                        
+                        # 手动设置组件
+                        pipe.text_encoder = text_encoder_alt
+                        pipe.tokenizer = tokenizer
+                        
+                    else:
+                        pipe = QwenImagePipeline.from_pretrained(
+                            base_model_path,
+                            transformer=transformer,
+                            scheduler=scheduler,
+                            torch_dtype=torch_dtype
+                        )
+                    
+                    # 将整个pipeline移动到指定的数据类型
+                    if torch_dtype != pipe.transformer.dtype:
+                        pipe.to(torch_dtype)
+                    controlnet_enable = False
+            else:
+                from diffusers import QwenImagePipeline
+                
+                # 检查是否需要使用替代的text_encoder
+                if use_alternative_text_encoder and alternative_text_encoder_model_path:
+                    # 手动加载各组件然后创建Pipeline
+                    # 从完整模型路径加载其他组件，但排除text_encoder
+                    pipe = QwenImagePipeline.from_pretrained(
+                        base_model_path,
+                        transformer=transformer,
+                        scheduler=scheduler,
+                        torch_dtype=torch_dtype,
+                        text_encoder=None  # 不加载text_encoder
+                    )
+                    
+                    # 手动加载替代的text_encoder
+                    from transformers import Qwen2_5_VLForConditionalGeneration, Qwen2Tokenizer
+                    
+                    # 根据项目规范，使用from_pretrained方法加载模型
+                    # 并使用父目录作为路径，同时启用内存优化参数
+                    text_encoder_alt = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+                        str(Path(alternative_text_encoder_model_path).parent),  # 使用父目录作为路径
+                        torch_dtype=torch_dtype,
+                        low_cpu_mem_usage=True,
+                        max_memory={0: "15GB"}
+                    )
+                    
+                    # 加载tokenizer（从原始路径）
+                    tokenizer = Qwen2Tokenizer.from_pretrained(
+                        base_model_path,
+                        subfolder="tokenizer"
+                    )
+                    
+                    # 手动设置组件
+                    pipe.text_encoder = text_encoder_alt
+                    pipe.tokenizer = tokenizer
+                    
+                else:
                     pipe = QwenImagePipeline.from_pretrained(
                         base_model_path,
                         transformer=transformer,
                         scheduler=scheduler,
                         torch_dtype=torch_dtype
                     )
-                    # 将整个pipeline移动到指定的数据类型
-                    if torch_dtype != pipe.transformer.dtype:
-                        pipe.to(torch_dtype)
-                    controlnet_enable = False
-            else:
-                print("使用标准QwenImagePipeline管道")
-                from diffusers import QwenImagePipeline
-                pipe = QwenImagePipeline.from_pretrained(
-                    base_model_path,
-                    transformer=transformer,
-                    scheduler=scheduler,
-                    torch_dtype=torch_dtype
-                )
+                
                 # 将整个pipeline移动到指定的数据类型
                 if torch_dtype != pipe.transformer.dtype:
                     pipe.to(torch_dtype)
-            print("Pipeline已构建")
-            print("模型加载完成")
-            
-        except Exception as e:
-            print(f"模型加载失败: {e}")
-            import traceback
-            traceback.print_exc()
+                    
+        except Exception:
             # 确保在下一次尝试前清理可能损坏的对象
             transformer = None
             pipe = None
@@ -955,13 +1011,11 @@ def run_text_to_image(args_file):
         from nunchaku.utils import get_gpu_memory
         if get_gpu_memory() > 18:
             pipe.enable_model_cpu_offload()
-            print("启用CPU卸载")
         else:
             if transformer is not None:
                 transformer.set_offload(True, use_pin_memory=False, num_blocks_on_gpu=1)
                 pipe._exclude_from_cpu_offload.append("transformer")
             pipe.enable_sequential_cpu_offload()
-            print("启用顺序CPU卸载")
         
         # 获取随机种子
         seed = args.get("seed", -1)
@@ -984,15 +1038,10 @@ def run_text_to_image(args_file):
                            and control_image_path != "" 
                            and controlnet_model_selected != "无")
         
-        print(f"ControlNet启用状态: {controlnet_enable}")
-        print(f"控制图像路径: {control_image_path}")
-        print(f"选择的ControlNet模型: {controlnet_model_selected}")
-        
         if controlnet_enable and control_image_path:
             # 预处理控制图像
             processed_control_image = preprocess_control_image(control_image_path, controlnet_preprocessor)
             if processed_control_image is None:
-                print("控制图像处理失败")
                 controlnet_enable = False
             else:
                 # 再次确保图像是RGB模式
@@ -1031,9 +1080,8 @@ def run_text_to_image(args_file):
                 "control_guidance_start": controlnet_start,
                 "control_guidance_end": controlnet_end,
             })
-            print(f"ControlNet已启用，参数: 强度={controlnet_conditioning_scale}, 开始={controlnet_start}, 结束={controlnet_end}")
         else:
-            print("ControlNet未启用或条件不满足")
+            pass
 
         # 处理LoRA模型
         lora_model_1 = args.get("lora_model_1")
@@ -1052,7 +1100,6 @@ def run_text_to_image(args_file):
                 if not model_path or model_path == "":
                     return False
                 
-                print(f"加载LoRA模型 {model_name}: {model_path} (强度: {weight})")
                 try:
                     # 直接从已复制到diffusers库中的nunchaku导入LoRA模块
                     from nunchaku.lora.flux.v1.lora_flux_v2 import update_lora_params_v2, set_lora_strength_v2, reset_lora_v2
@@ -1063,53 +1110,34 @@ def run_text_to_image(args_file):
                         try:
                             # 尝试应用LoRA权重
                             # 首先检查LoRA模型与当前模型的兼容性
-                            print(f"正在检查LoRA模型 {model_name} 与当前模型的兼容性...")
                             update_lora_params_v2(pipeline.transformer, lora_state_dict, strength=weight, allow_expand=True)
-                            print(f"LoRA模型 {model_name} 加载成功")
                             return True
                         except RuntimeError as e:
                             if "size of tensor" in str(e) and "must match" in str(e):
-                                print(f"LoRA模型 {model_name} 与当前模型不兼容: 尺寸不匹配")
-                                print(f"错误详情: {e}")
-                                print("这可能是因为LoRA模型是为不同版本或架构的主模型设计的")
-                                print("请确保LoRA模型与主模型架构匹配，或者尝试使用其他LoRA模型")
                                 # 尝试重置LoRA（如果可能）
                                 try:
                                     reset_lora_v2(pipeline.transformer)
                                 except:
                                     pass
+
                                 return False
                             elif "unexpected" in str(e):
-                                print(f"LoRA模型 {model_name} 包含不支持的层: {e}")
-                                print("请使用与当前模型架构兼容的LoRA模型")
                                 return False
                             else:
                                 raise e
                         except ValueError as e:
                             if "mismatch" in str(e).lower() or "shape" in str(e).lower():
-                                print(f"LoRA模型 {model_name} 与当前模型结构不匹配: {e}")
-                                print("请确保使用与主模型相同架构训练的LoRA模型")
                                 return False
+
                             else:
                                 raise e
-                        except AttributeError as e:
-                            print(f"LoRA模块缺少必要的函数: {e}")
-                            print("请确保lora_flux_v2.py文件包含update_lora_params_v2和set_lora_strength_v2函数")
-                            import traceback
-                            traceback.print_exc()
+                        except AttributeError:
                             return False
-                        except Exception as e:
-                            print(f"应用LoRA模型时发生未知错误: {e}")
-                            import traceback
-                            traceback.print_exc()
+                        except Exception:
                             return False
                     else:
-                        print(f"LoRA模型 {model_name} 加载失败: 无法加载权重")
                         return False
-                except Exception as e:
-                    print(f"LoRA模型 {model_name} 加载过程中出现错误: {e}")
-                    import traceback
-                    traceback.print_exc()
+                except Exception:
                     return False
             
             # 确保pipeline已定义后再加载LoRA模型
@@ -1123,7 +1151,6 @@ def run_text_to_image(args_file):
                 
                 # 重新初始化CPU卸载管理器以适应LoRA加载后模型参数维度的变化
                 if hasattr(pipe, 'transformer') and hasattr(pipe.transformer, 'offload') and pipe.transformer.offload:
-                    print("重新初始化CPU卸载管理器以适应LoRA模型参数")
                     try:
                         # 保存当前的卸载设置
                         use_pin_memory = getattr(pipe.transformer.offload_manager, 'use_pin_memory', True)
@@ -1150,58 +1177,80 @@ def run_text_to_image(args_file):
                                     copy.deepcopy(blocks[0]).to(device), 
                                     copy.deepcopy(blocks[0]).to(device)
                                 ]
-                        print("CPU卸载管理器重新初始化完成")
-                    except Exception as e:
-                        print(f"重新初始化CPU卸载管理器时出错: {e}")
-                        import traceback
-                        traceback.print_exc()
+                    except Exception:
+                        pass
                 elif hasattr(pipe, 'transformer'):
                     # 如果没有启用卸载，确保所有模型参数在正确的设备上
                     try:
                         device = pipe.transformer.device
                         # 将整个transformer模型移动到指定设备
                         pipe.transformer.to(device)
-                        print(f"确保模型在设备 {device} 上")
-                    except Exception as e:
-                        print(f"移动模型到设备时出错: {e}")
-                        import traceback
-                        traceback.print_exc()
+                    except Exception:
+                        pass
                 else:
-                    print("警告: pipe变量未定义，跳过LoRA模型加载")
+                    pass
             else:
-                print("警告: pipe变量未定义，跳过LoRA模型加载")
-        except Exception as e:
-            print(f"LoRA加载过程中出现错误: {e}")
+                pass
+        except Exception:
+            pass
 
         # 生成图像
-        print("开始生成图像...")
         # 使用官方推荐的参数
         images = pipe(**generation_params).images
-        
-        print("图像生成完成")
         
         # 保存图像，使用时间戳确保文件名唯一
         timestamp = int(time.time() * 1000)  # 毫秒级时间戳
         output_paths = []
         
-        # 获取生成批次大小
-        batch_size = args.get("batch_size", 1)
-        
+        # 处理输出图像 - 严格按照官方示例方式处理
         for i, image in enumerate(images):
-            output_path = Path(args["output_dir"]) / f"qwen_image_{timestamp}_{i}.png"
+            # 确保图像是PIL Image对象
+            if not isinstance(image, Image.Image):
+                # 如果是numpy数组，转换为PIL Image
+                if isinstance(image, np.ndarray):
+                    image = Image.fromarray(image)
+            
+            # 严格按照官方示例方式处理图像
+            # 确保图像是RGB模式
+            image = image.convert("RGB")
+            
+            # 直接保存图像，不做任何额外处理
+            output_path = Path(args["output_dir"]) / f"qwen_image_edit_{timestamp}_{i}.png"
             image.save(output_path)
             output_paths.append(output_path)
-            print(f"图像保存完成: {output_path}")
         
         # 输出成功信息，输出所有图像路径
+        success_messages = []
         for output_path in output_paths:
-            print(f"SUCCESS: {output_path}")
+            success_messages.append(f"SUCCESS: {output_path}")
+        
+        # 在 finally 块之前，通过一个统一的位置输出所有消息
+        _print_captured_output(success_messages)
         
     except Exception as e:
-        print(f"运行图像编辑功能时发生错误: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return
+        # 将错误信息传递给统一的输出函数
+        _print_captured_output([f"运行图像编辑功能时发生错误: {str(e)}"])
+        
+    finally:
+        # 恢复原始的标准输出和错误流
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+        warnings.showwarning = original_showwarning
+
+def _print_captured_output(messages):
+    """
+    统一处理被捕获的输出，仅在需要时恢复原始stdout进行打印。
+    :param messages: 要输出的消息列表
+    """
+    # 临时恢复原始stdout以打印消息
+    temp_stdout = sys.stdout
+    sys.stdout = original_stdout
+    try:
+        for msg in messages:
+            print(msg)
+    finally:
+        # 立刻将stdout重新定向回捕获对象
+        sys.stdout = temp_stdout
 # ==================== 图像编辑功能 ====================
 def run_image_editing(args_file):
     """运行图像编辑功能"""
@@ -1216,48 +1265,9 @@ def run_image_editing(args_file):
     from pathlib import Path
     from PIL import Image
     try:
-        print(f"开始执行图像编辑功能，参数文件: {args_file}")
-        
-        # 记录开始时间
-        start_time = time.time()
-        
-        # 检查参数文件是否存在
-        print(f"检查参数文件是否存在: {args_file}")
-        print(f"当前工作目录: {os.getcwd()}")
-        print(f"参数文件绝对路径: {os.path.abspath(args_file)}")
-        
-        if not os.path.exists(args_file):
-            print(f"错误: 参数文件不存在: {args_file}")
-            # 列出当前目录下的文件
-            current_dir = os.path.dirname(args_file) if os.path.dirname(args_file) else "."
-            if os.path.exists(current_dir):
-                print(f"目录 {current_dir} 中的文件:")
-                for file in os.listdir(current_dir):
-                    print(f"  {file}")
-            return
-        
-        if not os.path.isfile(args_file):
-            print(f"错误: 参数文件不是一个有效的文件: {args_file}")
-            return
-            
-        # 检查文件是否可读
-        if not os.access(args_file, os.R_OK):
-            print(f"错误: 参数文件不可读: {args_file}")
-            return
-            
         # 读取参数
         with open(args_file, 'r', encoding='utf-8') as f:
             args = json.load(f)
-        
-        # 添加详细的参数检查和日志
-        print(f"接收到的完整参数: {args}")
-        
-        # 检查必需的参数是否存在
-        required_args = ["prompt", "images", "steps", "cfg_scale", "scheduler"]
-        for arg in required_args:
-            if arg not in args:
-                print(f"错误: 缺少必需参数 '{arg}'")
-                return
         
         # 获取参数
         prompt = args["prompt"]
@@ -1269,14 +1279,6 @@ def run_image_editing(args_file):
         steps = args["steps"] if args["steps"] is not None else 8  # 设置默认步数为8
         cfg_scale = args["cfg_scale"]
         scheduler_type = args["scheduler"]
-        
-        # 添加参数详细信息日志
-        print(f"输入图像路径: {input_images}")
-        print(f"提示词: {prompt}")
-        print(f"负面提示词: {negative_prompt}")
-        print(f"推理步数: {steps}")
-        print(f"CFG Scale: {cfg_scale}")
-        print(f"调度器类型: {scheduler_type}")
         
         # 查找第一个非空的图像路径作为输入图像，第二个非空路径作为控制图像（如果存在）
         input_image_path = None
@@ -1300,11 +1302,10 @@ def run_image_editing(args_file):
                 init_image = Image.open(input_image_path)
                 orig_width, orig_height = init_image.size
                 width, height = orig_width, orig_height
-                print(f"从输入图像 {input_image_path} 获取尺寸: {width}x{height}")
-            except Exception as e:
-                print(f"无法加载输入图像以获取尺寸，使用默认尺寸 1024x1024: {e}")
+            except Exception:
+                pass
         else:
-            print(f"未提供有效输入图像，使用默认尺寸: {width}x{height}")
+            pass
         
         # 处理ControlNet相关参数
         controlnet_conditioning_scale = args.get("controlnet_conditioning_scale", 1.0)
@@ -1324,19 +1325,11 @@ def run_image_editing(args_file):
                            and controlnet_model_selected != "无" 
                            and PREPROCESSORS_AVAILABLE)
         
-        print(f"ControlNet启用状态: {controlnet_enable}")
-        print(f"控制图像存在: {has_control_image}")
-        print(f"选择的ControlNet模型: {controlnet_model_selected}")
-        print(f"用户选择步数: {args['steps']}")
-
-        
         # 验证输入图像参数
         if not isinstance(input_images, list):
-            print(f"错误: images参数应该是一个列表，但实际类型是 {type(input_images)}")
             return
             
         if len(input_images) == 0:
-            print("错误: images参数是空列表，未提供任何图像路径")
             return
             
 
@@ -1347,26 +1340,19 @@ def run_image_editing(args_file):
         try:
             # 首先尝试导入支持LoRA的nunchaku版本
             from nunchaku import NunchakuQwenImageTransformer2DModel as EditTransformer
-            print("成功导入支持LoRA的NunchakuQwenImageTransformer2DModel (编辑版)")
-        except (ImportError, ModuleNotFoundError) as e:
-            print(f"无法导入支持LoRA的nunchaku版本 (编辑版): {e}")
+        except (ImportError, ModuleNotFoundError):
             try:
                 # 回退到diffusers标准版本
                 from diffusers.models.transformers.transformer_qwenimage import QwenImageTransformer2DModel as EditTransformer
-                print("回退到diffusers标准版本的QwenImageTransformer2DModel (编辑版)")
-            except Exception as e2:
-                print(f"无法导入diffusers标准版本 (编辑版): {e2}")
+            except Exception:
                 EditTransformer = None
         
         if EditTransformer is None:
-            print("错误: 无法导入任何可用的Transformer模型 (编辑版)")
             return
             
         from nunchaku.utils import get_gpu_memory
         from diffusers.utils import load_image
         from PIL import Image
-        
-        print("依赖库导入成功")
         
         # 获取用户选择的采样方法
         scheduler_type = args.get("scheduler", "euler")
@@ -1433,19 +1419,13 @@ def run_image_editing(args_file):
                 break
             
             if model_path is None:
-                print("未找到任何编辑模型文件")
                 return
-        
-        print(f"用户选择步数: {steps}")
-        print(f"模型路径: {model_path}")
         
         # 检查模型文件是否存在
         if not model_path or not model_path.exists():
-            print(f"模型文件不存在: {model_path}")
             return
         
         # 加载模型
-        print("开始加载模型...")
         transformer = EditTransformer.from_pretrained(
             str(model_path),
             torch_dtype=torch.bfloat16
@@ -1456,11 +1436,8 @@ def run_image_editing(args_file):
         base_model_path = model_path.parent.parent  # 获取models/qwen-image目录
         base_model_path = base_model_path.resolve()  # 获取绝对路径
         
-        print(f"模型根目录: {base_model_path}")
-        
         # 确保基础路径存在
         if not base_model_path.exists():
-            print(f"模型根目录不存在: {base_model_path}")
             return
             
         # 使用本地组件创建pipeline
@@ -1471,17 +1448,13 @@ def run_image_editing(args_file):
             torch_dtype=torch.bfloat16
         )
         
-        print("模型加载完成")
-        
         # 设置模型卸载
         if get_gpu_memory() > 18:
             pipeline.enable_model_cpu_offload()
-            print("启用CPU卸载")
         else:
             transformer.set_offload(True, use_pin_memory=False, num_blocks_on_gpu=1)
             pipeline._exclude_from_cpu_offload.append("transformer")
             pipeline.enable_sequential_cpu_offload()
-            print("启用顺序CPU卸载")
         
         # 处理LoRA模型
         lora_model_1 = args.get("lora_model_1")
@@ -1500,7 +1473,6 @@ def run_image_editing(args_file):
                 if not model_path or model_path == "":
                     return False
                     
-                print(f"加载LoRA模型 {model_name}: {model_path} (强度: {weight})")
                 try:
                     # 使用importlib.util直接从文件导入，避免触发整个nunchaku包的加载
                     import importlib.util
@@ -1527,11 +1499,9 @@ def run_image_editing(args_file):
                                 try:
                                     # 尝试应用LoRA权重
                                     update_lora_params(pipeline.transformer, lora_state_dict, strength=weight)
-                                    print(f"LoRA模型 {model_name} 加载成功")
                                     
                                     # 重新初始化CPU卸载管理器以适应LoRA加载后模型参数维度的变化
                                     if hasattr(pipeline, 'transformer') and hasattr(pipeline.transformer, 'offload') and pipeline.transformer.offload:
-                                        print("重新初始化CPU卸载管理器以适应LoRA模型参数")
                                         try:
                                             # 保存当前的卸载设置
                                             use_pin_memory = getattr(pipeline.transformer.offload_manager, 'use_pin_memory', True)
@@ -1540,28 +1510,19 @@ def run_image_editing(args_file):
                                             # 重新设置卸载
                                             pipeline.transformer.set_offload(False)  # 先关闭
                                             pipeline.transformer.set_offload(True, use_pin_memory=use_pin_memory, num_blocks_on_gpu=num_blocks_on_gpu)  # 再开启
-                                        except Exception as e:
-                                            print(f"重新初始化CPU卸载管理器时出错: {e}")
+                                        except Exception:
+                                            pass
                                     
                                     return True
-                                except Exception as e:
-                                    print(f"应用LoRA模型时发生错误: {e}")
-                                    import traceback
-                                    traceback.print_exc()
+                                except Exception:
                                     return False
                             else:
-                                print(f"LoRA模型 {model_name} 加载失败: 无法加载权重")
                                 return False
                         else:
-                            print(f"LoRA模块缺少必要的函数: update_lora_params_v2")
                             return False
                     else:
-                        print(f"LoRA模块文件不存在: {lora_module_path}")
                         return False
-                except Exception as e:
-                    print(f"LoRA模型 {model_name} 加载过程中出现错误: {e}")
-                    import traceback
-                    traceback.print_exc()
+                except Exception:
                     return False
             
             # 确保pipeline已定义后再加载LoRA模型
@@ -1573,9 +1534,9 @@ def run_image_editing(args_file):
                 if lora_model_2:
                     load_lora_model(lora_model_2, lora_weight_2, "2", pipeline)
             else:
-                print("警告: pipeline变量未定义，跳过LoRA模型加载")
-        except Exception as e:
-            print(f"LoRA加载过程中出现错误: {e}")
+                pass
+        except Exception:
+            pass
         # 处理输入图像和控制图像
         init_image = None
         control_image_path = None
@@ -1595,12 +1556,7 @@ def run_image_editing(args_file):
         
         # 使用UI传递的controlnet_enable参数来控制ControlNet启用状态
         controlnet_enable = args.get("controlnet_enable", False)
-        
-        print(f"ControlNet启用状态: {controlnet_enable}")
-        print(f"控制图像路径: {control_image_path}")
-        print(f"选择的ControlNet模型: {controlnet_model_selected}")
-        print(f"用户选择步数: {args['steps']}")
-        
+
         # 预处理控制图像（如果启用）
         processed_control_image = None
         if controlnet_enable and control_image_path:
@@ -1609,7 +1565,6 @@ def run_image_editing(args_file):
             if isinstance(clean_preprocessor_type, str) and "]" in clean_preprocessor_type:
                 # 去除"[Pose] "这样的前缀
                 clean_preprocessor_type = clean_preprocessor_type.split("]", 1)[1].strip()
-                print(f"预处理器名称已清理: '{controlnet_preprocessor}' -> '{clean_preprocessor_type}'")
             
             # 特殊处理一些常见的预处理器名称映射
             preprocessor_mapping = {
@@ -1632,15 +1587,13 @@ def run_image_editing(args_file):
             mask_path = mask_image_path  # 使用从参数中获取的蒙版图像路径
             if clean_preprocessor_type == "inpaint_only":
                 if mask_image_path:
-                    print(f"为inpaint_only预处理器提供蒙版图像: {mask_path}")
+                    pass
                 else:
                     # 如果没有单独提供蒙版，则使用control_image_path本身（假设它包含蒙版信息）
                     mask_path = control_image_path
-                    print("使用control_image本身作为inpaint_only预处理器的蒙版")
             
             processed_control_image = preprocess_control_image(control_image_path, clean_preprocessor_type, mask_path)
             if processed_control_image is None:
-                print("控制图像处理失败")
                 has_control_image = False
             else:
                 # 再次确保图像是RGB模式
@@ -1652,24 +1605,17 @@ def run_image_editing(args_file):
                 if processed_control_image.mode != 'RGB':
                     processed_control_image = processed_control_image.convert('RGB')
                 
-                print(f"控制图像预处理完成，尺寸: {processed_control_image.size}")
         else:
-            print("未启用ControlNet或控制图像不存在")
             processed_control_image = None
 
         # 准备生成参数
-        print(f"开始处理输入图像，图像路径列表: {input_images}")
         
         if not input_image_path:
-            print("错误: 未提供输入图像")
             return
             
         try:
-            print(f"尝试加载图像: {input_image_path}")
             init_image = load_image(input_image_path)
-            print(f"图像加载结果: {init_image}")
             if init_image is None:
-                print("错误: 无法加载输入图像")
                 return
                 
             # 严格按照官方示例方式处理图像
@@ -1679,16 +1625,12 @@ def run_image_editing(args_file):
             # 获取原始尺寸
             orig_width, orig_height = init_image.size
             width, height = orig_width, orig_height
-            print(f"输入图像原始尺寸: {orig_width}x{orig_height}")
-        except Exception as e:
-            print(f"加载输入图像失败: {e}")
-            import traceback
-            traceback.print_exc()
+
+        except Exception:
             return
                 
         # 生成图像
-        print("开始生成图像...")
-        
+
         # 获取生成批次大小
         batch_size = args.get("batch_size", 1)
         
@@ -1715,9 +1657,7 @@ def run_image_editing(args_file):
             generation_params["image"] = init_image
             
         images = pipeline(**generation_params).images
-        
-        print("图像生成完成")
-        
+
         # 保存图像，使用时间戳确保文件名唯一
         timestamp = int(time.time() * 1000)  # 毫秒级时间戳
         output_paths = []
@@ -1738,16 +1678,24 @@ def run_image_editing(args_file):
             output_path = Path(args["output_dir"]) / f"qwen_image_edit_{timestamp}_{i}.png"
             image.save(output_path)
             output_paths.append(output_path)
-            print(f"图像保存完成: {output_path}")
         
         # 输出成功信息，输出所有图像路径
+        # 恢复标准输出以显示成功信息
+        sys.stdout = original_stdout
         for output_path in output_paths:
             print(f"SUCCESS: {output_path}")
+        sys.stdout = captured_stdout
         
     except Exception as e:
+        # 恢复标准输出以显示错误信息
+        sys.stdout = original_stdout
         print(f"运行图像编辑功能时发生错误: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        sys.stdout = captured_stdout
         return
+    finally:
+        # 恢复原始的标准输出和错误流
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+        warnings.showwarning = original_showwarning
 
         return

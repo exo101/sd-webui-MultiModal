@@ -16,10 +16,8 @@ from modules import shared
 try:
     from modelscope import ZImagePipeline
     MODELScope_AVAILABLE = True
-    print("Z-Image-Turbo: ModelScope库可用")
 except ImportError as e:
     MODELScope_AVAILABLE = False
-    print(f"Z-Image-Turbo: ModelScope库不可用: {e}")
 
 # 模型和输出目录
 models_dir = Path(shared.models_path) / "Tongyi-MAI" / "Z-Image-Turbo"
@@ -46,11 +44,7 @@ def load_model_if_needed(model_type='original', gguf_model=None):
         if (model_loaded and pipe is not None and 
             current_model_type == model_type and 
             (model_type != 'gguf' or current_gguf_model == gguf_model)):
-            print("Z-Image-Turbo: 模型已加载，跳过重复加载")
             return "模型已加载"
-        
-        print("Z-Image-Turbo: 开始加载模型...")
-        print(f"Z-Image-Turbo: 开始加载 {model_type} 类型的 Z-Image-Turbo 模型...")
         
         # 确保模型目录存在
         model_save_path = models_dir
@@ -59,17 +53,11 @@ def load_model_if_needed(model_type='original', gguf_model=None):
         # 使用ModelScope官方示例方式加载模型
         from modelscope import ZImagePipeline
         
-        # 检查模型是否已经存在于指定路径
-        model_files = list(model_save_path.glob("*"))
-        print(f"Z-Image-Turbo: 模型目录中的文件: {model_files}")
-        
         if model_type == 'gguf' and gguf_model:
             # GGUF模型加载逻辑
             gguf_path = model_save_path / gguf_model
             if not gguf_path.exists():
                 return f"GGUF模型文件未找到: {gguf_model}"
-            
-            print(f"Z-Image-Turbo: 加载GGUF模型: {gguf_path}")
             
             # 按照示例代码正确加载GGUF模型
             from modelscope import ZImageTransformer2DModel, GGUFQuantizationConfig
@@ -98,23 +86,15 @@ def load_model_if_needed(model_type='original', gguf_model=None):
             current_gguf_model = gguf_model
         else:
             # 原始模型加载逻辑
-            if model_save_path.exists() and model_files:
+            if model_save_path.exists() and list(model_save_path.glob("*")):
                 # 从本地路径加载模型
-                status_text = "正在加载本地模型..."
-                print(status_text)
-                print(f"Z-Image-Turbo: 从本地路径加载ModelScope模型: {model_save_path}")
-                # 根据ModelScope专用管道规范，不使用load_in_8bit参数
                 pipe = ZImagePipeline.from_pretrained(
                     str(model_save_path),
                     torch_dtype=torch.bfloat16,
                     low_cpu_mem_usage=False,
                 )
             else:
-                # 指定本地保存路径
-                status_text = "正在下载模型，请稍候..."
-                print(status_text)
-                print(f"Z-Image-Turbo: ModelScope模型将保存到: {model_save_path}")
-                # 根据ModelScope专用管道规范，不使用load_in_8bit参数
+                # 从网络下载模型
                 pipe = ZImagePipeline.from_pretrained(
                     'Tongyi-MAI/Z-Image-Turbo',
                     torch_dtype=torch.bfloat16,
@@ -123,40 +103,30 @@ def load_model_if_needed(model_type='original', gguf_model=None):
                 
                 # 保存模型到本地
                 try:
-                    print(f"Z-Image-Turbo: 正在保存模型到: {model_save_path}")
                     pipe.save_pretrained(str(model_save_path))
-                    print("Z-Image-Turbo: 模型保存完成")
                 except Exception as save_error:
-                    print(f"Z-Image-Turbo: 保存ModelScope模型时出错: {save_error}")
-                    traceback.print_exc()
+                    pass
             
             # 使用模型自带的设备管理机制
             # 参考FLUX Kontext的做法，启用模型CPU卸载而不是强制放到GPU
             if hasattr(pipe, 'enable_model_cpu_offload'):
-                print("Z-Image-Turbo: 启用模型CPU卸载")
                 pipe.enable_model_cpu_offload()
             elif hasattr(pipe, 'enable_sequential_cpu_offload'):
-                print("Z-Image-Turbo: 启用序列化CPU卸载")
                 pipe.enable_sequential_cpu_offload()
             else:
                 # 如果没有CPU卸载功能，则尝试将模型移动到GPU
                 try:
                     pipe = pipe.to("cuda")
-                    print("Z-Image-Turbo: 模型已移动到CUDA设备")
                 except Exception as move_error:
-                    print(f"Z-Image-Turbo: 将模型移动到CUDA设备时出错: {move_error}")
-                    # 如果无法移动到GPU，则保持在CPU上运行
+                    pass
             
             current_model_type = 'original'
             current_gguf_model = None
         
         model_loaded = True
-        print("Z-Image-Turbo: 模型加载成功")
         return "模型加载成功"
     except Exception as e:
         error_msg = str(e)
-        print(f"Z-Image-Turbo: ModelScope加载错误详情: {error_msg}")
-        traceback.print_exc()
         return f"模型加载失败: {error_msg}"
 
 def save_image(image_np, seed, index=0):
@@ -206,10 +176,8 @@ def save_image(image_np, seed, index=0):
             # 如果已经是PIL图像
             image_np.save(image_path, 'PNG')
         
-        print(f"Z-Image-Turbo: 图像已保存到: {image_path}")
         return str(image_path)
     except Exception as e:
-        print(f"Z-Image-Turbo: 保存图像时出错: {e}")
         traceback.print_exc()
         return None
 
@@ -224,20 +192,16 @@ def open_folder(folder_path):
             os.system(f'xdg-open "{folder_path}"')
         return f"已打开文件夹: {folder_path}"
     except Exception as e:
-        print(f"打开文件夹时出错: {e}")
         return f"打开文件夹失败: {e}"
 
 def create_z_image_ui():
     """创建Z-Image-Turbo UI界面"""
-    print("Z-Image-Turbo: 开始创建 UI...")
     
     # 检查ModelScope是否可用
     if not MODELScope_AVAILABLE:
-        print("Z-Image-Turbo: ModelScope 不可用，创建错误提示界面")
         with gr.Blocks() as demo:
             gr.Markdown("# Z-Image-Turbo 图像生成 (不可用)")
             gr.Markdown("错误：ModelScope 不可用，请检查安装")
-        print("Z-Image-Turbo: ModelScope 不可用，返回简化UI")
         return demo
     
     # 导入采样器模块
@@ -258,7 +222,6 @@ def create_z_image_ui():
     gguf_model_choices = get_gguf_models()
     default_gguf_model = gguf_model_choices[0] if gguf_model_choices else ""
     
-    print("Z-Image-Turbo: 创建主界面")
     with gr.Blocks() as demo:
         gr.Markdown("# Z-Image-Turbo 图像生成")
         gr.Markdown("基于 ModelScope 的超快速文生图模型")
@@ -362,7 +325,6 @@ def create_z_image_ui():
                     outputs=[]
                 )
         
-        print("Z-Image-Turbo: 设置事件处理器")
         generate_btn.click(
             fn=generate_image,
             inputs=[
@@ -374,20 +336,15 @@ def create_z_image_ui():
             outputs=[output_info, output_images]
         )
     
-    print("Z-Image-Turbo: UI 创建完成")
     return demo
 
 # 模块是否可用的标志
 Z_IMAGE_MODULE_AVAILABLE = MODELScope_AVAILABLE
-print(f"Z-Image-Turbo: 模块可用性: {Z_IMAGE_MODULE_AVAILABLE}")
 
 # 确保模块可以被正确导入
 if __name__ != "__main__":
     # 当作为模块导入时，进行简单的初始化检查
-    if Z_IMAGE_MODULE_AVAILABLE:
-        print("Z-Image-Turbo: 模块初始化完成，准备就绪")
-    else:
-        print("Z-Image-Turbo: 模块初始化失败，功能不可用")
+    pass
 
 def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, seed, sampler, batch_size=1,
                    enable_hr=False, hr_scale=2.0, hr_upscaler=None, hr_second_pass_steps=0, denoising_strength=0.7,
@@ -479,7 +436,6 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
                 
                 # 检查是否有NaN或无穷大值
                 if torch.isnan(image_tensor).any() or torch.isinf(image_tensor).any():
-                    print("警告：检测到模型输出包含NaN或无穷大值")
                     # 尝试用均值填充NaN和无穷大
                     image_tensor = torch.nan_to_num(image_tensor, nan=0.5, posinf=1.0, neginf=0.0)
                 
@@ -507,7 +463,6 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
             # 检查图像是否全黑或全白
             img_min, img_max = image_np.min(), image_np.max()
             if img_min == img_max:
-                print(f"警告：图像数据异常，最小值={img_min}, 最大值={img_max}")
                 # 如果是常量图像，生成一个测试图像
                 image_np = np.ones_like(image_np) * 0.5  # 灰色图像用于测试
             
@@ -522,7 +477,6 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
             
             # 特别处理GGUF模型可能产生的问题
             if use_gguf and (np.all(image_np == 0) or np.all(image_np == 255)):
-                print("警告：检测到GGUF模型生成的图像全黑或全白，尝试修复...")
                 # 对于全黑或全白图像，创建一个测试图像以便诊断问题
                 image_np = np.ones_like(image_np) * 127  # 灰色图像用于测试
             
@@ -564,3 +518,4 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
     except Exception as e:
         error_details = traceback.format_exc()
         return f"图像生成失败: {str(e)}\n详细错误信息:\n{error_details}", None
+

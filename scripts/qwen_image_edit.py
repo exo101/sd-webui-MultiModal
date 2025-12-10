@@ -11,21 +11,6 @@ import psutil
 import numpy as np
 from PIL import Image
 from modules import shared
-
-# 尝试导入WebUI的采样器模块
-try:
-    from modules import sd_samplers
-    WEBUI_SAMPLERS_AVAILABLE = True
-except ImportError:
-    WEBUI_SAMPLERS_AVAILABLE = False
-
-# 尝试导入WebUI的调度器模块
-try:
-    from modules import sd_schedulers
-    WEBUI_SCHEDULERS_AVAILABLE = True
-except ImportError:
-    WEBUI_SCHEDULERS_AVAILABLE = False
-
 import shutil
 import webbrowser
 
@@ -251,34 +236,23 @@ CONTROLNET_PREPROCESSOR_DISPLAY_TO_INTERNAL = get_preprocessor_display_to_intern
 def get_model_choices(model_dir):
     """获取指定目录下的模型文件列表"""
     try:
-        # 预先初始化choices变量
-        choices = []
-        
         if not model_dir.exists():
             print(f"警告: 模型目录不存在 {model_dir}")
             # 尝试创建目录
             model_dir.mkdir(parents=True, exist_ok=True)
-            # 添加默认选项
-            choices.append(("未找到模型文件", ""))
-            return choices
+            return []
         
         # 直接在指定目录查找模型文件，不深入子目录
         model_files = list(model_dir.glob("*.safetensors"))
         
-        # 如果仍然没有找到任何模型文件，添加默认选项
-        if not model_files:
-            # 添加默认选项，即使没有找到模型文件
-            choices.append(("未找到模型文件", ""))
-        else:
-            # 返回 (显示名称, 文件名) 的元组列表
-            choices = [(f.name, f.name) for f in model_files]
         
-        return choices
+        # 返回 (显示名称, 文件名) 的元组列表
+        result = [(f.name, f.name) for f in model_files]
+        return result
     except Exception as e:
         print(f"获取模型列表时出错: {e}")
         traceback.print_exc()
-        # 返回默认选项而不是空列表
-        return [("未找到模型文件", "")]
+        return []
 
 # 获取LoRA模型文件列表
 def get_lora_choices(lora_dir):
@@ -502,17 +476,23 @@ def preprocess_control_image(image_input, preprocessor_display_name):
             print(f"不支持的图像输入类型: {type(image_input)}")
             return None
         
-        if not image_path or not os.path.exists(image_path):
+        # 检查图像路径是否有效
+        if not image_path:
             print("无效的图像路径")
             return None
-        
+            
+        # 检查文件是否存在（如果是文件路径）
+        if isinstance(image_input, str) and not os.path.exists(image_path):
+            print(f"图像文件不存在: {image_path}")
+            return None
+            
         # 将UI显示名称转换为内部标识符
         mapped_preprocessor_type = CONTROLNET_PREPROCESSOR_DISPLAY_TO_INTERNAL.get(preprocessor_display_name, "none")
         print(f"开始使用预处理器 {preprocessor_display_name} ({mapped_preprocessor_type}) 处理图像: {image_path}")
         
         # 构造参数字典
         args = {
-            "image_path": str(image_path),
+            "image_path": image_path,  # 这里已经是字符串路径了
             "preprocessor_type": mapped_preprocessor_type
         }
         
@@ -521,40 +501,28 @@ def preprocess_control_image(image_input, preprocessor_display_name):
         with open(args_file, 'w', encoding='utf-8') as f:
             json.dump(args, f, ensure_ascii=False, indent=2)
         
-        # 构造命令 - 使用Python模块方式执行，更稳定
+        # 使用与文生图相同的方式执行预处理 - 通过Python代码直接调用函数
+        # 这比通过命令行调用脚本更加可靠
+        scripts_dir_str = str(current_dir).replace('\\', '/')
+        args_file_str = str(args_file).replace('\\', '/')
+        
+        # 构造命令 - 使用Python代码直接调用函数的方式
         cmd = [
             main_python,
-            str(qwen_image_dir / "qwen_image_scripts.py"),
-            "--preprocess",
-            "--args_file",
-            str(args_file)
+            "-c",
+            f"import sys; sys.path.append('{scripts_dir_str}'); from qwen_image_scripts import run_preprocess_control_image; run_preprocess_control_image('{args_file_str}')"
         ]
         
-        # 将UI显示名称转换为内部标识符
-        mapped_preprocessor_type = CONTROLNET_PREPROCESSOR_DISPLAY_TO_INTERNAL.get(preprocessor_display_name, "none")
-        print(f"开始使用预处理器 {preprocessor_display_name} ({mapped_preprocessor_type}) 处理图像: {image_path}")
-        
-        # 调用预处理脚本
-        args = {
-            "image_path": image_path,
-            "preprocessor_type": mapped_preprocessor_type  # 使用映射后的预处理器名称
-        }
-        
-        args_file = qwen_image_dir / "temp_preprocess_args.json"
-        with open(args_file, "w", encoding="utf-8") as f:
-            json.dump(args, f, ensure_ascii=False, indent=2)
-        
-        print(f"执行命令: {' '.join(cmd)}")
-        print(f"工作目录: {qwen_image_dir}")
+        print(f"执行预处理命令: {' '.join(cmd)}")
         result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(qwen_image_dir), timeout=300)
         
         # 删除临时参数文件
         if args_file.exists():
             args_file.unlink()
         
-        print(f"预处理返回码: {result.returncode}")
-        print(f"预处理标准输出: {result.stdout}")
-        print(f"预处理错误输出: {result.stderr}")
+        print(f"预处理命令返回码: {result.returncode}")
+        print(f"预处理命令输出: {result.stdout}")
+        print(f"预处理命令错误: {result.stderr}")
         
         if result.returncode != 0:
             print(f"预处理失败: {result.stderr}")
@@ -574,7 +542,7 @@ def preprocess_control_image(image_input, preprocessor_display_name):
             processed_image = Image.open(processed_image_path)
             return processed_image
         else:
-            print("未找到有效的预处理图像")
+            print("预处理未返回有效图像")
             return None
             
     except Exception as e:
@@ -584,10 +552,8 @@ def preprocess_control_image(image_input, preprocessor_display_name):
 
 # ==================== 核心功能函数 ====================
 def edit_images(prompt, negative_prompt, image1, image2, image3, steps, cfg_scale,
-               model_file, scheduler, scheduler_type, lora_model_1="", lora_model_2="", 
+               model_file, scheduler, lora_model_1="", lora_model_2="", 
                lora_weight_1=1.0, lora_weight_2=1.0, seed=-1,
-               original_image=None, mask_image=None, control_mask=None,
-               controlnet_model=None, controlnet_start=0.0, controlnet_end=1.0,
                # 添加 ControlNet 参数
                control_image=None, controlnet_conditioning_scale=1.0,
                controlnet_preprocessor="none"):
@@ -934,62 +900,15 @@ def create_qwen_image_edit_ui():
                             )
                             
                             # 添加采样方法选择组件
-                            # 获取WebUI内置的采样器选项
-                            if WEBUI_SAMPLERS_AVAILABLE:
-                                try:
-                                    sampler_choices = [(sampler.name, sampler.name) for sampler in sd_samplers.visible_samplers()]
-                                except:
-                                    sampler_choices = [
-                                        ("Euler", "euler"),
-                                        ("Euler Ancestral", "euler_ancestral"),
-                                        ("Heun", "heun"),
-                                        ("DPM++ 2M", "dpmpp_2m")
-                                    ]
-                            else:
-                                sampler_choices = [
+                            edit_scheduler = gr.Dropdown(
+                                choices=[
                                     ("Euler", "euler"),
                                     ("Euler Ancestral", "euler_ancestral"),
                                     ("Heun", "heun"),
                                     ("DPM++ 2M", "dpmpp_2m")
-                                ]
-                            
-                            edit_scheduler = gr.Dropdown(
-                                choices=sampler_choices,
-                                value=sampler_choices[0][1] if sampler_choices else "euler",
+                                ],
+                                value="euler",
                                 label="采样方法",
-                                min_width=120
-                            )
-                            
-                            # 添加调度器选项
-                            # 获取WebUI内置的调度器选项
-                            if WEBUI_SCHEDULERS_AVAILABLE:
-                                try:
-                                    scheduler_choices = [(scheduler.label, scheduler.name) for scheduler in sd_schedulers.schedulers]
-                                except:
-                                    scheduler_choices = [
-                                        ("Automatic", "automatic"),
-                                        ("Karras", "karras"),
-                                        ("Exponential", "exponential"),
-                                        ("SGM Uniform", "sgm_uniform"),
-                                        ("Simple", "simple"),
-                                        ("Normal", "normal"),
-                                        ("DDIM", "ddim_uniform")
-                                    ]
-                            else:
-                                scheduler_choices = [
-                                    ("Automatic", "automatic"),
-                                    ("Karras", "karras"),
-                                    ("Exponential", "exponential"),
-                                    ("SGM Uniform", "sgm_uniform"),
-                                    ("Simple", "simple"),
-                                    ("Normal", "normal"),
-                                    ("DDIM", "ddim_uniform")
-                                ]
-                            
-                            edit_scheduler_type = gr.Dropdown(
-                                choices=scheduler_choices,
-                                value=scheduler_choices[0][1] if scheduler_choices else "automatic",
-                                label="调度器",
                                 min_width=120
                             )
                             
@@ -1001,14 +920,6 @@ def create_qwen_image_edit_ui():
                                 interactive=True,
                                 min_width=150
                             )
-                            
-                            # Additional image inputs for advanced features
-                            original_image = gr.Image(type="filepath", label="原始图像", visible=False)
-                            mask_image = gr.Image(type="filepath", label="蒙版图像", visible=False)
-                            control_mask = gr.Image(type="filepath", label="ControlNet蒙版", visible=False)
-                            controlnet_model = gr.Textbox(value="", label="ControlNet模型", visible=False)
-                            controlnet_start = gr.Slider(minimum=0.0, maximum=1.0, value=0.0, step=0.05, label="ControlNet开始步数比例", visible=False)
-                            controlnet_end = gr.Slider(minimum=0.0, maximum=1.0, value=1.0, step=0.05, label="ControlNet结束步数比例", visible=False)
                         
                         # 添加LoRA模型选择组件
                         with gr.Accordion("LoRA模型设置", open=False):
@@ -1225,21 +1136,15 @@ def create_qwen_image_edit_ui():
                 edit_cfg,
                 edit_model,
                 edit_scheduler,
-                edit_scheduler_type,
                 edit_lora_1,
                 edit_lora_2,
                 edit_lora_weight_1,
                 edit_lora_weight_2,
                 edit_seed,
-                original_image,
-                mask_image,
+                # 添加 ControlNet 参数
                 control_image.background,
-                control_mask,
-                controlnet_model,
                 controlnet_conditioning_scale,
-                controlnet_preprocessor,
-                controlnet_start,
-                controlnet_end
+                controlnet_preprocessor
             ],
             outputs=[edit_output, edit_status]
         )
@@ -1247,29 +1152,24 @@ def create_qwen_image_edit_ui():
         # 返回UI组件字典，以便在主程序中引用
         result = {
             "edit_prompt": edit_prompt,
-            "edit_negative_prompt": edit_negative_prompt,
+            "edit_image1": edit_image1,
+            "edit_image2": edit_image2,
+            "edit_image3": edit_image3,
             "edit_steps": edit_steps,
-            "edit_cfg": edit_cfg,
             "edit_model": edit_model,
+            "edit_cfg": edit_cfg,
+            "edit_negative_prompt": edit_negative_prompt,
             "edit_scheduler": edit_scheduler,
-            "edit_scheduler_type": edit_scheduler_type,
             "edit_lora_1": edit_lora_1,
             "edit_lora_2": edit_lora_2,
             "edit_lora_weight_1": edit_lora_weight_1,
             "edit_lora_weight_2": edit_lora_weight_2,
             "edit_seed": edit_seed,
-            "original_image": original_image,
-            "mask_image": mask_image,
-            "control_image": control_image,
-            "control_mask": control_mask,
-            "controlnet_model": controlnet_model,
-            "controlnet_conditioning_scale": controlnet_conditioning_scale,
-            "controlnet_preprocessor": controlnet_preprocessor,
-            "controlnet_start": controlnet_start,
-            "controlnet_end": controlnet_end,
             "edit_button": edit_button,
             "edit_output": edit_output,
             "edit_status": edit_status,
+            "edit_lora_url_1": edit_lora_url_1,  # 添加LoRA网址组件
+            "edit_lora_url_2": edit_lora_url_2   # 添加LoRA网址组件
         }
         
         # 添加刷新LoRA模型列表的函数

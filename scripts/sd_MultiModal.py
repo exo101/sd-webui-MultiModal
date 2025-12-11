@@ -17,6 +17,7 @@ scripts_dir = Path(__file__).parent
 if str(scripts_dir) is not None and str(scripts_dir) not in sys.path:
     sys.path.append(str(scripts_dir))
 
+# 尝试导入各个功能模块
 def import_modules():
     """尝试导入所有必要的模块，并返回包含这些模块的命名空间对象"""
     def _import_and_register_modules():
@@ -24,6 +25,7 @@ def import_modules():
         script_dir = str(scripts_dir)
         if script_dir not in sys.path:
             sys.path.insert(0, script_dir)
+            
             
         try: from prompt_templates import create_prompt_template_ui
         except ImportError: create_prompt_template_ui = None
@@ -83,7 +85,14 @@ def import_modules():
             create_sam_ui = None
             SAM_AVAILABLE = False
         
-        # 添加Z-Image模块导入
+        # 尝试导入FLUX.1-krea模块
+        try: 
+            from flux_krea_ui import create_flux_krea_ui, FLUX_KREA_AVAILABLE
+        except ImportError: 
+            create_flux_krea_ui = None
+            FLUX_KREA_AVAILABLE = False
+
+         # 添加Z-Image模块导入
         try: 
             from z_image_ui import create_z_image_ui as z_image_create_func, Z_IMAGE_MODULE_AVAILABLE
         except ImportError: 
@@ -113,13 +122,15 @@ def import_modules():
         namespace.QWEN_IMAGE_EDIT_MODULE_AVAILABLE = QWEN_IMAGE_EDIT_MODULE_AVAILABLE
         namespace.create_sam_ui = create_sam_ui
         namespace.SAM_AVAILABLE = SAM_AVAILABLE
-        
-        # 添加 Z-Image 模块到命名空间
+        namespace.create_flux_krea_ui = create_flux_krea_ui
+        namespace.FLUX_KREA_AVAILABLE = FLUX_KREA_AVAILABLE
+
+           # 添加 Z-Image 模块到命名空间
         namespace.create_z_image_ui = z_image_create_func
         namespace.Z_IMAGE_MODULE_AVAILABLE = Z_IMAGE_MODULE_AVAILABLE
         
         return namespace
-    
+        
     return _import_and_register_modules()
 
 # 尝试导入所有模块
@@ -147,6 +158,7 @@ FLUX_KONTEXT_AVAILABLE = imported_modules.FLUX_KONTEXT_AVAILABLE
 create_cleaner_module = imported_modules.create_cleaner_module
 CLEANER_AVAILABLE = imported_modules.CLEANER_AVAILABLE
 
+
 # 确保 SAM、Cleaner 和 Qwen Image 模块变量正确赋值
 create_sam_ui = imported_modules.create_sam_ui
 SAM_AVAILABLE = imported_modules.SAM_AVAILABLE
@@ -157,9 +169,14 @@ QWEN_IMAGE_MODULE_AVAILABLE = imported_modules.QWEN_IMAGE_MODULE_AVAILABLE
 create_qwen_image_edit_ui = imported_modules.create_qwen_image_edit_ui
 QWEN_IMAGE_EDIT_MODULE_AVAILABLE = imported_modules.QWEN_IMAGE_EDIT_MODULE_AVAILABLE
 
+
 # 添加 Z-Image 模块变量赋值
 create_z_image_ui = imported_modules.create_z_image_ui
 Z_IMAGE_MODULE_AVAILABLE = imported_modules.Z_IMAGE_MODULE_AVAILABLE
+
+# 添加FLUX KREA模块变量赋值
+create_flux_krea_ui = imported_modules.create_flux_krea_ui
+FLUX_KREA_AVAILABLE = imported_modules.FLUX_KREA_AVAILABLE
 
 current_dir = os.path.abspath(os.getcwd())
 python_interpreter = sys.executable
@@ -366,7 +383,7 @@ def chat(message, chat_history, vision_model, language_model, model_type, upload
     
     return "", chat_history, image_input
 
-def XYKC_tab():
+def MultiModal_tab():
     with gr.Blocks(analytics_enabled=False) as ui:
         with gr.Tabs():
             # 重要公告标签页
@@ -383,20 +400,34 @@ def XYKC_tab():
                     # 左侧区域：标签管理、图像识别与语言交互、模型选择作为一个整体
                     with gr.Column(scale=1):
                         # 标签管理模块
-                        tag_management_components = create_tag_management_module()
-                        tag_management_components["folder_path"].elem_classes = ["xykc-accordion"]
+                        try:
+                            if create_tag_management_module is not None:
+                                tag_management_components = create_tag_management_module()
+                                if tag_management_components:
+                                    with gr.Box():
+                                        if "refresh_button" in tag_management_components:
+                                            tag_management_components["refresh_button"]
+                                        if "folder_path" in tag_management_components:
+                                            tag_management_components["folder_path"].elem_classes = ["xykc-accordion"]
+                            else:
+                                gr.Markdown("标签管理模块当前不可用。")
+                        except Exception as e:
+                            print(f"标签管理模块加载失败: {e}")
                         
                         # 图像管理模块
                         try:
-                            image_management_ui = create_image_management_module()
-                            if image_management_ui:
-                                with gr.Box():
-                                    if "dir_input" in image_management_ui:
-                                        image_management_ui["dir_input"]
-                                    if "load_dir_btn" in image_management_ui:
-                                        image_management_ui["load_dir_btn"]
-                                    if "gallery" in image_management_ui:
-                                        image_management_ui["gallery"]
+                            if create_image_management_module is not None:
+                                image_management_ui = create_image_management_module()
+                                if image_management_ui:
+                                    with gr.Box():
+                                        if "dir_input" in image_management_ui:
+                                            image_management_ui["dir_input"]
+                                        if "load_dir_btn" in image_management_ui:
+                                            image_management_ui["load_dir_btn"]
+                                        if "gallery" in image_management_ui:
+                                            image_management_ui["gallery"]
+                            else:
+                                gr.Markdown("图像管理模块当前不可用。")
                         except Exception as e:
                             print(f"图像管理模块加载失败: {e}")
                         
@@ -482,14 +513,17 @@ def XYKC_tab():
                     with gr.Column(scale=1):
                         # 关键词辅助模板区域
                         with gr.Accordion("关键词辅助模板", open=False):
-                            template_ui = create_prompt_template_ui()
-                            with gr.Row():
-                                with gr.Column():
-                                    template_ui["expression_template"]
-                                with gr.Column():
-                                    template_ui["story_template"]
-                                with gr.Column():
-                                    template_ui["shot_template"]
+                            if create_prompt_template_ui is not None:
+                                template_ui = create_prompt_template_ui()
+                                with gr.Row():
+                                    with gr.Column():
+                                        template_ui["expression_template"]
+                                    with gr.Column():
+                                        template_ui["story_template"]
+                                    with gr.Column():
+                                        template_ui["shot_template"]
+                            else:
+                                gr.Markdown("关键词辅助模板模块当前不可用。")
                         
                         # 聊天区域
                         chat_history = gr.Chatbot(
@@ -539,7 +573,10 @@ def XYKC_tab():
                         # 快捷描述区域
                         with gr.Group():
                             # 创建并添加快捷描述按钮
-                            quick_description_buttons = create_quick_description(chat_message)
+                            if create_quick_description is not None:
+                                quick_description_buttons = create_quick_description(chat_message)
+                            else:
+                                quick_description_buttons = {}
                             
                             # 将快捷描述按钮点击事件绑定到聊天输入框
 
@@ -624,16 +661,19 @@ def XYKC_tab():
                 with gr.Tabs():
                     with gr.TabItem("智能抠图"):
                         # 简化调用方式并统一结构
-                        try:
-                            create_image_matting_module()
-                        except Exception as e:
-                            gr.Markdown(f"智能抠图模块加载失败：{e}")
+                        if create_image_matting_module is not None:
+                            try:
+                                create_image_matting_module()
+                            except Exception as e:
+                                gr.Markdown(f"智能抠图模块加载失败：{e}")
+                        else:
+                            gr.Markdown("智能抠图模块当前不可用。")
                     
                     with gr.TabItem("图像分割"):
                         # 检查并显示图像分割模块
-                        if SAM_AVAILABLE and create_sam_segmentation is not None:
+                        if SAM_AVAILABLE and create_sam_ui is not None:
                             try:
-                                sam_ui_components = create_sam_segmentation()
+                                sam_ui_components = create_sam_ui()
                             except Exception as e:
                                 with gr.Group():
                                     gr.Markdown("## 图像分割")
@@ -662,38 +702,43 @@ def XYKC_tab():
             # 视频关键帧提取标签页
             with gr.TabItem("4.视频关键帧提取"):
                 # 创建并添加视频分帧组件
-                video_frame_components = create_video_frame_extractor()                   
-
-                # 将视频分帧组件解包
-                video_input = video_frame_components["video_input"]
-                frame_output = video_frame_components["frame_output"]
-                frame_quality = video_frame_components["frame_quality"]
-                frame_mode = video_frame_components["frame_mode"]
-                frame_preview = video_frame_components["frame_preview"]
-                extract_video_frames = video_frame_components["extract_video_frames"]
-                
-                # 绑定按钮点击事件
-                extract_button = gr.Button("提取关键帧")
-                extract_button.click(
-                    fn=extract_video_frames,
-                    inputs=[video_input, frame_output, frame_quality, frame_mode],
-                    outputs=[gr.File(label="提取的帧文件"), frame_preview]
-                )
+                if create_video_frame_extractor is not None:
+                    video_frame_components = create_video_frame_extractor()                   
+                    
+                    # 将视频分帧组件解包
+                    video_input = video_frame_components["video_input"]
+                    frame_output = video_frame_components["frame_output"]
+                    frame_quality = video_frame_components["frame_quality"]
+                    frame_mode = video_frame_components["frame_mode"]
+                    frame_preview = video_frame_components["frame_preview"]
+                    extract_video_frames = video_frame_components["extract_video_frames"]
+                    
+                    # 绑定按钮点击事件
+                    extract_button = gr.Button("提取关键帧")
+                    extract_button.click(
+                        fn=extract_video_frames,
+                        inputs=[video_input, frame_output, frame_quality, frame_mode],
+                        outputs=[gr.File(label="提取的帧文件"), frame_preview]
+                    )
+                else:
+                    gr.Markdown("视频关键帧提取模块当前不可用。")
             
             # 数字人视频生成标签页
             with gr.TabItem("5.数字人对口型生成"):
                 # 创建并添加数字人视频生成功能
-                latent_sync_components = create_latent_sync_ui()
-                
-                # 将组件解包以供引用（如果需要）
-                latent_video_input = latent_sync_components["video_input"]
-                latent_audio_input = latent_sync_components["audio_input"]
-                latent_guidance_scale = latent_sync_components["guidance_scale"]
-                latent_inference_steps = latent_sync_components["inference_steps"]
-                latent_seed = latent_sync_components["seed"]
-                latent_process_btn = latent_sync_components["process_btn"]
-                latent_video_output = latent_sync_components["video_output"]
-
+                if create_latent_sync_ui is not None:
+                    latent_sync_components = create_latent_sync_ui()
+                    
+                    # 将组件解包以供引用（如果需要）
+                    latent_video_input = latent_sync_components["video_input"]
+                    latent_audio_input = latent_sync_components["audio_input"]
+                    latent_guidance_scale = latent_sync_components["guidance_scale"]
+                    latent_inference_steps = latent_sync_components["inference_steps"]
+                    latent_seed = latent_sync_components["seed"]
+                    latent_process_btn = latent_sync_components["process_btn"]
+                    latent_video_output = latent_sync_components["video_output"]
+                else:
+                    gr.Markdown("数字人视频生成模块当前不可用。")
             # Index-TTS语音合成标签页（如果可用）
             if 'INDEX_TTS_AVAILABLE' in globals() and INDEX_TTS_AVAILABLE:
                 with gr.TabItem("6.Index-TTS语音合成"):
@@ -708,23 +753,45 @@ def XYKC_tab():
                 with gr.TabItem("6.Index-TTS语音合成"):
                     gr.Markdown("Index-TTS模块当前不可用，可能是因为缺少模型文件或依赖项。")
 
-            # FLUX.1-Kontext标签页（如果可用）
-            if 'FLUX_KONTEXT_AVAILABLE' in globals() and FLUX_KONTEXT_AVAILABLE:
-                with gr.TabItem("7.FLUX.1-Kontext图像编辑"):
-                    try:
-                        # 直接创建FLUX.1-Kontext UI组件
-                        flux_kontext_components = create_flux_kontext_ui()
-                        
-                        # 如果组件创建成功，它们已经在create_flux_kontext_ui函数中被正确创建和显示
-                        # 不需要额外的处理
-                        if not flux_kontext_components:
-                            gr.Markdown("FLUX.1-Kontext模块加载失败")
-                    except Exception as e:
-                        gr.Markdown(f"FLUX.1-Kontext模块初始化错误: {e}")
- 
+            # 添加 FLUX 系列标签页
+            with gr.TabItem("7.nunchaku加速-FLUX系列图像生成与编辑"):
+                with gr.Tabs():
+                    # kontext图像编辑子标签页
+                    with gr.TabItem("kontext图像编辑"):
+                        try:
+                            if 'FLUX_KONTEXT_AVAILABLE' in globals() and FLUX_KONTEXT_AVAILABLE:
+                                # 创建FLUX.1-Kontext UI组件
+                                flux_kontext_components = create_flux_kontext_ui()
+                                
+                                if not flux_kontext_components:
+                                    gr.Markdown("FLUX.1-Kontext模块加载失败")
+                            else:
+                                gr.Markdown("FLUX.1-Kontext模块当前不可用，可能是因为缺少模型文件或依赖项。")
+                        except Exception as e:
+                            gr.Markdown(f"FLUX.1-Kontext模块初始化错误: {e}")
+                            import traceback
+                            traceback.print_exc()
+                
+                    # FLUX.1-krea图像生成子标签页
+                    with gr.TabItem("FLUX.1-图像生成"):
+                        try:
+                            # 检查FLUX.1-krea模块是否可用
+                            flux_krea_available = globals().get('FLUX_KREA_AVAILABLE', False)
+                            if flux_krea_available:
+                                # 创建FLUX.1-krea UI组件
+                                flux_krea_components = create_flux_krea_ui()
+                                
+                                if not flux_krea_components:
+                                    gr.Markdown("FLUX.1-krea模块加载失败")
+                            else:
+                                gr.Markdown("FLUX.1-krea模块当前不可用，可能是因为缺少模型文件或依赖项。")
+                        except Exception as e:
+                            gr.Markdown(f"FLUX.1-krea模块初始化错误: {e}")
+                            import traceback
+                            traceback.print_exc()
             # 添加 Qwen Image 标签页（如果可用）
             if 'QWEN_IMAGE_MODULE_AVAILABLE' in globals() and QWEN_IMAGE_MODULE_AVAILABLE:
-                with gr.TabItem("8.Qwen Image图像生成"):
+                with gr.TabItem("8.nunchaku加速-Qwen Image图像生成与编辑"):
                     try:
                         with gr.Tabs():
                             with gr.TabItem("文生图"):
@@ -770,13 +837,23 @@ def XYKC_tab():
                 with gr.TabItem("9.Z-Image-Turbo图像生成"):
                     gr.Markdown("Z-Image-Turbo模块当前不可用，可能是因为缺少模型文件或依赖项。")
 
-    return [(ui, "多模态插件12", "XYKC_vision_tab")]
+    return [(ui, "多模态插件12", "MultiModal_vision_tab")]
 
-script_callbacks.on_ui_tabs(XYKC_tab)
+# 移除了重复的XYKC_tab函数定义，保留了第一个更完整的版本
+                        
+modules_status = {
+    'index_tts': INDEX_TTS_AVAILABLE,
+    'flux_kontext': FLUX_KONTEXT_AVAILABLE,
+    'cleaner': CLEANER_AVAILABLE,
+    'sam': SAM_AVAILABLE,
+}
 
-import modules.scripts as scripts
-import gradio as gr
-from modules import script_callbacks
+script_callbacks.on_ui_tabs(MultiModal_tab)
+
+# 避免重复导入已经导入过的模块
+# import modules.scripts as scripts
+# import gradio as gr
+# from modules import script_callbacks
 
 # 在WebUI启动时在后台日志中显示插件信息和使用声明
 def on_app_started(*args, **kwargs):
@@ -799,3 +876,14 @@ def on_app_started(*args, **kwargs):
     print("- Qwen图像生成")
     print()
     print("使用须知：使用此插件者请合法使用AI，不得发表不正当言论，作假新闻，二次销售，二次改装等违法行为，之后的一切行为与插件开发者无关。")
+    print("=" * 60)
+
+script_callbacks.on_app_started(on_app_started)
+
+# 检查模块状态
+modules_status = {
+    'index_tts': INDEX_TTS_AVAILABLE,
+    'flux_kontext': FLUX_KONTEXT_AVAILABLE,
+    'cleaner': CLEANER_AVAILABLE,
+    'sam': SAM_AVAILABLE,
+}

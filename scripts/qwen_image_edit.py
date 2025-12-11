@@ -514,7 +514,7 @@ def preprocess_control_image(image_input, preprocessor_display_name):
         ]
         
         print(f"执行预处理命令: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(qwen_image_dir), timeout=300)
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(qwen_image_dir), timeout=600)
         
         # 删除临时参数文件
         if args_file.exists():
@@ -1316,3 +1316,4 @@ custom_css = """
     margin-bottom: 5px;
 }
 """
+

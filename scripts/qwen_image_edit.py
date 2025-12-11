@@ -684,7 +684,7 @@ def edit_images(prompt, negative_prompt, image1, image2, image3, steps, cfg_scal
         # 执行命令
         print(f"执行命令: {' '.join(cmd)}")
         print(f"工作目录: {qwen_image_dir}")
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(qwen_image_dir), timeout=300)
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(qwen_image_dir), timeout=600)
         
         # 删除临时参数文件
         if args_file.exists():
@@ -1316,4 +1316,5 @@ custom_css = """
     margin-bottom: 5px;
 }
 """
+
 

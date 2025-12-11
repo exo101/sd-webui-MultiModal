@@ -10,24 +10,32 @@ import time
 from modules import shared
 import datetime
 
-from diffusers import (
-    FluxKontextPipeline, 
-    FluxTransformer2DModel, 
-    GGUFQuantizationConfig,
-    AutoencoderKL,
-    FlowMatchEulerDiscreteScheduler
-)
+# 尝试导入diffusers相关模块
+try:
+    from diffusers import (
+        FluxKontextPipeline, 
+        FluxTransformer2DModel, 
+        GGUFQuantizationConfig,
+        AutoencoderKL,
+        FlowMatchEulerDiscreteScheduler
+    )
+    DIFFUSERS_AVAILABLE = True
+except ImportError as e:
+    print(f"Diffusers库导入失败: {e}")
+    DIFFUSERS_AVAILABLE = False
 
+# 尝试导入nunchaku相关模块
 try:
     from nunchaku import NunchakuFluxTransformer2dModel
     from nunchaku.lora.flux.compose import compose_lora
     from nunchaku.utils import get_precision
     NUNCHAKU_AVAILABLE = True
     print("Nunchaku库已找到，将使用优化的FLUX.1-Kontext模型")
-except ImportError:
+except ImportError as e:
+    print(f"Nunchaku库导入失败: {e}")
     NUNCHAKU_AVAILABLE = False
-    print("Nunchaku库未找到，将使用标准的GGUF模型")
 
+# 检查LoRA支持
 try:
     from diffusers import DiffusionPipeline
     LORA_SUPPORTED = True
@@ -394,6 +402,10 @@ def load_nunchaku_model(enable_cpu_offload=False, precision=None):
 def load_flux_kontext_model(selected_model="Q2_K", enable_cpu_offload=False):
     """加载FLUX.1-Kontext GGUF模型"""
     global pipe, FLUX_KONTEXT_LOADED, SELECTED_MODEL
+    
+    # 检查必要依赖
+    if not DIFFUSERS_AVAILABLE:
+        raise RuntimeError("无法加载模型：缺少必要的diffusers库依赖")
     
     if pipe is not None and SELECTED_MODEL == selected_model and FLUX_KONTEXT_LOADED:
         print("使用已缓存的模型")
@@ -1010,281 +1022,255 @@ def create_flux_kontext_ui():
     """创建FLUX.1-Kontext UI界面"""
     # 使用Blocks包装所有UI元素
     with gr.Blocks() as flux_kontext_ui:
-        with gr.Tabs():
-            with gr.TabItem("图像编辑"):
-                with gr.Row():
-                    # 左半边：参数设置区域
-                    with gr.Column(scale=1):
-                        with gr.Group():
-                            with gr.Row():
-                                dual_image_1 = gr.Image(
-                                    label="上传图像", 
-                                    type="pil",
-                                    height=300
-                                )
-                            
-                            with gr.Row():
-                                dual_model_choices = ["Q2_K", "Q4_K_S", "Q5_K_M", "Q6_K", "Q8_0"]
-                                if NUNCHAKU_AVAILABLE:
-                                    # 提供更多Nunchaku选项以支持不同精度
-                                    dual_model_choices = [
-                                        "Nunchaku fp4 (推荐)", 
-                                        "Nunchaku int4", 
-                                        "Q2_K", 
-                                        "Q4_K_S", 
-                                        "Q5_K_M", 
-                                        "Q6_K", 
-                                        "Q8_0"
-                                    ]
-                            
-                                dual_model_type = gr.Dropdown(
-                                    label="模型选择",
-                                    choices=dual_model_choices,
-                                    value="Nunchaku fp4 (推荐)" if NUNCHAKU_AVAILABLE else "Q2_K",
-                                    info="Nunchaku提供更好的性能和更低的显存需求。fp4为浮点4位量化，int4为整数4位量化。Q2_K 显存占用最小 (推荐 6-8GB 显存), Q6_K 平衡质量与显存占用, Q8_0 质量最高 (需要 12GB+ 显存)"
-                                )
-                                
-                                dual_enable_cpu_offload = gr.Checkbox(
-                                    label="启用CPU卸载 (节省显存)",
-                                    value=False,
-                                    info="将部分模型组件移动到CPU以节省显存，但会降低推理速度。如果出现显存不足错误，请启用此选项。"
-                                )
-                            
-                            with gr.Row():
-                                dual_lora_enable = gr.Checkbox(
-                                    label="启用LoRA",
-                                    value=False,
-                                    info="启用LoRA模型以修改生成风格"
-                                )
-                                dual_lora_model = gr.Dropdown(
-                                    label="LoRA模型选择",
-                                    choices=list_lora_models(),
-                                    value=list_lora_models()[0] if list_lora_models() else "",
-                                    interactive=False  # 默认不可交互
-                                )
-                                
-                            with gr.Row():
-                                dual_lora_weight = gr.Slider(
-                                    label="LoRA权重",
-                                    minimum=0.0,
-                                    maximum=1.0,
-                                    step=0.05,
-                                    value=0.5,
-                                    info="控制LoRA模型的影响强度"
-                                )
-                            
-                            # 添加刷新LoRA模型列表按钮
-                            with gr.Row():
-                                refresh_lora_button = gr.Button("刷新LoRA模型列表")
-                            
-                            # 添加事件监听器，使得启用LoRA复选框时，LoRA模型下拉菜单变为可交互状态
-                            def update_lora_interactive(enable_lora):
-                                return gr.update(interactive=enable_lora)
-                            
-                            dual_lora_enable.change(
-                                fn=update_lora_interactive,
-                                inputs=dual_lora_enable,
-                                outputs=dual_lora_model
-                            )
-                            
-                            # 刷新LoRA模型列表的函数
-                            def refresh_lora_models():
-                                updated_choices = list_lora_models()
-                                default_value = updated_choices[0] if updated_choices else ""
-                                return gr.update(choices=updated_choices, value=default_value)
-                            
-                            # 绑定刷新按钮事件
-                            refresh_lora_button.click(
-                                fn=refresh_lora_models,
-                                inputs=[],
-                                outputs=dual_lora_model
-                            )
-                            
-                            with gr.Group():
-                                gr.Markdown("**编辑指令**")
-                                edit_textbox = gr.Textbox(
-                                    label="编辑描述",
-                                    placeholder="请输入编辑指令，例如：'将天空变成夜晚' 或 '给汽车换颜色'",
-                                    lines=3,
-                                    max_lines=5
-                                )
-                            
-                            with gr.Group():
-                                with gr.Row():
-                                    dual_seed = gr.Number(
-                                        label="随机种子",
-                                        value=0,
-                                        precision=0,
-                                        info="设置随机种子以获得可重现的结果"
-                                    )
-                                    
-                                    # 移除随机种子复选框
-                                    # dual_randomize_seed = gr.Checkbox(
-                                    #     label="随机种子",
-                                    #     value=True
-                                    # )
-                                
-                                with gr.Row():
-                                    dual_guidance_scale = gr.Slider(
-                                        label="CFG引导数",
-                                        minimum=1.0,
-                                        maximum=10.0,
-                                        step=0.1,
-                                        value=3.5,
-                                        info="控制生成图像与提示词的一致性，数值越高越严格遵循提示词"
-                                    )
-                                    
-                                    dual_num_inference_steps = gr.Slider(
-                                        label="推理步数",
-                                        minimum=10,
-                                        maximum=50,
-                                        step=1,
-                                        value=20,
-                                        info="控制生成图像的质量和计算时间"
-                                    )
+        with gr.Row():
+            # 左半边：参数设置区域
+            with gr.Column(scale=1):
+                with gr.Group():
+                    with gr.Row():
+                        dual_image_1 = gr.Image(
+                            label="上传图像", 
+                            type="pil",
+                            height=300
+                        )
                     
-                    # 右半边：生成相关控件区域
-                    with gr.Column(scale=1):
-                        # 生成按钮
-                        dual_generate_button = gr.Button("生成系列结果", variant="primary", size="lg")
-                        
-                        # 生成结果展示
-                        dual_generated_gallery = gr.Gallery(
-                            label="生成结果",
-                            columns=2,
-                            rows=2,
-                            object_fit="contain",
-                            height="auto",
-                            preview=True
+                    with gr.Row():
+                        dual_model_choices = ["Q2_K", "Q4_K_S", "Q5_K_M", "Q6_K", "Q8_0"]
+                        if NUNCHAKU_AVAILABLE:
+                            # 提供更多Nunchaku选项以支持不同精度
+                            dual_model_choices = [
+                                "Nunchaku fp4 (50系）", 
+                                "Nunchaku int4 (非50系）", 
+                                "Q2_K", 
+                                "Q4_K_S", 
+                                "Q5_K_M", 
+                                "Q6_K", 
+                                "Q8_0"
+                            ]
+                    
+                        dual_model_type = gr.Dropdown(
+                            label="模型选择",
+                            choices=dual_model_choices,
+                            value="Nunchaku fp4 (50系）" if NUNCHAKU_AVAILABLE else "Q2_K",
+                            info="Nunchaku提供更好的性能和更低的显存需求。fp4为浮点4位量化，int4为整数4位量化。Q2_K 显存占用最小 (推荐 6-8GB 显存), Q6_K 平衡质量与显存占用, Q8_0 质量最高 (需要 12GB+ 显存)"
                         )
                         
-                        # 种子信息
-                        dual_seed_info = gr.Textbox(
-                            label="使用的种子",
-                            interactive=False,
-                            lines=2
+                        dual_enable_cpu_offload = gr.Checkbox(
+                            label="启用CPU卸载 (节省显存)",
+                            value=False,
+                            info="将部分模型组件移动到CPU以节省显存，但会降低推理速度。如果出现显存不足错误，请启用此选项。"
+                        )
+                    
+                    with gr.Row():
+                        dual_lora_enable = gr.Checkbox(
+                            label="启用LoRA",
+                            value=False,
+                            info="启用LoRA模型以修改生成风格"
+                        )
+                        dual_lora_model = gr.Dropdown(
+                            label="LoRA模型选择",
+                            choices=list_lora_models(),
+                            value=list_lora_models()[0] if list_lora_models() else "",
+                            interactive=False  # 默认不可交互
                         )
                         
-                        # 打开输出目录按钮
-                        open_output_dir_button = gr.Button("打开输出目录")
-                        open_output_dir_button.click(
-                            fn=open_flux_output_dir,
-                            inputs=[],
-                            outputs=[]
+                    with gr.Row():
+                        dual_lora_weight = gr.Slider(
+                            label="LoRA权重",
+                            minimum=0.0,
+                            maximum=1.0,
+                            step=0.05,
+                            value=0.5,
+                            info="控制LoRA模型的影响强度"
                         )
-                
-                # 定义生成编辑系列的处理函数
-                def on_generate_edit_series(image_1, *args):
-                    # 解析参数 (调整参数顺序和数量)
-                    edit_args = args[:-8]  # 编辑组件参数
-                    seed = args[-8] 
-                    # 移除randomize_seed参数
-                    guidance_scale = args[-7]
-                    num_inference_steps = args[-6]
-                    model_type = args[-5]
-                    enable_cpu_offload = args[-4]
-                    lora_enable = args[-3]  # 新增LoRA启用参数
-                    lora_model = args[-2]   # 新增LoRA模型参数
-                    lora_weight = args[-1]  # 新增LoRA权重参数
                     
-                    input_image = image_1
+                    # 添加刷新LoRA模型列表按钮
+                    with gr.Row():
+                        refresh_lora_button = gr.Button("刷新LoRA模型列表")
                     
-                    if input_image is None:
-                        return [], "请上传图像。"
+                    # 添加事件监听器，使得启用LoRA复选框时，LoRA模型下拉菜单变为可交互状态
+                    def update_lora_interactive(enable_lora):
+                        return gr.update(interactive=enable_lora)
                     
-                    # 解析编辑选项
-                    selected_edits = []
-                    
-                    # 打印调试信息
-                    print(f"编辑组件参数数量: {len(edit_args)}")
-                    # 只有一个编辑组件 (现在只有textbox，checkbox已移除)
-                    if len(edit_args) >= 1:
-                        textbox_value = edit_args[0]
-                        print(f"编辑: textbox='{textbox_value}'")
-                        
-                        # 检查textbox_value是否为字符串类型并且有内容
-                        if textbox_value and isinstance(textbox_value, str) and textbox_value.strip():
-                            selected_edits.append(textbox_value)
-                    
-                    if not selected_edits:
-                        return [], "请至少选择一个编辑项。"
-                    
-                    print(f"生成编辑系列，选中的编辑项: {selected_edits}")
-                    
-                    # 处理模型类型选择（特别是Nunchaku选项）
-                    actual_model_type = model_type
-                    # 不再在这里转换模型类型，直接传递用户选择的模型类型
-                    
-                    # 如果启用了LoRA，加载LoRA模型
-                    global pipe
-                    lora_path = None
-                    if lora_enable and lora_model:
-                        # 构建完整的LoRA文件路径
-                        full_lora_path = os.path.join(shared.models_path, "Lora", lora_model)
-                        
-                        # 检查文件是否存在
-                        if os.path.exists(full_lora_path):
-                            # 确保模型已加载
-                            if pipe is None or SELECTED_MODEL != actual_model_type or not FLUX_KONTEXT_LOADED:
-                                pipe = load_flux_kontext_model(actual_model_type, enable_cpu_offload)
-                            
-                            if pipe is not None:
-                                # 在加载LoRA之前准备模型
-                                prepare_model_for_lora(pipe)
-                                # 卸载当前LoRA（如果有）
-                                unload_lora_weights(pipe)
-                                # 加载新LoRA - 传递模型文件名而非完整路径
-                                load_lora_weights(pipe, lora_model, lora_weight)
-                        else:
-                            print(f"LoRA模型文件不存在: {full_lora_path}")
-                    
-                    # 确保输入图像是列表格式
-                    if not isinstance(input_image, list):
-                        input_image = [input_image]
-                    
-                    # 上传一张图像：单独编辑这张图像
-                    print("处理单张图像编辑")
-                    # 确保模型已加载
-                    if pipe is None or SELECTED_MODEL != actual_model_type or not FLUX_KONTEXT_LOADED:
-                        pipe = load_flux_kontext_model(actual_model_type, enable_cpu_offload)
-                        if pipe is None:
-                            raise gr.Error("模型加载失败，请检查模型文件是否完整")
-                    
-                    images, seeds = generate_edit_series(
-                        input_image, selected_edits,
-                        seed, False, guidance_scale, num_inference_steps,  # 默认不随机化种子
-                        enable_cpu_offload, actual_model_type  # 传递模型类型
+                    dual_lora_enable.change(
+                        fn=update_lora_interactive,
+                        inputs=dual_lora_enable,
+                        outputs=dual_lora_model
                     )
                     
-                    seed_text = f"使用的种子: {seeds}"
+                    # 刷新LoRA模型列表的函数
+                    def refresh_lora_models():
+                        updated_choices = list_lora_models()
+                        default_value = updated_choices[0] if updated_choices else ""
+                        return gr.update(choices=updated_choices, value=default_value)
                     
-                    print(f"返回 {len(images)} 张图像到结果展示组件")
-                    for i, img in enumerate(images):
-                        print(f"图像 {i+1}: 类型={type(img)}, 尺寸={img.size if hasattr(img, 'size') else 'N/A'}")
+                    # 绑定刷新按钮事件
+                    refresh_lora_button.click(
+                        fn=refresh_lora_models,
+                        inputs=[],
+                        outputs=dual_lora_model
+                    )
                     
-                    return images, seed_text
+                    with gr.Group():
+                        gr.Markdown("**编辑设置**")
+                        edit_textbox = gr.Textbox(
+                            label="编辑指令",
+                            placeholder="请输入编辑指令，例如：在图像右侧添加一只猫",
+                            lines=3,
+                            max_lines=5
+                        )
+                    
+                    with gr.Group():
+                        with gr.Row():
+                            dual_seed = gr.Number(
+                                label="随机种子",
+                                value=0,
+                                precision=0,
+                                info="设置随机种子以获得可重现的结果，0表示随机"
+                            )
+                        
+                        with gr.Row():
+                            dual_guidance_scale = gr.Slider(
+                                label="CFG引导数",
+                                minimum=1.0,
+                                maximum=10.0,
+                                step=0.1,
+                                value=3.5,
+                                info="控制生成图像与提示词的一致性，数值越高越严格遵循提示词"
+                            )
+                            
+                            dual_num_inference_steps = gr.Slider(
+                                label="推理步数",
+                                minimum=10,
+                                maximum=50,
+                                step=1,
+                                value=20,
+                                info="控制生成图像的质量和计算时间"
+                            )
+            
+            # 右半边：生成相关控件区域
+            with gr.Column(scale=1):
+                # 生成按钮
+                dual_generate_button = gr.Button("生成图像", variant="primary", size="lg")
                 
-                # 绑定双图像编辑生成按钮事件
-                dual_generate_button.click(
-                    fn=on_generate_edit_series,
-                    inputs=[
-                        dual_image_1, 
-                        edit_textbox,
-                        dual_seed, 
-                        # 移除dual_randomize_seed参数
-                        dual_guidance_scale, 
-                        dual_num_inference_steps,
-                        dual_model_type,
-                        dual_enable_cpu_offload,
-                        dual_lora_enable,
-                        dual_lora_model,
-                        dual_lora_weight
-                    ], 
-                    outputs=[dual_generated_gallery, dual_seed_info]
+                # 生成结果展示
+                dual_generated_gallery = gr.Gallery(
+                    label="生成结果",
+                    show_label=True,
+                    elem_id="gallery",
+                    columns=2,
+                    object_fit="contain",
+                    height="auto",
+                    preview=True
                 )
                 
-                print("FLUX.1-Kontext UI 创建完成")
-    
+                # 种子信息
+                dual_seed_info = gr.Textbox(
+                    label="使用的种子",
+                    interactive=False,
+                    lines=1
+                )
+                
+                # 打开输出目录按钮
+                def open_flux_output_dir():
+                    """打开FLUX输出目录"""
+                    output_dir = os.path.join(shared.data_path, "outputs", "flux-kontext")
+                    os.makedirs(output_dir, exist_ok=True)
+                    import subprocess
+                    import platform
+                    try:
+                        system = platform.system()
+                        if system == "Windows":
+                            subprocess.run(["explorer", output_dir])
+                        elif system == "Darwin":  # macOS
+                            subprocess.run(["open", output_dir])
+                        else:  # Linux and other Unix-like systems
+                            subprocess.run(["xdg-open", output_dir])
+                    except Exception as e:
+                        print(f"打开目录失败: {e}")
+                
+                open_output_dir_button = gr.Button("打开输出目录")
+                open_output_dir_button.click(
+                    fn=open_flux_output_dir,
+                    inputs=[],
+                    outputs=[]
+                )
+
+        # 定义生成图像的处理函数
+        def on_generate_edit_series(*args):
+            # 解析参数
+            image = args[0]
+            edit_prompt = args[1]
+            seed = args[2]
+            guidance_scale = args[3]
+            num_inference_steps = args[4]
+            model_type = args[5]
+            enable_cpu_offload = args[6]
+            lora_enable = args[7]
+            lora_model = args[8]
+            lora_weight = args[9]
+            
+            if image is None:
+                return [], "请上传图像"
+            
+            if not edit_prompt:
+                return [], "请提供编辑指令"
+            
+            try:
+                # 检查必要依赖是否可用
+                if not DIFFUSERS_AVAILABLE:
+                    raise RuntimeError("缺少必要的依赖库: diffusers")
+                
+                # 加载模型
+                global pipe
+                pipe = load_flux_kontext_model(model_type, enable_cpu_offload)
+                
+                # 如果启用了LoRA，加载LoRA模型
+                if lora_enable and lora_model:
+                    # 注意：这里需要根据实际情况实现LoRA加载逻辑
+                    print(f"LoRA功能暂未完全实现: {lora_model}")
+                
+                # 生成图像
+                images, used_seed = generate_edit_series(
+                    image=image,
+                    edit_prompt=edit_prompt,
+                    seed=seed,
+                    guidance_scale=guidance_scale,
+                    num_inference_steps=num_inference_steps
+                )
+                
+                seed_text = f"使用的种子: {used_seed}"
+                print(f"返回 {len(images)} 张图像到结果展示组件")
+                for i, img in enumerate(images):
+                    print(f"图像 {i+1}: 类型={type(img)}, 尺寸={img.size if hasattr(img, 'size') else 'N/A'}")
+                
+                return images, seed_text
+            
+            except Exception as e:
+                error_msg = str(e)
+                print(f"生成图像时出错: {error_msg}")
+                return [], f"生成失败: {error_msg}"
+
+        # 绑定双图像编辑生成按钮事件
+        dual_generate_button.click(
+            fn=on_generate_edit_series,
+            inputs=[
+                dual_image_1, 
+                edit_textbox,
+                dual_seed, 
+                # 移除dual_randomize_seed参数
+                dual_guidance_scale, 
+                dual_num_inference_steps,
+                dual_model_type,
+                dual_enable_cpu_offload,
+                dual_lora_enable,
+                dual_lora_model,
+                dual_lora_weight
+            ], 
+            outputs=[dual_generated_gallery, dual_seed_info]
+        )
+        
+        print("FLUX.1-Kontext UI 创建完成")
+
     # 返回包装好的UI容器
     return flux_kontext_ui
 

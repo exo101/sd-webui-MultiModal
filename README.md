@@ -56,22 +56,28 @@ WebUI Forge安装使用介绍：
 ## 插件模型目录
 | 整合包目录 | 模型目录 | 子目录 |说明 |
 |---------------------|--------|-----------|-----------|
-| `sd-webui-forge-aki`|`models`|`sam`| 图像分割模型目录 |
+| `sd-webui-forge-aki`|`models`|`adetailer`| 修脸插件模型 |
 | `sd-webui-forge-aki`|`models`|`cleaner`| 图像清理模型目录 |
-| `sd-webui-forge-aki`|`models`|`Tongyi-MAl`| Z-Image模型目录 |
-| `sd-webui-forge-aki`|`models`|`index-tts2`| Index-TTS语音合成模型目录 |
-| `sd-webui-forge-aki`|`models`|`FLUX.1-Kontext-dev`| 图像编辑模型目录 |
-| `sd-webui-forge-aki`|`models`|`lora`|qwen LoRA微调模型目录 |
+| `sd-webui-forge-aki`|`models`|`RealESRGAN`| 高清放大算法目录 |
+| `sd-webui-forge-aki`|`models`|`ESRGAN`| 高清放大算法目录 |
+| `sd-webui-forge-aki`|`models`|`lora`| LoRA微调模型目录 |
 | `sd-webui-forge-aki`|`models`|`qwen-image`| qwen模型与组件总目录 |
 | `sd-webui-forge-aki`|`models`|`qwen-image\qwenimage`| qwen文生图主模型目录 |
 | `sd-webui-forge-aki`|`models`|`qwen-image\qwen-image-edit`| qwen图像编辑主模型目录 |
-| `sd-webui-forge-aki`|`models`|`ControlNet\ Qwen-Image-ControlNet-Union`| qwen ControlNet模型目录 |
+| `sd-webui-forge-aki`|`models`|`index-tts2`| Index-TTS语音合成模型目录 |
+| `sd-webui-forge-aki`|`models`|`FLUX.1-Kontext-dev`| Kontext图像编辑模型目录 |
+| `sd-webui-forge-aki`|`models`|`ControlNet`| ControlNet控制模型目录 |
+| `sd-webui-forge-aki`|`models`|`ControlNetPreprocessor`| ControlNet预处理器目录 |
 | `sd-webui-forge-aki`|`models`|`LatentSync`| 数字人视频生成模型目录 |
-| `sd-webui-forge-aki`|`models`|`adetailer`| 修脸插件模型 |
 | `sd-webui-forge-aki`|`models`|`insightface`| 换脸插件模型 |
 | `sd-webui-forge-aki`|`models`|`faceswaplab`| 换脸插件模型 |
 | `sd-webui-forge-aki`|`models`|`GFPGAN`| 换脸插件放大模型 |
 | `sd-webui-forge-aki`|`models`|`Codeformer`| 换脸插件放大模型 |
+| `sd-webui-forge-aki`|`models`|`roop`| 换脸插件模型目录 |
+| `sd-webui-forge-aki`|`models`|`sam`| 图像分割模型目录 |
+| `sd-webui-forge-aki`|`models`|`Stable-diffusion`| 传统flux.XL.1.5模型目录 |
+| `sd-webui-forge-aki`|`models`|`Tongyi-MAl`| Z-Image模型目录 |
+| `sd-webui-forge-aki`|`models`|`vae`| 图像编解码模型 |
 | `C:`|`ffmpeg\`| 语音与视频合成依赖文件 |
 
 ## ps插件

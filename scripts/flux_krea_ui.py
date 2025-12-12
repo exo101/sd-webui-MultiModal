@@ -4,7 +4,7 @@ import os
 import gc
 import time
 from modules import shared
-from modules import sd_samplers, sd_schedulers
+from modules import sd_samplers
 
 # 尝试导入diffusers相关模块
 try:
@@ -50,17 +50,7 @@ def get_webui_samplers():
         # 回退到默认采样器列表
         return ["Euler", "DPM++ 2M", "Euler Ancestral", "UniPC"]
 
-# 支持的调度器列表（使用WebUI原生调度器）
-def get_webui_schedulers():
-    """获取WebUI原生调度器列表"""
-    try:
-        # 使用WebUI原生调度器
-        schedulers = [scheduler.label for scheduler in sd_schedulers.schedulers]
-        return schedulers if schedulers else ["Default"]
-    except Exception as e:
-        print(f"获取WebUI调度器失败: {e}")
-        # 回退到默认调度器列表
-        return ["Default"]
+
 
 def load_flux_krea_model(model_type, enable_cpu_offload=False):
     """加载FLUX.1-krea模型"""
@@ -445,14 +435,6 @@ def create_flux_krea_ui():
                             value="Euler" if "Euler" in get_webui_samplers() else get_webui_samplers()[0],
                             info="选择图像生成的采样算法"
                         )
-                        
-                        # 使用WebUI原生调度器
-                        krea_scheduler = gr.Dropdown(
-                            label="调度器",
-                            choices=get_webui_schedulers(),
-                            value="Default",
-                            info="调度器控制噪声调度策略"
-                        )
             
             # 右半边：生成相关控件区域
             with gr.Column(scale=2):
@@ -532,11 +514,6 @@ def create_flux_krea_ui():
                 # 加载模型
                 global pipe
                 pipe = load_flux_krea_model(model_type, enable_cpu_offload)
-                
-                # 如果启用了LoRA，加载LoRA模型
-                if lora_enable and lora_model:
-                    # 注意：这里需要根据实际情况实现LoRA加载逻辑
-                    pass  # LoRA功能暂未实现，静默处理
                 
                 # 生成图像
                 image_paths, used_seed = generate_image(

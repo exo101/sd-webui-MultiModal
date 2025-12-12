@@ -50,13 +50,6 @@ from transformers import (
     T5TokenizerFast
 )
 
-GGUF_FILENAMES = {
-    "Q2_K": "flux1-kontext-dev-Q2_K.gguf",
-    "Q4_K_S": "flux1-kontext-dev-Q4_K_S.gguf",
-    "Q5_K_M": "flux1-kontext-dev-Q5_K_M.gguf",
-    "Q6_K": "flux1-kontext-dev-Q6_K.gguf",
-    "Q8_0": "flux1-kontext-dev-Q8_0.gguf"
-}
 
 NUNCHAKU_MODEL_CONFIGS = {
     "int4": "svdq-int4_r32-flux.1-kontext-dev.safetensors",
@@ -447,6 +440,9 @@ def load_flux_kontext_model(selected_model="Q2_K", enable_cpu_offload=False):
             # 如果Nunchaku不可用，则直接报错
             raise Exception("Nunchaku模型不可用，请安装Nunchaku库支持")
         
+        # 移除了GGUF模型处理逻辑，只保留Nunchaku模型
+        raise Exception("GGUF模型支持已被移除，请使用Nunchaku模型")
+        
         # 只有在需要加载GGUF模型时才执行下面的代码
         model_filename = GGUF_FILENAMES.get(selected_model, GGUF_FILENAMES["Q2_K"])
         model_path = find_existing_model(model_filename)
@@ -524,17 +520,29 @@ def load_flux_kontext_model(selected_model="Q2_K", enable_cpu_offload=False):
             raise Exception("T5文本编码器或分词器路径不存在")
         
         # 检查是否是GGUF量化模型
-        gguf_config = GGUFQuantizationConfig(bits=4)  # 默认4位量化
-        
+        try:
+            # 尝试不带参数初始化GGUFQuantizationConfig
+            gguf_config = GGUFQuantizationConfig()
+        except Exception as e:
+            # 如果不带参数初始化失败，则不使用量化配置
+            gguf_config = None
+            print(f"GGUFQuantizationConfig初始化失败: {e}")
+
         # 加载Transformer模型
         transformer_path = os.path.join(full_model_path, "transformer")
         if os.path.exists(transformer_path):
             try:
                 # 尝试加载GGUF格式的Transformer
+                transformer_kwargs = {
+                    "torch_dtype": torch.bfloat16
+                }
+                # 只有在gguf_config有效时才添加quantization_config参数
+                if gguf_config is not None:
+                    transformer_kwargs["quantization_config"] = gguf_config
+                    
                 transformer = FluxTransformer2DModel.from_pretrained(
                     transformer_path,
-                    quantization_config=gguf_config,
-                    torch_dtype=torch.bfloat16
+                    **transformer_kwargs
                 )
                 print("成功加载GGUF Transformer")
             except Exception as e:
@@ -1098,24 +1106,18 @@ def create_flux_kontext_ui():
                         )
                     
                     with gr.Row():
-                        dual_model_choices = ["Q2_K", "Q4_K_S", "Q5_K_M", "Q6_K", "Q8_0"]
-                        if NUNCHAKU_AVAILABLE:
-                            # 提供更多Nunchaku选项以支持不同精度
-                            dual_model_choices = [
-                                "Nunchaku fp4 (50系）", 
-                                "Nunchaku int4 (非50系）", 
-                                "Q2_K", 
-                                "Q4_K_S", 
-                                "Q5_K_M", 
-                                "Q6_K", 
-                                "Q8_0"
-                            ]
+                        dual_model_choices = ["Nunchaku fp4 (50系）", "Nunchaku int4 (非50系）"] if NUNCHAKU_AVAILABLE else []
+                        
+                        if not dual_model_choices:
+                            dual_model_choices = ["Nunchaku fp4 (50系）", "Nunchaku int4 (非50系）"]
+                            # 如果Nunchaku不可用，显示错误信息
+                            print("警告：Nunchaku库不可用，但仍显示在选项中")
                     
                         dual_model_type = gr.Dropdown(
                             label="模型选择",
                             choices=dual_model_choices,
-                            value="Nunchaku fp4 (50系）" if NUNCHAKU_AVAILABLE else "Q2_K",
-                            info="Nunchaku提供更好的性能和更低的显存需求。fp4为浮点4位量化，int4为整数4位量化。Q2_K 显存占用最小 (推荐 6-8GB 显存), Q6_K 平衡质量与显存占用, Q8_0 质量最高 (需要 12GB+ 显存)"
+                            value="Nunchaku fp4 (50系）" if NUNCHAKU_AVAILABLE else "Nunchaku fp4 (50系）",
+                            info="Nunchaku提供更好的性能和更低的显存需求。fp4为浮点4位量化，int4为整数4位量化。"
                         )
                         
                         dual_enable_cpu_offload = gr.Checkbox(

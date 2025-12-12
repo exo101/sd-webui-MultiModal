@@ -192,26 +192,40 @@ def update_sampler(sampler_name):
                 sampler = s
                 break
         
-        if sampler and hasattr(sampler, 'constructor') and sampler.constructor:
-            # 使用WebUI采样器的构造函数
-            if hasattr(pipe, 'scheduler'):
-                # 获取当前调度器配置
-                config = pipe.scheduler.config
-                # 创建新的调度器实例
-                pipe.scheduler = sampler.constructor.from_config(config)
-                print(f"采样器已更新为: {sampler_name}")
-            else:
-                print(f"管道不支持调度器更新")
+        # 如果找不到匹配的采样器，使用默认的Euler调度器
+        if sampler is None:
+            pipe.scheduler = FlowMatchEulerDiscreteScheduler.from_config(pipe.scheduler.config)
+            print(f"未找到采样器 {sampler_name}，使用默认Euler调度器")
+            return
+        
+        # 对于FLUX模型，我们直接使用diffusers的调度器类
+        # 建立WebUI采样器名称到diffusers调度器类的映射
+        scheduler_map = {
+            "Euler": FlowMatchEulerDiscreteScheduler,
+            "DPM++ 2M": DPMSolverMultistepScheduler,
+            "Euler a": EulerAncestralDiscreteScheduler,
+            "UniPC": UniPCMultistepScheduler
+        }
+        
+        # 查找对应的调度器类
+        scheduler_class = scheduler_map.get(sampler_name)
+        if scheduler_class:
+            pipe.scheduler = scheduler_class.from_config(pipe.scheduler.config)
+            print(f"采样器已更新为: {sampler_name}")
         else:
-            # 回退到原有的采样器映射
-            scheduler_class = SAMPLER_MAP.get(sampler_name)
-            if scheduler_class:
-                pipe.scheduler = scheduler_class.from_config(pipe.scheduler.config)
-                print(f"采样器已更新为: {sampler_name}")
-            else:
-                print(f"未知的采样器: {sampler_name}")
+            # 如果没有找到对应的调度器类，使用默认的Euler调度器
+            pipe.scheduler = FlowMatchEulerDiscreteScheduler.from_config(pipe.scheduler.config)
+            print(f"未找到 {sampler_name} 对应的调度器类，使用默认Euler调度器")
+            
     except Exception as e:
         print(f"更新采样器时出错: {e}")
+        # 出错时回退到默认调度器
+        try:
+            pipe.scheduler = FlowMatchEulerDiscreteScheduler.from_config(pipe.scheduler.config)
+            print("已回退到默认Euler调度器")
+        except Exception as fallback_e:
+            print(f"回退到默认调度器时也出错: {fallback_e}")
+
 
 def generate_image(prompt, negative_prompt="", width=1024, height=1024, 
                    guidance_scale=3.5, num_inference_steps=20, seed=0, 

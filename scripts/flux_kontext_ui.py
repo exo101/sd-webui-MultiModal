@@ -373,8 +373,11 @@ def load_nunchaku_model(enable_cpu_offload=False, precision=None):
                 print("模型已移动到CUDA设备")
             except Exception as e:
                 print(f"将模型移动到CUDA时出错: {e}")
-                pipe.enable_sequential_cpu_offload()
-                print("改为启用Sequential CPU卸载")
+                if hasattr(pipe, 'enable_sequential_cpu_offload'):
+                    pipe.enable_sequential_cpu_offload()
+                    print("改为启用Sequential CPU卸载")
+                else:
+                    print("无法启用CPU卸载，模型可能无法正常运行")
         
         # 强制将T5编码器固定在CPU上
         try:
@@ -520,22 +523,72 @@ def load_flux_kontext_model(selected_model="Q2_K", enable_cpu_offload=False):
         else:
             raise Exception("T5文本编码器或分词器路径不存在")
         
-        print(f"正在加载GGUF模型: {model_path}")
-        try:
-            transformer = FluxTransformer2DModel.from_single_file(
-                model_path,
-                config=os.path.join(full_model_path, "transformer"),
-                quantization_config=GGUFQuantizationConfig(compute_dtype=torch.bfloat16),
-                torch_dtype=torch.bfloat16,
-            )
-            print("成功加载GGUF模型")
-        except Exception as e:
-            print(f"加载GGUF模型失败: {e}")
-            raise Exception("无法加载Transformer模型")
+        # 检查是否是GGUF量化模型
+        gguf_config = GGUFQuantizationConfig(bits=4)  # 默认4位量化
         
-        # 根据enable_cpu_offload参数决定设备管理策略
-        if enable_cpu_offload:
-            # 明确指定所有组件都在CPU上
+        # 加载Transformer模型
+        transformer_path = os.path.join(full_model_path, "transformer")
+        if os.path.exists(transformer_path):
+            try:
+                # 尝试加载GGUF格式的Transformer
+                transformer = FluxTransformer2DModel.from_pretrained(
+                    transformer_path,
+                    quantization_config=gguf_config,
+                    torch_dtype=torch.bfloat16
+                )
+                print("成功加载GGUF Transformer")
+            except Exception as e:
+                print(f"GGUF Transformer加载失败: {e}")
+                # 回退到普通加载方式
+                try:
+                    transformer = FluxTransformer2DModel.from_pretrained(
+                        transformer_path,
+                        torch_dtype=torch.bfloat16
+                    )
+                    print("成功加载普通Transformer")
+                except Exception as e2:
+                    print(f"普通Transformer加载也失败: {e2}")
+                    raise Exception("Transformer模型加载失败")
+        else:
+            raise Exception("Transformer模型不存在")
+        
+        # 构建pipeline
+        try:
+            pipe = FluxKontextPipeline(
+                scheduler=scheduler,
+                vae=vae,
+                text_encoder=text_encoder,
+                tokenizer=tokenizer,
+                text_encoder_2=text_encoder_2,
+                tokenizer_2=tokenizer_2,
+                transformer=transformer,
+            )
+            
+            # 根据enable_cpu_offload参数决定是否启用CPU卸载
+            if enable_cpu_offload:
+                if hasattr(pipe, 'enable_sequential_cpu_offload'):
+                    pipe.enable_sequential_cpu_offload()
+                    print("已启用Sequential CPU卸载")
+                elif hasattr(pipe, 'enable_model_cpu_offload'):
+                    pipe.enable_model_cpu_offload()
+                    print("已启用Model CPU卸载")
+                else:
+                    print("警告: 模型不支持CPU卸载")
+            else:
+                # 只有在不启用CPU卸载时才移动到CUDA设备
+                try:
+                    pipe = pipe.to("cuda")
+                    print("模型已移动到CUDA设备")
+                except Exception as e:
+                    print(f"将模型移动到CUDA时出错: {e}")
+                    if hasattr(pipe, 'enable_sequential_cpu_offload'):
+                        pipe.enable_sequential_cpu_offload()
+                        print("改为启用Sequential CPU卸载")
+                    else:
+                        print("无法启用CPU卸载，模型可能无法正常运行")
+        except Exception as e:
+            print(f"模型移动到CUDA失败: {e}")
+            # 回退到CPU模式
             pipe = FluxKontextPipeline(
                 scheduler=scheduler,
                 vae=vae.to("cpu"),
@@ -546,34 +599,7 @@ def load_flux_kontext_model(selected_model="Q2_K", enable_cpu_offload=False):
                 transformer=transformer.to("cpu"),
             )
             pipe.enable_model_cpu_offload()
-            print("已启用模型CPU卸载以节省显存")
-        else:
-            try:
-                pipe = FluxKontextPipeline(
-                    scheduler=scheduler,
-                    vae=vae,
-                    text_encoder=text_encoder,
-                    tokenizer=tokenizer,
-                    text_encoder_2=text_encoder_2,
-                    tokenizer_2=tokenizer_2,
-                    transformer=transformer,
-                )
-                pipe = pipe.to("cuda")
-                print("模型已移动到CUDA设备")
-            except Exception as e:
-                print(f"模型移动到CUDA失败: {e}")
-                # 回退到CPU模式
-                pipe = FluxKontextPipeline(
-                    scheduler=scheduler,
-                    vae=vae.to("cpu"),
-                    text_encoder=text_encoder.to("cpu"),
-                    tokenizer=tokenizer,
-                    text_encoder_2=text_encoder_2.to("cpu"),
-                    tokenizer_2=tokenizer_2,
-                    transformer=transformer.to("cpu"),
-                )
-                pipe.enable_model_cpu_offload()
-                print("改为启用CPU卸载")
+            print("改为启用CPU卸载")
         
         # 强制将T5编码器固定在CPU上，避免其试图使用GPU
         try:
@@ -629,7 +655,8 @@ def generate_edit_series(
     guidance_scale=2.5, 
     num_inference_steps=10,
     enable_cpu_offload=False,
-    model_type="Q2_K"
+    model_type="Q2_K",
+    **kwargs  # 添加这一行以接受额外参数
 ):
     """生成一系列不同编辑变体，支持单图或双图编辑"""
     global pipe
@@ -802,7 +829,44 @@ def generate_edit_series(
     if not images_output:
         raise gr.Error("未能生成任何图像，请检查输入和参数设置。")
     
-    return images_output, seeds_used
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    return images_output, seeds_used, timestamp
+
+
+def create_kontext_edits(selected_edits_str):
+    """根据选择的编辑类型创建编辑提示词列表"""
+    if not selected_edits_str:
+        return []
+    
+    # 将字符串转换为列表
+    if isinstance(selected_edits_str, str):
+        selected_edits = [edit.strip() for edit in selected_edits_str.split(',')]
+    else:
+        selected_edits = selected_edits_str
+    
+    # 创建最终的编辑列表
+    edits = []
+    for edit in selected_edits:
+        if edit in DEFAULT_EDIT_OPTIONS:
+            edits.append(edit)
+        elif edit in STYLE_EDIT_OPTIONS:
+            edits.append(edit)
+        elif edit in COLOR_EDIT_OPTIONS:
+            edits.append(edit)
+        elif edit in COMPOSITION_EDIT_OPTIONS:
+            edits.append(edit)
+        elif edit in EFFECT_EDIT_OPTIONS:
+            edits.append(edit)
+        elif edit in SCENE_EDIT_OPTIONS:
+            edits.append(edit)
+        elif edit in QUALITY_EDIT_OPTIONS:
+            edits.append(edit)
+        else:
+            # 自定义编辑
+            edits.append(edit)
+    
+    return edits
 
 
 def generate_dual_context_image(
@@ -1230,15 +1294,19 @@ def create_flux_kontext_ui():
                     print(f"LoRA功能暂未完全实现: {lora_model}")
                 
                 # 生成图像
-                images, used_seed = generate_edit_series(
-                    image=image,
-                    edit_prompt=edit_prompt,
+                # 修复参数传递问题，将image包装成列表，edit_prompt包装成列表
+                images, used_seeds, timestamp = generate_edit_series(
+                    input_images=[image],  # 修正参数名和格式
+                    selected_edits=[edit_prompt],  # 修正参数名和格式
                     seed=seed,
                     guidance_scale=guidance_scale,
-                    num_inference_steps=num_inference_steps
+                    num_inference_steps=num_inference_steps,
+                    enable_cpu_offload=enable_cpu_offload,
+                    model_type=model_type
                 )
                 
-                seed_text = f"使用的种子: {used_seed}"
+                # 使用第一个种子作为显示种子
+                seed_text = f"使用的种子: {used_seeds[0] if used_seeds else seed}"
                 print(f"返回 {len(images)} 张图像到结果展示组件")
                 for i, img in enumerate(images):
                     print(f"图像 {i+1}: 类型={type(img)}, 尺寸={img.size if hasattr(img, 'size') else 'N/A'}")

@@ -95,9 +95,30 @@ def import_modules():
          # 添加Z-Image模块导入
         try: 
             from z_image_ui import create_z_image_ui as z_image_create_func, Z_IMAGE_MODULE_AVAILABLE
-        except ImportError: 
+            print(f"Z-Image模块导入成功，可用性标志: {Z_IMAGE_MODULE_AVAILABLE}")
+        except ImportError as e:
+            print(f"Z-Image模块导入失败: {e}")
             z_image_create_func = None
             Z_IMAGE_MODULE_AVAILABLE = False
+            
+        # 尝试单独导入Z_IMAGE_MODULE_AVAILABLE，以防它在z_image_ui.py中定义而不是作为导出变量
+        if not 'Z_IMAGE_MODULE_AVAILABLE' in locals():
+            try:
+                from z_image_ui import Z_IMAGE_MODULE_AVAILABLE
+                print(f"Z-Image模块可用性标志单独导入成功: {Z_IMAGE_MODULE_AVAILABLE}")
+            except ImportError:
+                try:
+                    from z_image_ui import MODELScope_AVAILABLE as Z_IMAGE_MODULE_AVAILABLE
+                    print(f"Z-Image模块可用性标志通过MODELScope_AVAILABLE导入成功: {Z_IMAGE_MODULE_AVAILABLE}")
+                except ImportError as e:
+                    print(f"Z-Image模块可用性标志导入失败: {e}")
+                    Z_IMAGE_MODULE_AVAILABLE = False
+            try:
+                from z_image_ui import create_z_image_ui as z_image_create_func
+                print("Z-Image UI创建函数导入成功")
+            except ImportError as e:
+                print(f"Z-Image UI创建函数导入失败: {e}")
+                z_image_create_func = None
             
         # 返回命名空间对象
         import types
@@ -128,6 +149,7 @@ def import_modules():
            # 添加 Z-Image 模块到命名空间
         namespace.create_z_image_ui = z_image_create_func
         namespace.Z_IMAGE_MODULE_AVAILABLE = Z_IMAGE_MODULE_AVAILABLE
+        print(f"Z-Image模块添加到命名空间，可用性标志: {Z_IMAGE_MODULE_AVAILABLE}")
         
         return namespace
         
@@ -172,7 +194,28 @@ QWEN_IMAGE_EDIT_MODULE_AVAILABLE = imported_modules.QWEN_IMAGE_EDIT_MODULE_AVAIL
 
 # 添加 Z-Image 模块变量赋值
 create_z_image_ui = imported_modules.create_z_image_ui
-Z_IMAGE_MODULE_AVAILABLE = imported_modules.Z_IMAGE_MODULE_AVAILABLE
+print(f"Z-Image UI创建函数赋值: {create_z_image_ui is not None}")
+
+# 确保即使在导入失败的情况下也能定义变量
+if not hasattr(imported_modules, 'Z_IMAGE_MODULE_AVAILABLE'):
+    # 双重检查机制
+    try:
+        from z_image_ui import Z_IMAGE_MODULE_AVAILABLE as fallback_z_image_available
+        Z_IMAGE_MODULE_AVAILABLE = fallback_z_image_available
+        print(f"Z-Image模块可用性标志通过后备机制获取: {Z_IMAGE_MODULE_AVAILABLE}")
+    except ImportError:
+        try:
+            from z_image_ui import MODELScope_AVAILABLE as fallback_z_image_available
+            Z_IMAGE_MODULE_AVAILABLE = fallback_z_image_available
+            print(f"Z-Image模块可用性标志通过MODELScope获取: {Z_IMAGE_MODULE_AVAILABLE}")
+        except ImportError:
+            Z_IMAGE_MODULE_AVAILABLE = False
+            print("Z-Image模块不可用")
+else:
+    Z_IMAGE_MODULE_AVAILABLE = imported_modules.Z_IMAGE_MODULE_AVAILABLE
+    print(f"Z-Image模块可用性标志从导入模块获取: {Z_IMAGE_MODULE_AVAILABLE}")
+
+print(f"最终Z-Image模块可用性标志: {Z_IMAGE_MODULE_AVAILABLE}")
 
 # 添加FLUX KREA模块变量赋值
 create_flux_krea_ui = imported_modules.create_flux_krea_ui
@@ -818,22 +861,29 @@ def MultiModal_tab():
                     gr.Markdown("Qwen Image模块当前不可用，可能是因为缺少模型文件或依赖项。")
             
             # 添加 Z-Image-Turbo 标签页（如果可用）
+            print(f"检查Z-Image模块可用性: {'Z_IMAGE_MODULE_AVAILABLE' in globals()} and {Z_IMAGE_MODULE_AVAILABLE if 'Z_IMAGE_MODULE_AVAILABLE' in globals() else 'N/A'}")
             if 'Z_IMAGE_MODULE_AVAILABLE' in globals() and Z_IMAGE_MODULE_AVAILABLE:
+                print("Z-Image模块可用，创建标签页")
                 with gr.TabItem("9.Z-Image-Turbo图像生成"):
                     try:
                         with gr.Tabs():
                             with gr.TabItem("文生图"):
                                 # 创建 Z-Image-Turbo 文生图 UI 组件
-                                z_image_components = create_z_image_ui()
+                                z_image_components = create_z_image_ui() if 'create_z_image_ui' in globals() else None
                                 
                                 # 组件已经自动显示，无需额外处理
                                 if not z_image_components:
                                     gr.Markdown("Z-Image-Turbo文生图模块加载失败")
+                                    print("Z-Image-Turbo文生图模块加载失败")
+                            print("Z-Image标签页创建完成")
                     except Exception as e:
                         gr.Markdown(f"Z-Image-Turbo模块初始化错误: {e}")
                         import traceback
                         traceback.print_exc()
+                        print(f"Z-Image-Turbo模块初始化错误: {e}")
+                        print(traceback.format_exc())
             elif 'Z_IMAGE_MODULE_AVAILABLE' in globals() and not Z_IMAGE_MODULE_AVAILABLE:
+                print("Z-Image模块不可用，显示提示信息")
                 with gr.TabItem("9.Z-Image-Turbo图像生成"):
                     gr.Markdown("Z-Image-Turbo模块当前不可用，可能是因为缺少模型文件或依赖项。")
 

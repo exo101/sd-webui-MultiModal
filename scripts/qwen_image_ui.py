@@ -539,7 +539,7 @@ def preprocess_control_image(image_input, preprocessor_display_name):
         print(f"执行预处理命令: {' '.join(cmd)}")
         
         # 执行命令
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(qwen_image_dir), timeout=600)
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(qwen_image_dir), timeout=1200)
         
         # 删除临时参数文件
         if args_file.exists():
@@ -759,7 +759,7 @@ def run_text_to_image(prompt, negative_prompt, width, height, steps, cfg_scale,
         # 执行命令
         print(f"执行命令: {' '.join(cmd)}")
         print(f"工作目录: {qwen_image_dir}")
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(qwen_image_dir), timeout=600)
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(qwen_image_dir), timeout=1200)
         
         # 删除临时参数文件
         if args_file.exists():
@@ -1690,4 +1690,5 @@ function updateSizePreview(width, height) {
 }
 </script>
 """
+
 

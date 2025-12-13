@@ -296,25 +296,8 @@ def load_nunchaku_model(enable_cpu_offload=False, precision=None):
                 model_path = alt_model_path
                 print(f"在备用路径找到模型: {model_path}")
             else:
-                # 尝试直接查找模型文件
-                direct_model_filenames = [
-                    'svdq-fp4_r32-flux.1-kontext-dev.safetensors',
-                    'svdq-int4_r32-flux.1-kontext-dev.safetensors'
-                ]
-                
-                for direct_model_filename in direct_model_filenames:
-                    direct_model_path = os.path.join(
-                        shared.models_path,
-                        'FLUX.1-Kontext-dev',
-                        direct_model_filename
-                    )
-                    if os.path.exists(direct_model_path):
-                        model_path = direct_model_path
-                        model_filename = direct_model_filename
-                        print(f"使用用户指定的模型文件: {model_path}")
-                        break
-                else:
-                    raise Exception(f"Nunchaku模型文件不存在: {model_path}")
+                # 修改：提供更具体的错误信息，明确指出缺少哪个模型文件
+                raise Exception(f"缺少必需的Nunchaku模型文件: {model_filename}，请确保该文件存在于 {os.path.join(shared.models_path, 'FLUX.1-Kontext-dev')} 目录中")
         
         # 使用正确的Nunchaku模型加载方式，启用offload参数
         transformer = NunchakuFluxTransformer2dModel.from_pretrained(
@@ -342,9 +325,11 @@ def load_nunchaku_model(enable_cpu_offload=False, precision=None):
                 print(f"加载T5模型失败: {e}")
                 import traceback
                 traceback.print_exc()
-                raise Exception("无法加载T5文本编码器")
+                # 修改：提供更具体的错误信息
+                raise Exception(f"无法加载T5文本编码器，请检查 {text_encoder_2_path} 目录中的文件是否完整: {str(e)}")
         else:
-            raise Exception("T5文本编码器路径不存在")
+            # 修改：提供更具体的错误信息
+            raise Exception(f"T5文本编码器路径不存在: {text_encoder_2_path}，请确保该目录包含T5模型文件")
         
         # 加载其他必要组件
         pipe = FluxKontextPipeline.from_pretrained(
@@ -421,7 +406,7 @@ def load_flux_kontext_model(selected_model="Q2_K", enable_cpu_offload=False):
         if selected_model.startswith("Nunchaku") and NUNCHAKU_AVAILABLE:
             print("使用Nunchaku优化的FLUX.1-Kontext模型")
             # 根据用户选择的精度加载对应的Nunchaku模型
-            if selected_model == "Nunchaku int4":
+            if "int4" in selected_model.lower():
                 # 直接使用int4精度
                 result = load_nunchaku_model(enable_cpu_offload, "int4")
             else:
@@ -434,215 +419,21 @@ def load_flux_kontext_model(selected_model="Q2_K", enable_cpu_offload=False):
                 print("Nunchaku模型加载完成")
                 return result
             else:
-                # 如果Nunchaku模型加载失败，直接报错而不是回退到GGUF模型
-                raise Exception("Nunchaku模型加载失败，请检查模型文件是否存在且完整")
+                # 修改：提供更具体的错误信息
+                raise Exception("Nunchaku模型加载失败，请检查模型文件是否存在且完整，特别是 svdq-int4_r32-flux.1-kontext-dev.safetensors 或 svdq-fp4_r32-flux.1-kontext-dev.safetensors 文件")
         elif selected_model.startswith("Nunchaku") and not NUNCHAKU_AVAILABLE:
             # 如果Nunchaku不可用，则直接报错
             raise Exception("Nunchaku模型不可用，请安装Nunchaku库支持")
         
         # 移除了GGUF模型处理逻辑，只保留Nunchaku模型
-        raise Exception("GGUF模型支持已被移除，请使用Nunchaku模型")
-        
-        # 只有在需要加载GGUF模型时才执行下面的代码
-        model_filename = GGUF_FILENAMES.get(selected_model, GGUF_FILENAMES["Q2_K"])
-        model_path = find_existing_model(model_filename)
-            
-        print(f"选择的模型: {selected_model}")
-        print(f"模型文件名: {model_filename}")
-        print(f"找到的模型路径: {model_path}")
-        
-        if not model_path:
-            raise Exception(f"模型文件 {model_filename} 不存在，请确保已下载模型文件到正确目录")
-        
-        print(f"正在加载模型: {model_path}")
-        
-        full_model_path = os.path.join(
-            shared.models_path,
-            'FLUX.1-Kontext-dev'
-        )
-        
-        print(f"完整模型路径: {full_model_path}")
-        print(f"完整模型路径是否存在: {os.path.exists(full_model_path)}")
-        print(f"model_index.json是否存在: {os.path.exists(os.path.join(full_model_path, 'model_index.json'))}")
-        
-        scheduler_path = os.path.join(full_model_path, "scheduler")
-        if os.path.exists(scheduler_path):
-            scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(scheduler_path)
-            print("成功加载调度器")
-        else:
-            scheduler = FlowMatchEulerDiscreteScheduler()
-            print("使用默认调度器")
-        
-        vae_path = os.path.join(full_model_path, "vae")
-        if os.path.exists(vae_path):
-            vae = AutoencoderKL.from_pretrained(vae_path, torch_dtype=torch.bfloat16)
-            print("成功加载VAE")
-        else:
-            raise Exception("VAE模型不存在")
-        
-        text_encoder_path = os.path.join(full_model_path, "text_encoder")
-        if os.path.exists(text_encoder_path):
-            text_encoder = CLIPTextModel.from_pretrained(text_encoder_path, torch_dtype=torch.bfloat16)
-            print("成功加载CLIP文本编码器")
-        else:
-            raise Exception("CLIP文本编码器不存在")
-        
-        tokenizer_path = os.path.join(full_model_path, "tokenizer")
-        if os.path.exists(tokenizer_path):
-            tokenizer = CLIPTokenizer.from_pretrained(tokenizer_path)
-            print("成功加载CLIP分词器")
-        else:
-            raise Exception("CLIP分词器不存在")
-        
-        # 加载T5文本编码器和分词器并确保它在CPU上
-        text_encoder_2_path = os.path.join(full_model_path, "text_encoder_2")
-        tokenizer_2_path = os.path.join(full_model_path, "tokenizer_2")
-        if os.path.exists(text_encoder_2_path) and os.path.exists(tokenizer_2_path):
-            print(f"加载T5模型从路径: {text_encoder_2_path}")
-            try:
-                text_encoder_2 = T5EncoderModel.from_pretrained(
-                    text_encoder_2_path, 
-                    torch_dtype=torch.bfloat16,
-                    low_cpu_mem_usage=True,
-                    device_map={"": "cpu"},  # 强制T5编码器在CPU上运行
-                )
-                print("成功加载T5模型")
-                
-                # 加载T5分词器
-                tokenizer_2 = T5TokenizerFast.from_pretrained(tokenizer_2_path)
-                print("成功加载T5分词器")
-            except Exception as e:
-                print(f"加载T5模型失败: {e}")
-                import traceback
-                traceback.print_exc()
-                raise Exception("无法加载T5文本编码器")
-        else:
-            raise Exception("T5文本编码器或分词器路径不存在")
-        
-        # 检查是否是GGUF量化模型
-        try:
-            # 尝试不带参数初始化GGUFQuantizationConfig
-            gguf_config = GGUFQuantizationConfig()
-        except Exception as e:
-            # 如果不带参数初始化失败，则不使用量化配置
-            gguf_config = None
-            print(f"GGUFQuantizationConfig初始化失败: {e}")
 
-        # 加载Transformer模型
-        transformer_path = os.path.join(full_model_path, "transformer")
-        if os.path.exists(transformer_path):
-            try:
-                # 尝试加载GGUF格式的Transformer
-                transformer_kwargs = {
-                    "torch_dtype": torch.bfloat16
-                }
-                # 只有在gguf_config有效时才添加quantization_config参数
-                if gguf_config is not None:
-                    transformer_kwargs["quantization_config"] = gguf_config
-                    
-                transformer = FluxTransformer2DModel.from_pretrained(
-                    transformer_path,
-                    **transformer_kwargs
-                )
-                print("成功加载GGUF Transformer")
-            except Exception as e:
-                print(f"GGUF Transformer加载失败: {e}")
-                # 回退到普通加载方式
-                try:
-                    transformer = FluxTransformer2DModel.from_pretrained(
-                        transformer_path,
-                        torch_dtype=torch.bfloat16
-                    )
-                    print("成功加载普通Transformer")
-                except Exception as e2:
-                    print(f"普通Transformer加载也失败: {e2}")
-                    raise Exception("Transformer模型加载失败")
-        else:
-            raise Exception("Transformer模型不存在")
-        
-        # 构建pipeline
-        try:
-            pipe = FluxKontextPipeline(
-                scheduler=scheduler,
-                vae=vae,
-                text_encoder=text_encoder,
-                tokenizer=tokenizer,
-                text_encoder_2=text_encoder_2,
-                tokenizer_2=tokenizer_2,
-                transformer=transformer,
-            )
-            
-            # 根据enable_cpu_offload参数决定是否启用CPU卸载
-            if enable_cpu_offload:
-                if hasattr(pipe, 'enable_sequential_cpu_offload'):
-                    pipe.enable_sequential_cpu_offload()
-                    print("已启用Sequential CPU卸载")
-                elif hasattr(pipe, 'enable_model_cpu_offload'):
-                    pipe.enable_model_cpu_offload()
-                    print("已启用Model CPU卸载")
-                else:
-                    print("警告: 模型不支持CPU卸载")
-            else:
-                # 只有在不启用CPU卸载时才移动到CUDA设备
-                try:
-                    pipe = pipe.to("cuda")
-                    print("模型已移动到CUDA设备")
-                except Exception as e:
-                    print(f"将模型移动到CUDA时出错: {e}")
-                    if hasattr(pipe, 'enable_sequential_cpu_offload'):
-                        pipe.enable_sequential_cpu_offload()
-                        print("改为启用Sequential CPU卸载")
-                    else:
-                        print("无法启用CPU卸载，模型可能无法正常运行")
-        except Exception as e:
-            print(f"模型移动到CUDA失败: {e}")
-            # 回退到CPU模式
-            pipe = FluxKontextPipeline(
-                scheduler=scheduler,
-                vae=vae.to("cpu"),
-                text_encoder=text_encoder.to("cpu"),
-                tokenizer=tokenizer,
-                text_encoder_2=text_encoder_2.to("cpu"),
-                tokenizer_2=tokenizer_2,
-                transformer=transformer.to("cpu"),
-            )
-            pipe.enable_model_cpu_offload()
-            print("改为启用CPU卸载")
-        
-        # 强制将T5编码器固定在CPU上，避免其试图使用GPU
-        try:
-            if hasattr(pipe, 'text_encoder_2'):
-                pipe.text_encoder_2 = pipe.text_encoder_2.to("cpu")
-                print("T5文本编码器已固定在CPU上")
-        except Exception as e:
-            print(f"将T5文本编码器固定在CPU上时出错: {e}")
-        
-        try:
-            pipe.vae.enable_slicing()
-            print("已启用VAE切片")
-        except Exception as e:
-            print(f"启用VAE切片失败: {e}")
-            
-        try:
-            pipe.vae.enable_tiling()
-            print("已启用VAE平铺")
-        except Exception as e:
-            print(f"启用VAE平铺失败: {e}")
-        
-        if LOADED_LORA is not None and os.path.exists(LOADED_LORA):
-            load_lora_weights(pipe, LOADED_LORA, LOADED_LORA_WEIGHT)
-        
-        fix_model_device_consistency(pipe)
-        
-        FLUX_KONTEXT_LOADED = True
-        print("模型加载完成")
-        return pipe
-        
     except Exception as e:
-        error_msg = f"加载 GGUF 管道时出错: {e}"
-        print(error_msg)
+        # 修改：保持详细的错误信息
+        error_msg = str(e)
+        print(f"加载模型时出错: {error_msg}")
         FLUX_KONTEXT_LOADED = False
-        return None
+        # 直接抛出原始异常，而不是包装成通用信息
+        raise e
 
 
 def fix_model_device_consistency(pipe):
@@ -817,14 +608,14 @@ def generate_edit_series(
                         pipe.text_encoder_2 = pipe.text_encoder_2.to("cpu")
                     
                     image = pipe(
-                        image=input_image, 
-                        prompt=final_prompt,
-                        guidance_scale=guidance_scale,
-                        num_inference_steps=num_inference_steps,
-                        generator=generator,
-                        width=original_width,
-                        height=original_height
-                    ).images[0]
+                            image=input_image, 
+                            prompt=final_prompt,
+                            guidance_scale=guidance_scale,
+                            num_inference_steps=num_inference_steps,
+                            generator=generator,
+                            width=original_width,
+                            height=original_height
+                        ).images[0]
                     
                     images_output.append(image)
                 except Exception as resize_error:

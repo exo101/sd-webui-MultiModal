@@ -729,6 +729,30 @@ def run_text_to_image(args_file):
             "use_karras_sigmas": False,
         }
         
+        # 添加calculate_shift函数以修复潜在的负维度问题
+        def calculate_shift(
+            image_seq_len,
+            base_seq_len: int = 256,
+            max_seq_len: int = 4096,
+            base_shift: float = 0.5,
+            max_shift: float = 1.15,
+        ):
+            # 添加边界检查，防止image_seq_len为负数或过大
+            image_seq_len = max(min(image_seq_len, max_seq_len), base_seq_len)
+            m = (max_shift - base_shift) / (max_seq_len - base_seq_len)
+            b = base_shift - m * base_seq_len
+            mu = image_seq_len * m + b
+            return mu
+
+        # 获取图像序列长度，用于动态shift计算
+        image_seq_len = (width // 16) * (height // 16)  # Qwen-Image的典型下采样比例
+        # 确保image_seq_len在合理范围内，避免负值或过大值
+        image_seq_len = max(256, min(image_seq_len, 4096))
+        
+        # 根据图像序列长度动态计算shift值
+        dynamic_shift = calculate_shift(image_seq_len)
+        scheduler_config["shift"] = dynamic_shift
+        
         # 根据用户选择创建相应的调度器
         if scheduler_type == "euler":
             scheduler = FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
@@ -878,14 +902,7 @@ def run_text_to_image(args_file):
             elif not (text_encoder_path / "model-00001-of-00004.safetensors").exists():
                 text_encoder_missing = True
             
-            # 如果text_encoder组件缺失，检查是否存在qwen_2.5_vl_7b_fp8_scaled.safetensors作为替代
-            use_alternative_text_encoder = False
-            alternative_text_encoder_model_path = None
-            if text_encoder_missing:
-                alternative_text_encoder = text_encoder_path / "qwen_2.5_vl_7b_fp8_scaled.safetensors"
-                if alternative_text_encoder.exists():
-                    use_alternative_text_encoder = True
-                    alternative_text_encoder_model_path = str(alternative_text_encoder)
+            # 直接使用标准的text_encoder加载逻辑
             
             if controlnet_enable and controlnet is not None:
                 try:
@@ -906,47 +923,12 @@ def run_text_to_image(args_file):
                     # 回退到标准QwenImagePipeline管道
                     from diffusers import QwenImagePipeline
                     
-                    # 检查是否需要使用替代的text_encoder
-                    if use_alternative_text_encoder and alternative_text_encoder_model_path:
-                        # 手动加载各组件然后创建Pipeline
-                        # 从完整模型路径加载其他组件，但排除text_encoder
-                        pipe = QwenImagePipeline.from_pretrained(
-                            base_model_path,
-                            transformer=transformer,
-                            scheduler=scheduler,
-                            torch_dtype=torch_dtype,
-                            text_encoder=None  # 不加载text_encoder
-                        )
-                        
-                        # 手动加载替代的text_encoder
-                        from transformers import Qwen2_5_VLForConditionalGeneration, Qwen2Tokenizer
-                        
-                        # 根据项目规范，使用from_pretrained方法加载模型
-                        # 并使用父目录作为路径，同时启用内存优化参数
-                        text_encoder_alt = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-                            str(Path(alternative_text_encoder_model_path).parent),  # 使用父目录作为路径
-                            torch_dtype=torch_dtype,
-                            low_cpu_mem_usage=True,
-                            max_memory={0: "15GB"}
-                        )
-                        
-                        # 加载tokenizer（从原始路径）
-                        tokenizer = Qwen2Tokenizer.from_pretrained(
-                            base_model_path,
-                            subfolder="tokenizer"
-                        )
-                        
-                        # 手动设置组件
-                        pipe.text_encoder = text_encoder_alt
-                        pipe.tokenizer = tokenizer
-                        
-                    else:
-                        pipe = QwenImagePipeline.from_pretrained(
-                            base_model_path,
-                            transformer=transformer,
-                            scheduler=scheduler,
-                            torch_dtype=torch_dtype
-                        )
+                    pipe = QwenImagePipeline.from_pretrained(
+                        base_model_path,
+                        transformer=transformer,
+                        scheduler=scheduler,
+                        torch_dtype=torch_dtype
+                    )
                     
                     # 将整个pipeline移动到指定的数据类型
                     if torch_dtype != pipe.transformer.dtype:
@@ -955,29 +937,22 @@ def run_text_to_image(args_file):
             else:
                 from diffusers import QwenImagePipeline
                 
-                # 检查是否需要使用替代的text_encoder
-                if use_alternative_text_encoder and alternative_text_encoder_model_path:
-                    # 手动加载各组件然后创建Pipeline
-                    # 从完整模型路径加载其他组件，但排除text_encoder
-                    pipe = QwenImagePipeline.from_pretrained(
-                        base_model_path,
-                        transformer=transformer,
-                        scheduler=scheduler,
-                        torch_dtype=torch_dtype,
-                        text_encoder=None  # 不加载text_encoder
-                    )
+                pipe = QwenImagePipeline.from_pretrained(
+                    base_model_path,
+                    transformer=transformer,
+                    scheduler=scheduler,
+                    torch_dtype=torch_dtype
+                )
+                
+                # 将整个pipeline移动到指定的数据类型
+                if torch_dtype != pipe.transformer.dtype:
+                    pipe.to(torch_dtype)
+
+                    str(Path(alternative_text_encoder_model_path).parent),  # 使用父目录作为路径
+                    torch_dtype=torch_dtype,
+                    low_cpu_mem_usage=True,
+                    max_memory={0: "16GB"}
                     
-                    # 手动加载替代的text_encoder
-                    from transformers import Qwen2_5_VLForConditionalGeneration, Qwen2Tokenizer
-                    
-                    # 根据项目规范，使用from_pretrained方法加载模型
-                    # 并使用父目录作为路径，同时启用内存优化参数
-                    text_encoder_alt = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-                        str(Path(alternative_text_encoder_model_path).parent),  # 使用父目录作为路径
-                        torch_dtype=torch_dtype,
-                        low_cpu_mem_usage=True,
-                        max_memory={0: "15GB"}
-                    )
                     
                     # 加载tokenizer（从原始路径）
                     tokenizer = Qwen2Tokenizer.from_pretrained(
@@ -1007,15 +982,18 @@ def run_text_to_image(args_file):
             pipe = None
             return
         
-        # 设置模型卸载
+        # 设置模型卸载 - 采用与Z-Image相似的自动策略
         from nunchaku.utils import get_gpu_memory
-        if get_gpu_memory() > 18:
-            pipe.enable_model_cpu_offload()
-        else:
+        # 根据GPU内存大小自动选择策略
+        # 显存较小的系统（≤18GB）使用sequential_cpu_offload以节省内存
+        # 显存较大的系统（>18GB）使用model_cpu_offload以获得更好性能
+        if get_gpu_memory() <= 18:
             if transformer is not None:
                 transformer.set_offload(True, use_pin_memory=False, num_blocks_on_gpu=1)
                 pipe._exclude_from_cpu_offload.append("transformer")
             pipe.enable_sequential_cpu_offload()
+        else:
+            pipe.enable_model_cpu_offload()
         
         # 获取随机种子
         seed = args.get("seed", -1)
@@ -1331,7 +1309,6 @@ def run_image_editing(args_file):
             
         if len(input_images) == 0:
             return
-            
 
         # 导入必要的库
         from diffusers import QwenImageEditPlusPipeline
@@ -1354,25 +1331,47 @@ def run_image_editing(args_file):
         from diffusers.utils import load_image
         from PIL import Image
         
+        # 准备生成参数
+        
+        if not input_image_path:
+            return
+            
+        try:
+            init_image = load_image(input_image_path)
+            if init_image is None:
+                return
+                
+            # 严格按照官方示例方式处理图像
+            # 确保图像是RGB模式
+            init_image = init_image.convert("RGB")
+            
+            # 获取原始尺寸
+            orig_width, orig_height = init_image.size
+            width, height = orig_width, orig_height
+
+        except Exception:
+            return
+                
+        # 生成图像
+
+        # 获取生成批次大小
+        batch_size = args.get("batch_size", 1)
+        
+        # 在这里创建调度器，确保使用实际图像尺寸
         # 获取用户选择的采样方法
         scheduler_type = args.get("scheduler", "euler")
         
-        # Scheduler 配置
+        # 计算图像序列长度
+        # 根据图像尺寸计算image_seq_len，用于动态shift计算
+        image_seq_len = (width // 16) * (height // 16)  # Qwen-Image模型通常使用16x16的patch大小
+        
+        # 使用安全的shift计算函数，防止出现负维度张量
+        safe_shift = safe_calculate_shift(image_seq_len)
+        
+        # 简化Scheduler配置，使用安全计算的shift值
         scheduler_config = {
-            "base_image_seq_len": 256,
-            "base_shift": math.log(3),
-            "invert_sigmas": False,
-            "max_image_seq_len": 8192,
-            "max_shift": math.log(3),
             "num_train_timesteps": 1000,
-            "shift": 1.0,
-            "shift_terminal": None,
-            "stochastic_sampling": False,
-            "time_shift_type": "exponential",
-            "use_beta_sigmas": False,
-            "use_dynamic_shifting": True,
-            "use_exponential_sigmas": False,
-            "use_karras_sigmas": False,
+            "shift": safe_shift,
         }
         
         # 根据用户选择创建相应的调度器
@@ -1393,6 +1392,58 @@ def run_image_editing(args_file):
         else:
             # 默认使用 Euler 调度器
             scheduler = FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
+        
+        # 更新pipeline中的调度器
+        pipeline.scheduler = scheduler
+        
+        # 计算图像序列长度
+        # 根据图像尺寸计算image_seq_len，用于动态shift计算
+        image_seq_len = (width // 16) * (height // 16)  # Qwen-Image模型通常使用16x16的patch大小
+        
+        # 创建生成器
+        generator = torch.Generator(device="cuda" if torch.cuda.is_available() else "cpu").manual_seed(args.get("seed", -1))
+        
+        # 准备生成参数 - 严格按照官方示例方式准备
+        generation_params = {
+            "image": init_image,
+            "prompt": prompt,
+            "true_cfg_scale": cfg_scale,
+            "negative_prompt": negative_prompt if negative_prompt else " ",
+            "num_inference_steps": steps,
+            "generator": generator,
+            "num_images_per_prompt": batch_size,
+        }
+        
+        # 根据使用的Pipeline类型和是否启用ControlNet来处理图像输入
+        if controlnet_enable and processed_control_image is not None:
+            # 对于启用了ControlNet的情况，将参考图像和控制图像作为列表传递
+            generation_params["image"] = [init_image, processed_control_image]
+        else:
+            # 对于普通编辑模式，只传递输入图像
+            generation_params["image"] = init_image
+            
+        images = pipeline(**generation_params).images
+
+        # 保存图像，使用时间戳确保文件名唯一
+        timestamp = int(time.time() * 1000)  # 毫秒级时间戳
+        output_paths = []
+        
+        # 处理输出图像 - 严格按照官方示例方式处理
+        for i, image in enumerate(images):
+            # 确保图像是PIL Image对象
+            if not isinstance(image, Image.Image):
+                # 如果是numpy数组，转换为PIL Image
+                if isinstance(image, np.ndarray):
+                    image = Image.fromarray(image)
+            
+            # 严格按照官方示例方式处理图像
+            # 确保图像是RGB模式
+            image = image.convert("RGB")
+            
+            # 直接保存图像，不做任何额外处理
+            output_path = Path(args["output_dir"]) / f"qwen_image_edit_{timestamp}_{i}.png"
+            image.save(output_path)
+            output_paths.append(output_path)
         
         # 获取模型路径
         # 修复：使用传递的model_dir参数而不是硬编码路径
@@ -1448,13 +1499,16 @@ def run_image_editing(args_file):
             torch_dtype=torch.bfloat16
         )
         
-        # 设置模型卸载
-        if get_gpu_memory() > 18:
-            pipeline.enable_model_cpu_offload()
-        else:
-            transformer.set_offload(True, use_pin_memory=False, num_blocks_on_gpu=1)
-            pipeline._exclude_from_cpu_offload.append("transformer")
-            pipeline.enable_sequential_cpu_offload()
+        # 禁用默认的sequential_cpu_offload，因为我们使用Qwen模型自己的卸载机制
+        # Qwen模型有60个transformer块，对于16GB显存，我们可以将一半的块保留在GPU上
+        if hasattr(transformer, 'set_offload'):
+            # 先禁用任何现有的卸载设置
+            transformer.set_offload(False)
+            # 设置新的卸载参数，将30个块保留在GPU上以更好地利用16GB显存
+            transformer.set_offload(True, use_pin_memory=False, num_blocks_on_gpu=30)
+        # 不使用pipeline的默认CPU卸载机制
+        # pipeline._exclude_from_cpu_offload.append("transformer")
+        # pipeline.enable_sequential_cpu_offload()
         
         # 处理LoRA模型
         lora_model_1 = args.get("lora_model_1")
@@ -1507,13 +1561,12 @@ def run_image_editing(args_file):
                                             use_pin_memory = getattr(pipeline.transformer.offload_manager, 'use_pin_memory', True)
                                             num_blocks_on_gpu = getattr(pipeline.transformer.offload_manager, 'num_blocks_on_gpu', 1)
                                             
-                                            # 重新设置卸载
+                                            # 重新设置卸载，使用30个块在GPU上以更好地利用16GB显存
                                             pipeline.transformer.set_offload(False)  # 先关闭
-                                            pipeline.transformer.set_offload(True, use_pin_memory=use_pin_memory, num_blocks_on_gpu=num_blocks_on_gpu)  # 再开启
+                                            pipeline.transformer.set_offload(True, use_pin_memory=use_pin_memory, num_blocks_on_gpu=30)  # 再开启
                                         except Exception:
                                             pass
-                                    
-                                    return True
+                                    return True  # 成功应用LoRA权重后应返回True
                                 except Exception:
                                     return False
                             else:
@@ -1535,6 +1588,10 @@ def run_image_editing(args_file):
                     load_lora_model(lora_model_2, lora_weight_2, "2", pipeline)
             else:
                 pass
+        except Exception:
+            pass
+        
+        # 处理输入图像和控制图像
         except Exception:
             pass
         # 处理输入图像和控制图像

@@ -21,15 +21,15 @@
 
 ## 各项目配置显存要求
 
-- Qwen-Image: 12GB 
+- Qwen-Image: 12GB /内存64g
 - Qwen3vL: 10GB
-- Z-Image-Turbo ：16g
+- Z-Image-Turbo:12g//内存32g
 - LatentSync: 12GB
 - Index-TTS: 12GB
-- FLUX.1-Kontext: 12GB
-- FLUX:10GB
+- FLUX.1-Kontext:8GB
+- FLUX:8GB
 - XL: 8GB
-- Cleaner: 4GB以上
+- Cleaner: 6GB以上
 - Segment Anything: 10GB
 
 个人主页：[https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click ](https://space.bilibili.com/403361177?spm_id_from=333.40164.0.0) 

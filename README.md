@@ -63,10 +63,8 @@ WebUI Forge安装使用介绍：
 | `sd-webui-forge-aki`|`models`|`lora`| LoRA微调模型目录 |
 | `sd-webui-forge-aki`|`models`|`LatentSync`| 数字人视频生成模型目录 |
 | `sd-webui-forge-aki`|`models`|`qwen-image`| qwen模型与组件总目录 |
-| `sd-webui-forge-aki`|`models`|`qwen-image\qwenimage`| qwen文生图主模型目录 |
-| `sd-webui-forge-aki`|`models`|`qwen-image\qwen-image-edit`| qwen图像编辑主模型目录 |
 | `sd-webui-forge-aki`|`models`|`index-tts2`| Index-TTS语音合成模型目录 |
-| `sd-webui-forge-aki`|`models`|`FLUX.1-Kontext-dev`| Kontext图像编辑模型目录 |
+| `sd-webui-forge-aki`|`models`|`FLUX.1-Kontext-dev`| nunchuku量化fluX系列模型目录 |
 | `sd-webui-forge-aki`|`models`|`ControlNet`| ControlNet控制模型目录 |
 | `sd-webui-forge-aki`|`models`|`ControlNetPreprocessor`| ControlNet预处理器目录 |
 | `sd-webui-forge-aki`|`models`|`insightface`| 换脸插件模型 |

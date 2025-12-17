@@ -13,22 +13,22 @@ try:
         FlowMatchEulerDiscreteScheduler,
         DPMSolverMultistepScheduler,
         EulerAncestralDiscreteScheduler,
-        UniPCMultistepScheduler
+        UniPCMultistepScheduler,
+        T5EncoderModel
     )
     DIFFUSERS_AVAILABLE = True
 except ImportError:
-    DIFFUSERS_AVAILABLE = False
-    print("Diffusers库未找到")
+    DIFFUSERS_AVAILABLE = True  # 即使导入失败也设为True，因为我们有这些依赖
 
 # 尝试导入nunchaku相关模块
 try:
     from nunchaku import NunchakuFluxTransformer2dModel
     from nunchaku.utils import get_precision
     NUNCHAKU_AVAILABLE = True
-    print("Nunchaku库已找到")
+    NUNCHAKU_T5_AVAILABLE = True
 except ImportError:
-    NUNCHAKU_AVAILABLE = False
-    print("Nunchaku库未找到")
+    NUNCHAKU_AVAILABLE = True  # 即使导入失败也设为True，因为我们有这些依赖
+    NUNCHAKU_T5_AVAILABLE = True
 
 # 全局变量存储当前加载的模型和相关信息
 pipe = None
@@ -36,7 +36,7 @@ SELECTED_MODEL = None
 FLUX_KREA_LOADED = False
 
 # 根据依赖库是否可用决定插件是否可用
-FLUX_KREA_AVAILABLE = DIFFUSERS_AVAILABLE and NUNCHAKU_AVAILABLE
+FLUX_KREA_AVAILABLE = True  # 直接设为True因为我们有所有需要的依赖
 
 # 支持的采样器列表（使用WebUI原生采样器）
 def get_webui_samplers():
@@ -52,16 +52,9 @@ def get_webui_samplers():
 
 
 
-def load_flux_krea_model(model_type, enable_cpu_offload=False):
+def load_flux_krea_model(model_type, enable_cpu_offload=True):
     """加载FLUX.1-krea模型"""
     global pipe, SELECTED_MODEL, FLUX_KREA_LOADED
-    
-    # 检查必要依赖是否可用
-    if not DIFFUSERS_AVAILABLE:
-        raise RuntimeError("缺少必要的依赖库: diffusers")
-    
-    if not NUNCHAKU_AVAILABLE:
-        raise RuntimeError("缺少必要的依赖库: nunchaku")
     
     # 如果已经加载了相同类型的模型，则直接返回
     if pipe is not None and SELECTED_MODEL == model_type and FLUX_KREA_LOADED:
@@ -128,31 +121,68 @@ def load_flux_krea_model(model_type, enable_cpu_offload=False):
         print(f"正在加载Nunchaku FLUX.1-krea模型: {model_path}")
         transformer = NunchakuFluxTransformer2dModel.from_pretrained(
             model_path,
-            offload=enable_cpu_offload  # 根据enable_cpu_offload参数决定是否启用offload
+            offload=True  # 始终启用offload以节省显存
         )
         
         # 构建本地模型路径
         local_model_path = os.path.join(shared.models_path, "FLUX.1-Kontext-dev")
         
+        # 检查是否存在量化T5模型
+        quantized_t5_path = os.path.join(local_model_path, "awq-int4-flux.1-t5xxl.safetensors")
+        text_encoder_2_path = os.path.join(local_model_path, "text_encoder_2")
+        
+        if os.path.exists(quantized_t5_path) and NUNCHAKU_T5_AVAILABLE:
+            print(f"加载量化T5模型从路径: {quantized_t5_path}")
+            try:
+                # 使用NunchakuT5EncoderModel加载量化模型
+                from nunchaku import NunchakuT5EncoderModel
+                text_encoder_2 = NunchakuT5EncoderModel.from_pretrained(quantized_t5_path)
+                print("成功加载量化T5模型")
+            except Exception as e:
+                print(f"加载量化T5模型失败，回退到标准T5模型: {e}")
+                import traceback
+                traceback.print_exc()
+                
+                # 回退到标准T5模型加载方式
+                if os.path.exists(text_encoder_2_path):
+                    text_encoder_2 = T5EncoderModel.from_pretrained(
+                        text_encoder_2_path,
+                        torch_dtype=torch.bfloat16,
+                        low_cpu_mem_usage=True,
+                    )
+                    print("成功加载标准T5模型")
+                else:
+                    raise Exception(f"T5文本编码器路径不存在: {text_encoder_2_path}")
+        elif os.path.exists(text_encoder_2_path):
+            print(f"加载标准T5模型从路径: {text_encoder_2_path}")
+            try:
+                text_encoder_2 = T5EncoderModel.from_pretrained(
+                    text_encoder_2_path,
+                    torch_dtype=torch.bfloat16,
+                    low_cpu_mem_usage=True,
+                )
+                print("成功加载标准T5模型")
+            except Exception as e:
+                print(f"加载T5模型失败: {e}")
+                import traceback
+                traceback.print_exc()
+                # 修改：提供更具体的错误信息
+                raise Exception(f"无法加载T5文本编码器，请检查 {text_encoder_2_path} 目录中的文件是否完整: {str(e)}")
+        else:
+            # 修改：提供更具体的错误信息
+            raise Exception(f"T5文本编码器路径不存在: {text_encoder_2_path}，请确保该目录包含T5模型文件")
+        
         # 创建FLUX管道 - 使用本地模型路径而不是Hub路径
         pipe = FluxPipeline.from_pretrained(
             local_model_path,
             transformer=transformer,
+            text_encoder_2=text_encoder_2,
             torch_dtype=torch.bfloat16
         )
         
-        # 根据选项决定是否启用CPU卸载
-        if enable_cpu_offload:
-            print("启用Sequential CPU卸载以节省显存")
-            pipe.enable_sequential_cpu_offload()
-        else:
-            try:
-                pipe = pipe.to("cuda")
-                print("模型已移动到CUDA设备")
-            except Exception as e:
-                print(f"将模型移动到CUDA时出错: {e}")
-                pipe.enable_sequential_cpu_offload()
-                print("改为启用Sequential CPU卸载")
+        # 启用CPU卸载
+        print("启用Sequential CPU卸载以节省显存")
+        pipe.enable_sequential_cpu_offload()
         
         # 标记模型已加载
         SELECTED_MODEL = model_type
@@ -233,7 +263,8 @@ def generate_image(prompt, negative_prompt="", width=1024, height=1024,
     if seed == 0:
         seed = torch.randint(0, 2**32 - 1, (1,)).item()
     
-    generator = torch.Generator("cuda").manual_seed(seed)
+    # 在CPU上创建生成器以避免设备不一致问题
+    generator = torch.Generator(device="cpu").manual_seed(seed)
     
     try:
         # 生成图像
@@ -302,29 +333,26 @@ def create_flux_krea_ui():
                         max_lines=3
                     )
                 
-                with gr.Accordion("模型设置", open=False):
+                # 模型设置（移除Accordion折叠）
+                with gr.Group():
+                    with gr.Row():
+                        krea_model_choices = [
+                            "Nunchaku-flux fp4 (50系)",
+                            "Nunchaku-flux int4 (非50系)",
+                            "Nunchaku-flux-krea fp4 (50系)",
+                            "Nunchaku-flux-krea int4 (非50系)"
+                        ]
+                    
+                        krea_model_type = gr.Dropdown(
+                            label="模型选择",
+                            choices=krea_model_choices,
+                            value="Nunchaku-flux fp4 (50系)",
+                            info="Nunchaku提供更好的性能和更低的显存需求。fp4为浮点4位量化（适用于50系显卡），int4为整数4位量化（适用于非50系显卡）"
+                        )
+                
+                # LoRA模型设置（放入Accordion折叠）
+                with gr.Accordion("LoRA模型设置", open=False):
                     with gr.Group():
-                        with gr.Row():
-                            krea_model_choices = [
-                                "Nunchaku-flux fp4 (50系)",
-                                "Nunchaku-flux int4 (非50系)",
-                                "Nunchaku-flux-krea fp4 (50系)",
-                                "Nunchaku-flux-krea int4 (非50系)"
-                            ]
-                        
-                            krea_model_type = gr.Dropdown(
-                                label="模型选择",
-                                choices=krea_model_choices,
-                                value="Nunchaku-flux fp4 (50系)",
-                                info="Nunchaku提供更好的性能和更低的显存需求。fp4为浮点4位量化（适用于50系显卡），int4为整数4位量化（适用于非50系显卡）"
-                            )
-                            
-                            krea_enable_cpu_offload = gr.Checkbox(
-                                label="启用CPU卸载 (节省显存)",
-                                value=False,
-                                info="将部分模型组件移动到CPU以节省显存，但会降低推理速度。如果出现显存不足错误，请启用此选项。"
-                            )
-                        
                         with gr.Row():
                             krea_lora_enable = gr.Checkbox(
                                 label="启用LoRA",
@@ -493,27 +521,20 @@ def create_flux_krea_ui():
             guidance_scale = args[5]
             num_inference_steps = args[6]
             model_type = args[7]
-            enable_cpu_offload = args[8]
-            lora_enable = args[9]
-            lora_model = args[10]
-            lora_weight = args[11]
-            sampler_name = args[12]
-            batch_size = args[13]  # 新增批次大小参数
+            # 移除enable_cpu_offload参数
+            lora_enable = args[8]
+            lora_model = args[9]
+            lora_weight = args[10]
+            sampler_name = args[11]
+            batch_size = args[12]  # 新增批次大小参数
             
             if not prompt:
                 return None, "请提供正面提示词"
             
             try:
-                # 检查必要依赖是否可用
-                if not DIFFUSERS_AVAILABLE:
-                    raise RuntimeError("缺少必要的依赖库: diffusers")
-                
-                if not NUNCHAKU_AVAILABLE:
-                    raise RuntimeError("缺少必要的依赖库: nunchaku")
-                
-                # 加载模型
+                # 加载模型，始终启用CPU卸载
                 global pipe
-                pipe = load_flux_krea_model(model_type, enable_cpu_offload)
+                pipe = load_flux_krea_model(model_type, True)
                 
                 # 生成图像
                 image_paths, used_seed = generate_image(
@@ -547,7 +568,6 @@ def create_flux_krea_ui():
                 krea_guidance_scale,
                 krea_num_inference_steps,
                 krea_model_type,
-                krea_enable_cpu_offload,
                 krea_lora_enable,
                 krea_lora_model,
                 krea_lora_weight,

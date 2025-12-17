@@ -50,6 +50,14 @@ from transformers import (
     T5TokenizerFast
 )
 
+# 导入NunchakuT5EncoderModel用于加载量化T5模型
+try:
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'nunchaku-2_lora_concat'))
+    from nunchaku.models.text_encoders.t5_encoder import NunchakuT5EncoderModel
+    NUNCHAKU_T5_AVAILABLE = True
+except ImportError as e:
+    print(f"Nunchaku T5编码器导入失败: {e}")
+    NUNCHAKU_T5_AVAILABLE = False
 
 NUNCHAKU_MODEL_CONFIGS = {
     "int4": "svdq-int4_r32-flux.1-kontext-dev.safetensors",
@@ -66,6 +74,8 @@ pipe = None
 
 LOADED_LORA = None
 LOADED_LORA_WEIGHT = 0.0
+
+SELECTED_MODEL = None
 
 def list_lora_models():
     """列出所有可用的LoRA模型"""
@@ -264,12 +274,13 @@ def find_existing_model(filename):
         return None
 
 
-def load_nunchaku_model(enable_cpu_offload=False, precision=None):
-    """加载Nunchaku优化的FLUX.1-Kontext模型"""
-    global pipe, FLUX_KONTEXT_LOADED
+def load_nunchaku_model_with_quantized_t5(enable_cpu_offload=True, precision="fp4"):
+    """加载Nunchaku优化的FLUX.1-Kontext模型，支持量化T5文本编码器"""
+    global FLUX_KONTEXT_LOADED, pipe
     
     try:
-        if precision is None:
+        # 获取模型文件名
+        if precision not in NUNCHAKU_MODEL_CONFIGS:
             try:
                 precision = get_precision()
                 print(f"检测到的精度: {precision}")
@@ -299,28 +310,50 @@ def load_nunchaku_model(enable_cpu_offload=False, precision=None):
                 # 修改：提供更具体的错误信息，明确指出缺少哪个模型文件
                 raise Exception(f"缺少必需的Nunchaku模型文件: {model_filename}，请确保该文件存在于 {os.path.join(shared.models_path, 'FLUX.1-Kontext-dev')} 目录中")
         
-        # 使用正确的Nunchaku模型加载方式，启用offload参数
+        # 使用正确的Nunchaku模型加载方式
         transformer = NunchakuFluxTransformer2dModel.from_pretrained(
-            model_path, 
-            offload=enable_cpu_offload  # 根据enable_cpu_offload参数决定是否启用offload
+            model_path,
+            offload=enable_cpu_offload
         )
         print("成功加载Nunchaku优化的Transformer")
         
         # 使用FluxKontextPipeline.from_pretrained方法加载完整pipeline
         full_model_path = os.path.join(shared.models_path, 'FLUX.1-Kontext-dev')
         
-        # 加载T5文本编码器并确保它在CPU上
+        # 检查是否存在量化T5模型
+        quantized_t5_path = os.path.join(full_model_path, "awq-int4-flux.1-t5xxl.safetensors")
         text_encoder_2_path = os.path.join(full_model_path, "text_encoder_2")
-        if os.path.exists(text_encoder_2_path):
-            print(f"加载T5模型从路径: {text_encoder_2_path}")
+        
+        if os.path.exists(quantized_t5_path) and NUNCHAKU_T5_AVAILABLE:
+            print(f"加载量化T5模型从路径: {quantized_t5_path}")
+            try:
+                # 使用NunchakuT5EncoderModel加载量化模型
+                text_encoder_2 = NunchakuT5EncoderModel.from_pretrained(quantized_t5_path)
+                print("成功加载量化T5模型")
+            except Exception as e:
+                print(f"加载量化T5模型失败，回退到标准T5模型: {e}")
+                import traceback
+                traceback.print_exc()
+                
+                # 回退到标准T5模型加载方式
+                if os.path.exists(text_encoder_2_path):
+                    text_encoder_2 = T5EncoderModel.from_pretrained(
+                        text_encoder_2_path,
+                        torch_dtype=torch.bfloat16,
+                        low_cpu_mem_usage=True,
+                    )
+                    print("成功加载标准T5模型")
+                else:
+                    raise Exception(f"T5文本编码器路径不存在: {text_encoder_2_path}")
+        elif os.path.exists(text_encoder_2_path):
+            print(f"加载标准T5模型从路径: {text_encoder_2_path}")
             try:
                 text_encoder_2 = T5EncoderModel.from_pretrained(
-                    text_encoder_2_path, 
+                    text_encoder_2_path,
                     torch_dtype=torch.bfloat16,
                     low_cpu_mem_usage=True,
-                    device_map={"": "cpu"},  # 强制T5编码器在CPU上运行
                 )
-                print("成功加载T5模型")
+                print("成功加载标准T5模型")
             except Exception as e:
                 print(f"加载T5模型失败: {e}")
                 import traceback
@@ -333,42 +366,16 @@ def load_nunchaku_model(enable_cpu_offload=False, precision=None):
         
         # 加载其他必要组件
         pipe = FluxKontextPipeline.from_pretrained(
-            full_model_path, 
+            full_model_path,
             transformer=transformer,
-            text_encoder_2=text_encoder_2,  # 明确指定T5编码器
+            text_encoder_2=text_encoder_2,
             torch_dtype=torch.bfloat16
         )
         
-        # 根据enable_cpu_offload参数决定是否启用CPU卸载
+        # 启用CPU卸载
         if enable_cpu_offload:
-            # 使用Nunchaku推荐的sequential CPU offload方式
             pipe.enable_sequential_cpu_offload()
             print("已启用Sequential CPU卸载")
-        else:
-            # 只有在不启用CPU卸载时才移动到CUDA设备
-            try:
-                pipe = pipe.to("cuda")
-                print("模型已移动到CUDA设备")
-            except Exception as e:
-                print(f"将模型移动到CUDA时出错: {e}")
-                if hasattr(pipe, 'enable_sequential_cpu_offload'):
-                    pipe.enable_sequential_cpu_offload()
-                    print("改为启用Sequential CPU卸载")
-                else:
-                    print("无法启用CPU卸载，模型可能无法正常运行")
-        
-        # 强制将T5编码器固定在CPU上
-        try:
-            if hasattr(pipe, 'text_encoder_2'):
-                # 检查是否在meta设备上，如果是则使用特殊方法移动
-                if next(pipe.text_encoder_2.parameters()).device == torch.device('meta'):
-                    # 使用to_empty方法处理meta设备上的模型
-                    pipe.text_encoder_2 = pipe.text_encoder_2.to_empty(device="cpu")
-                else:
-                    pipe.text_encoder_2 = pipe.text_encoder_2.to("cpu")
-                print("T5文本编码器已固定在CPU上")
-        except Exception as e:
-            print(f"将T5文本编码器固定在CPU上时出错: {e}")
         
         FLUX_KONTEXT_LOADED = True
         print("成功加载Nunchaku优化的FLUX.1-Kontext模型")
@@ -380,24 +387,31 @@ def load_nunchaku_model(enable_cpu_offload=False, precision=None):
         # 不再回退到GGUF模型，直接返回None让调用方处理错误
         return None
 
-def load_flux_kontext_model(selected_model="Q2_K", enable_cpu_offload=False):
-    """加载FLUX.1-Kontext GGUF模型"""
-    global pipe, FLUX_KONTEXT_LOADED, SELECTED_MODEL
-    
-    # 检查必要依赖
-    if not DIFFUSERS_AVAILABLE:
-        raise RuntimeError("无法加载模型：缺少必要的diffusers库依赖")
-    
-    if pipe is not None and SELECTED_MODEL == selected_model and FLUX_KONTEXT_LOADED:
-        print("使用已缓存的模型")
-        return pipe
+def load_flux_kontext_model(selected_model="Nunchaku fp4", enable_cpu_offload=True):
+    """加载FLUX.1-Kontext模型"""
+    global SELECTED_MODEL, FLUX_KONTEXT_LOADED, pipe, LOADED_LORA, LOADED_LORA_WEIGHT
     
     try:
+        print(f"正在加载模型: {selected_model}")
+        print(f"CPU卸载: {enable_cpu_offload}")
+        
+        # 重置LoRA状态
+        LOADED_LORA = None
+        LOADED_LORA_WEIGHT = 0.0
+        
+        # 如果模型已加载且类型相同，检查是否需要重新加载
+        if pipe is not None and SELECTED_MODEL == selected_model and FLUX_KONTEXT_LOADED:
+            # 检查CPU卸载设置是否改变
+            # 注意：这里简化处理，实际可能需要更复杂的逻辑
+            print("模型已加载，跳过重复加载")
+            return pipe
+            
+        # 清理现有模型
         if pipe is not None:
             del pipe
+            pipe = None
             gc.collect()
             torch.cuda.empty_cache()
-            pipe = None
             FLUX_KONTEXT_LOADED = False
             
         SELECTED_MODEL = selected_model
@@ -405,13 +419,9 @@ def load_flux_kontext_model(selected_model="Q2_K", enable_cpu_offload=False):
         # 修复模型选择逻辑，确保Nunchaku选项正确映射到对应的模型
         if selected_model.startswith("Nunchaku") and NUNCHAKU_AVAILABLE:
             print("使用Nunchaku优化的FLUX.1-Kontext模型")
-            # 根据用户选择的精度加载对应的Nunchaku模型
-            if "int4" in selected_model.lower():
-                # 直接使用int4精度
-                result = load_nunchaku_model(enable_cpu_offload, "int4")
-            else:
-                # 默认使用fp4精度或其他Nunchaku选项
-                result = load_nunchaku_model(enable_cpu_offload, "fp4")
+            # 根据用户选择的精度加载对应的Nunchaku模型，并传递enable_cpu_offload参数
+            precision = "int4" if "int4" in selected_model.lower() else "fp4"
+            result = load_nunchaku_model_with_quantized_t5(enable_cpu_offload=enable_cpu_offload, precision=precision)
             
             # 如果Nunchaku模型加载成功，直接返回结果
             if result is not None:
@@ -453,15 +463,15 @@ def generate_edit_series(
     randomize_seed=False, 
     guidance_scale=2.5, 
     num_inference_steps=10,
-    enable_cpu_offload=False,
-    model_type="Q2_K",
-    **kwargs  # 添加这一行以接受额外参数
+    enable_cpu_offload=True,
+    model_type="Nunchaku fp4",
+    **kwargs
 ):
-    """生成一系列不同编辑变体，支持单图或双图编辑"""
+    """生成一系列不同编辑变体，仅支持单图编辑"""
     global pipe
     
     if pipe is None or SELECTED_MODEL != model_type or not FLUX_KONTEXT_LOADED:
-        pipe = load_flux_kontext_model(model_type, enable_cpu_offload)
+        pipe = load_flux_kontext_model(model_type, True)
         if pipe is None:
             raise gr.Error("模型加载失败，请检查模型文件是否完整")
     
@@ -510,16 +520,19 @@ def generate_edit_series(
     
     print(f"图像目标尺寸: {target_width}x{target_height}")
     
-    # 显示显存信息
+    # 显示显存信息（仅在启用CUDA时）
     if torch.cuda.is_available():
-        total_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)
-        reserved_memory = torch.cuda.memory_reserved(0) / (1024**3)
-        allocated_memory = torch.cuda.memory_allocated(0) / (1024**3)
-        free_memory = total_memory - reserved_memory
-        print(f"总显存: {total_memory:.2f} GB")
-        print(f"已保留显存: {reserved_memory:.2f} GB")
-        print(f"已分配显存: {allocated_memory:.2f} GB")
-        print(f"可用显存: {free_memory:.2f} GB")
+        try:
+            total_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+            reserved_memory = torch.cuda.memory_reserved(0) / (1024**3)
+            allocated_memory = torch.cuda.memory_allocated(0) / (1024**3)
+            free_memory = total_memory - reserved_memory
+            print(f"总显存: {total_memory:.2f} GB")
+            print(f"已保留显存: {reserved_memory:.2f} GB")
+            print(f"已分配显存: {allocated_memory:.2f} GB")
+            print(f"可用显存: {free_memory:.2f} GB")
+        except Exception as e:
+            print(f"获取显存信息失败: {e}")
     
     images_output = []
     seeds_used = []
@@ -538,9 +551,8 @@ def generate_edit_series(
             print(f"使用的种子: {current_seed}")
             
             try:
-                # 根据是否启用CPU卸载来选择设备
-                device = "cpu" if enable_cpu_offload else ("cuda" if torch.cuda.is_available() else "cpu")
-                generator = torch.Generator(device=device)
+                # 在CPU上创建生成器，避免设备不一致问题
+                generator = torch.Generator(device="cpu")
                 generator.manual_seed(current_seed)
                 
                 # 使用torch.no_grad上下文管理器减少内存使用
@@ -560,20 +572,13 @@ def generate_edit_series(
                 
             except RuntimeError as e:
                 if "CUDA error: CUBLAS_STATUS_ALLOC_FAILED" in str(e) or "out of memory" in str(e).lower():
-                    print("检测到CUDA内存分配失败，尝试启用CPU卸载...")
+                    print("检测到CUDA内存分配失败...")
                     try:
-                        pipe.enable_model_cpu_offload()
                         gc.collect()
                         torch.cuda.empty_cache()
                         
                         generator = torch.Generator(device="cpu")
                         generator.manual_seed(current_seed)
-                        
-                        # 强制将文本编码器组件移到CPU
-                        if hasattr(pipe, 'text_encoder'):
-                            pipe.text_encoder = pipe.text_encoder.to("cpu")
-                        if hasattr(pipe, 'text_encoder_2'):
-                            pipe.text_encoder_2 = pipe.text_encoder_2.to("cpu")
                         
                         image = pipe(
                             image=input_image, 
@@ -587,27 +592,15 @@ def generate_edit_series(
                         
                         images_output.append(image)
                     except Exception as fallback_error:
-                        print(f"启用CPU卸载后仍然失败: {fallback_error}")
+                        print(f"处理失败: {fallback_error}")
                         print("跳过当前编辑项并继续处理下一个")
-                else:
-                    raise e
-            except torch.cuda.OutOfMemoryError:
-                print("出现内存不足，尝试启用CPU卸载...")
-                try:
-                    pipe.enable_model_cpu_offload()
-                    gc.collect()
-                    torch.cuda.empty_cache()
-                    
-                    generator = torch.Generator(device="cpu")
-                    generator.manual_seed(current_seed)
-                    
-                    # 强制将文本编码器组件移到CPU
-                    if hasattr(pipe, 'text_encoder'):
-                        pipe.text_encoder = pipe.text_encoder.to("cpu")
-                    if hasattr(pipe, 'text_encoder_2'):
-                        pipe.text_encoder_2 = pipe.text_encoder_2.to("cpu")
-                    
-                    image = pipe(
+                elif "Expected all tensors to be on the same device" in str(e):
+                    print("检测到设备不一致错误...")
+                    try:
+                        generator = torch.Generator(device="cpu")
+                        generator.manual_seed(current_seed)
+                        
+                        image = pipe(
                             image=input_image, 
                             prompt=final_prompt,
                             guidance_scale=guidance_scale,
@@ -616,14 +609,37 @@ def generate_edit_series(
                             width=original_width,
                             height=original_height
                         ).images[0]
-                    
-                    images_output.append(image)
-                except Exception as resize_error:
-                    print(f"启用CPU卸载后仍然失败: {resize_error}")
-                    print("跳过当前编辑项并继续处理下一个")
+                        
+                        images_output.append(image)
+                    except Exception as fallback_error:
+                        print(f"修复设备不一致后仍然失败: {fallback_error}")
+                        print("跳过当前编辑项并继续处理下一个")
+                else:
+                    raise e
             except Exception as e:
-                print(f"处理过程中出现未预期错误: {e}")
-                print("跳过当前编辑项并继续处理下一个")
+                if "Expected all tensors to be on the same device" in str(e):
+                    print("检测到设备不一致错误...")
+                    try:
+                        generator = torch.Generator(device="cpu")
+                        generator.manual_seed(current_seed)
+                        
+                        image = pipe(
+                            image=input_image, 
+                            prompt=final_prompt,
+                            guidance_scale=guidance_scale,
+                            num_inference_steps=num_inference_steps,
+                            generator=generator,
+                            width=original_width,
+                            height=original_height
+                        ).images[0]
+                        
+                        images_output.append(image)
+                    except Exception as fallback_error:
+                        print(f"修复设备不一致后仍然失败: {fallback_error}")
+                        print("跳过当前编辑项并继续处理下一个")
+                else:
+                    print(f"处理过程中出现未预期错误: {e}")
+                    print("跳过当前编辑项并继续处理下一个")
     
     if not images_output:
         raise gr.Error("未能生成任何图像，请检查输入和参数设置。")
@@ -645,65 +661,42 @@ def create_kontext_edits(selected_edits_str):
         selected_edits = selected_edits_str
     
     # 创建最终的编辑列表
-    edits = []
-    for edit in selected_edits:
-        if edit in DEFAULT_EDIT_OPTIONS:
-            edits.append(edit)
-        elif edit in STYLE_EDIT_OPTIONS:
-            edits.append(edit)
-        elif edit in COLOR_EDIT_OPTIONS:
-            edits.append(edit)
-        elif edit in COMPOSITION_EDIT_OPTIONS:
-            edits.append(edit)
-        elif edit in EFFECT_EDIT_OPTIONS:
-            edits.append(edit)
-        elif edit in SCENE_EDIT_OPTIONS:
-            edits.append(edit)
-        elif edit in QUALITY_EDIT_OPTIONS:
-            edits.append(edit)
-        else:
-            # 自定义编辑
-            edits.append(edit)
+    edits = list(selected_edits)
     
     return edits
 
 
 def generate_dual_context_image(
     image_1,
-    image_2,
     selected_edits,
     seed=42,
     randomize_seed=False,
     guidance_scale=2.5,
     num_inference_steps=15,
-    enable_cpu_offload=False,
-    model_type="Q2_K"
+    enable_cpu_offload=True,
+    model_type="Nunchaku fp4"
 ):
     """
-    生成融合两张图像上下文的新图像
+    生成基于单张图像的编辑变体
     
     Args:
-        image_1: 第一张参考图像
-        image_2: 第二张参考图像
+        image_1: 输入图像
         selected_edits: 编辑指令列表
-        其他参数与generate_edit_series相同
     """
     global pipe
     
     if pipe is None or SELECTED_MODEL != model_type or not FLUX_KONTEXT_LOADED:
-        pipe = load_flux_kontext_model(model_type, enable_cpu_offload)
+        pipe = load_flux_kontext_model(model_type, True)
         if pipe is None:
             raise gr.Error("模型加载失败，请检查模型文件是否完整")
-    
-    # 移除重复的设备一致性检查，因为load_flux_kontext_model已经处理了
     
     if randomize_seed:
         base_seed = random.randint(0, MAX_SEED)
     else:
         base_seed = seed
     
-    if image_1 is None or image_2 is None:
-        raise gr.Error("请上传两张图像。")
+    if image_1 is None:
+        raise gr.Error("请上传图像。")
     
     edits_to_generate = []
     
@@ -716,13 +709,8 @@ def generate_dual_context_image(
     edits_to_generate = list(dict.fromkeys(edits_to_generate))
     
     print("输入图像尺寸:")
-    original_sizes = []
-    for i, img in enumerate([image_1, image_2]):
-        width, height = img.size
-        original_sizes.append((width, height))
-        print(f"图像 {i+1}: {width}x{height}")
-    
-    # 移除手动计算目标尺寸的代码，让模型自己处理尺寸
+    width, height = image_1.size
+    print(f"图像 1: {width}x{height}")
     
     generated_images = []
     all_used_seeds = []
@@ -730,37 +718,7 @@ def generate_dual_context_image(
     gc.collect()
     torch.cuda.empty_cache()
     
-    if torch.cuda.is_available():
-        device = torch.device("cuda")
-        total_memory = torch.cuda.get_device_properties(device).total_memory
-        reserved_memory = torch.cuda.memory_reserved(device)
-        allocated_memory = torch.cuda.memory_allocated(device)
-        free_memory = total_memory - reserved_memory - allocated_memory
-        
-        print(f"总显存: {total_memory / 1024**3:.2f} GB")
-        print(f"已保留显存: {reserved_memory / 1024**3:.2f} GB")
-        print(f"已分配显存: {allocated_memory / 1024**3:.2f} GB")
-        print(f"可用显存: {free_memory / 1024**3:.2f} GB")
-    
-    # 创建组合图像，但不改变原始图像的尺寸
-    # 获取两个图像的尺寸
-    width_1, height_1 = image_1.size
-    width_2, height_2 = image_2.size
-    
-    # 创建一个新的图像，高度为两个图像高度之和，宽度为两个图像中较大的那个
-    combined_width = max(width_1, width_2)
-    combined_height = height_1 + height_2
-    combined_image = Image.new('RGB', (combined_width, combined_height))
-    
-    # 将图像粘贴到组合图像上
-    # 第一张图像放在顶部
-    offset_x_1 = (combined_width - width_1) // 2  # 居中放置
-    combined_image.paste(image_1, (offset_x_1, 0))
-    
-    # 第二张图像放在底部
-    offset_x_2 = (combined_width - width_2) // 2  # 居中放置
-    combined_image.paste(image_2, (offset_x_2, height_1))
-    
+    # 为每个编辑指令生成一个变体
     for i, edit in enumerate(edits_to_generate):
         if randomize_seed:
             current_seed = random.randint(0, MAX_SEED)
@@ -768,36 +726,38 @@ def generate_dual_context_image(
             current_seed = seed
         
         if edit.strip():
-            final_prompt = f"Combine the context from both reference images with the following edit: {edit.strip()}, high quality, detailed, maintain original subject identity, professional photo"
+            final_prompt = f"image editing: {edit.strip()}, high quality, detailed, maintain original subject identity, professional photo"
         else:
-            final_prompt = f"Combine the context from both reference images, high quality, detailed, maintain original subject identity, professional photo"
+            final_prompt = f"image editing, high quality, detailed, maintain original subject identity, professional photo"
         
         final_prompt = final_prompt[:200]
         
-        print(f"融合图像 第 {i+1} 个变体，使用的提示词: {final_prompt}")
+        print(f"图像编辑 第 {i+1} 个变体，使用的提示词: {final_prompt}")
         print(f"使用的种子: {current_seed}")
         
         gc.collect()
         torch.cuda.empty_cache()
         
         try:
-            generator = torch.Generator(device="cuda" if torch.cuda.is_available() and not enable_cpu_offload else "cpu")
+            # 在CPU上创建生成器，避免设备不一致问题
+            generator = torch.Generator(device="cpu")
             generator.manual_seed(current_seed)
             
-            # 不传递width和height参数，让模型自己处理尺寸
+            # 使用原始图像尺寸
             image = pipe(
-                image=combined_image,
+                image=image_1,
                 prompt=final_prompt,
                 guidance_scale=guidance_scale,
                 num_inference_steps=num_inference_steps,
                 generator=generator,
+                width=width,
+                height=height
             ).images[0]
             
         except RuntimeError as e:
             if "CUDA error: CUBLAS_STATUS_ALLOC_FAILED" in str(e):
-                print("检测到CUDA内存分配失败，尝试启用CPU卸载...")
+                print("检测到CUDA内存分配失败...")
                 try:
-                    pipe.enable_model_cpu_offload()
                     gc.collect()
                     torch.cuda.empty_cache()
                     
@@ -805,41 +765,67 @@ def generate_dual_context_image(
                     generator.manual_seed(current_seed)
                     
                     image = pipe(
-                        image=combined_image,
+                        image=image_1,
                         prompt=final_prompt,
                         guidance_scale=guidance_scale,
                         num_inference_steps=num_inference_steps,
                         generator=generator,
+                        width=width,
+                        height=height
                     ).images[0]
                 except Exception as fallback_error:
-                    print(f"启用CPU卸载后仍然失败: {fallback_error}")
+                    print(f"处理失败: {fallback_error}")
                     print("跳过当前编辑项并继续处理下一个")
-            else:
-                raise e
-        except torch.cuda.OutOfMemoryError:
-            print("出现内存不足，尝试启用CPU卸载...")
-            try:
-                pipe.enable_model_cpu_offload()
-                gc.collect()
-                torch.cuda.empty_cache()
-                
-                generator = torch.Generator(device="cpu")
-                generator.manual_seed(current_seed)
-                
-                image = pipe(
-                        image=combined_image,
+                    continue
+            elif "Expected all tensors to be on the same device" in str(e):
+                print("检测到设备不一致错误...")
+                try:
+                    generator = torch.Generator(device="cpu")
+                    generator.manual_seed(current_seed)
+                    
+                    image = pipe(
+                        image=image_1,
                         prompt=final_prompt,
                         guidance_scale=guidance_scale,
                         num_inference_steps=num_inference_steps,
                         generator=generator,
+                        width=width,
+                        height=height
                     ).images[0]
-            except Exception as e:
-                print(f"启用CPU卸载后仍然失败: {e}")
-                print("跳过当前编辑项并继续处理下一个")
+                    
+                    generated_images.append(image)
+                except Exception as fallback_error:
+                    print(f"修复设备不一致后仍然失败: {fallback_error}")
+                    print("跳过当前编辑项并继续处理下一个")
+                    continue
+            else:
+                raise e
         except Exception as e:
-            print(f"处理过程中出现未预期错误: {e}")
-            print("跳过当前编辑项并继续处理下一个")
-            continue
+            if "Expected all tensors to be on the same device" in str(e):
+                print("检测到设备不一致错误...")
+                try:
+                    generator = torch.Generator(device="cpu")
+                    generator.manual_seed(current_seed)
+                    
+                    image = pipe(
+                        image=image_1,
+                        prompt=final_prompt,
+                        guidance_scale=guidance_scale,
+                        num_inference_steps=num_inference_steps,
+                        generator=generator,
+                        width=width,
+                        height=height
+                    ).images[0]
+                    
+                    generated_images.append(image)
+                except Exception as fallback_error:
+                    print(f"修复设备不一致后仍然失败: {fallback_error}")
+                    print("跳过当前编辑项并继续处理下一个")
+                    continue
+            else:
+                print(f"处理过程中出现未预期错误: {e}")
+                print("跳过当前编辑项并继续处理下一个")
+                continue
         
         generated_images.append(image)
         all_used_seeds.append(current_seed)
@@ -849,7 +835,7 @@ def generate_dual_context_image(
             os.makedirs(save_dir, exist_ok=True)
             
             timestamp = int(time.time())
-            filename = f"dual_context_image_{timestamp}_var{i+1}.png"
+            filename = f"edited_image_{timestamp}_var{i+1}.png"
             save_path = os.path.join(save_dir, filename)
             
             image.save(save_path)
@@ -909,12 +895,6 @@ def create_flux_kontext_ui():
                             choices=dual_model_choices,
                             value="Nunchaku fp4 (50系）" if NUNCHAKU_AVAILABLE else "Nunchaku fp4 (50系）",
                             info="Nunchaku提供更好的性能和更低的显存需求。fp4为浮点4位量化，int4为整数4位量化。"
-                        )
-                        
-                        dual_enable_cpu_offload = gr.Checkbox(
-                            label="启用CPU卸载 (节省显存)",
-                            value=False,
-                            info="将部分模型组件移动到CPU以节省显存，但会降低推理速度。如果出现显存不足错误，请启用此选项。"
                         )
                     
                     with gr.Row():
@@ -1061,10 +1041,9 @@ def create_flux_kontext_ui():
             guidance_scale = args[3]
             num_inference_steps = args[4]
             model_type = args[5]
-            enable_cpu_offload = args[6]
-            lora_enable = args[7]
-            lora_model = args[8]
-            lora_weight = args[9]
+            lora_enable = args[6]
+            lora_model = args[7]
+            lora_weight = args[8]
             
             if image is None:
                 return [], "请上传图像"
@@ -1077,9 +1056,9 @@ def create_flux_kontext_ui():
                 if not DIFFUSERS_AVAILABLE:
                     raise RuntimeError("缺少必要的依赖库: diffusers")
                 
-                # 加载模型
+                # 加载模型，默认启用CPU卸载
                 global pipe
-                pipe = load_flux_kontext_model(model_type, enable_cpu_offload)
+                pipe = load_flux_kontext_model(model_type, enable_cpu_offload=True)
                 
                 # 如果启用了LoRA，加载LoRA模型
                 if lora_enable and lora_model:
@@ -1094,7 +1073,7 @@ def create_flux_kontext_ui():
                     seed=seed,
                     guidance_scale=guidance_scale,
                     num_inference_steps=num_inference_steps,
-                    enable_cpu_offload=enable_cpu_offload,
+                    enable_cpu_offload=True,  # 默认启用CPU卸载
                     model_type=model_type
                 )
                 
@@ -1118,11 +1097,9 @@ def create_flux_kontext_ui():
                 dual_image_1, 
                 edit_textbox,
                 dual_seed, 
-                # 移除dual_randomize_seed参数
                 dual_guidance_scale, 
                 dual_num_inference_steps,
                 dual_model_type,
-                dual_enable_cpu_offload,
                 dual_lora_enable,
                 dual_lora_model,
                 dual_lora_weight

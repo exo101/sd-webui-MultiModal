@@ -89,6 +89,10 @@ WebUI Forge安装使用介绍：
   
 模型已存至网盘
 <img width="1440" height="781" alt="555555" src="https://github.com/user-attachments/assets/ac43e986-4108-48f0-a336-85ea4771f5d2" />
+### 更新内容
+2025/12/26
+- 添加Z-Image-Turbo-SDNQ-uint4-svd-r32 量化模型支持（全位量化）存储更低，显存降低 速度提升
+- 添加Z-Image-Turbo nuchaku量化模型支持（transformer主模型量化），显存降低 速度提升
 
 ### 更新内容
 2025/12/9

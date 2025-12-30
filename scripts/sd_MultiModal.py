@@ -84,8 +84,15 @@ def import_modules():
         except ImportError: 
             create_sam_ui = None
             SAM_AVAILABLE = False
-        
-        # 尝试导入FLUX.1-krea模块
+
+        # 添加 Qwen Image SDNQ 模块导入
+        try: 
+            from qwen_image_sdnq_ui import create_qwen_image_sdnq_ui, QWEN_IMAGE_SDNQ_MODULE_AVAILABLE
+        except ImportError: 
+            create_qwen_image_sdnq_ui = None
+            QWEN_IMAGE_SDNQ_MODULE_AVAILABLE = True  # 默认设为True，因为这是新功能，不一定需要外部依赖
+
+         # 尝试导入FLUX.1-krea模块
         try: 
             from flux_krea_ui import create_flux_krea_ui, FLUX_KREA_AVAILABLE
         except ImportError: 
@@ -145,6 +152,8 @@ def import_modules():
         namespace.SAM_AVAILABLE = SAM_AVAILABLE
         namespace.create_flux_krea_ui = create_flux_krea_ui
         namespace.FLUX_KREA_AVAILABLE = FLUX_KREA_AVAILABLE
+        namespace.create_qwen_image_sdnq_ui = create_qwen_image_sdnq_ui  # 新增：Qwen Image SDNQ模块
+        namespace.QWEN_IMAGE_SDNQ_MODULE_AVAILABLE = QWEN_IMAGE_SDNQ_MODULE_AVAILABLE  # 新增：Qwen Image SDNQ模块可用性
 
            # 添加 Z-Image 模块到命名空间
         namespace.create_z_image_ui = z_image_create_func
@@ -191,6 +200,9 @@ QWEN_IMAGE_MODULE_AVAILABLE = imported_modules.QWEN_IMAGE_MODULE_AVAILABLE
 create_qwen_image_edit_ui = imported_modules.create_qwen_image_edit_ui
 QWEN_IMAGE_EDIT_MODULE_AVAILABLE = imported_modules.QWEN_IMAGE_EDIT_MODULE_AVAILABLE
 
+# 新增：Qwen Image SDNQ 模块变量赋值
+create_qwen_image_sdnq_ui = imported_modules.create_qwen_image_sdnq_ui
+QWEN_IMAGE_SDNQ_MODULE_AVAILABLE = imported_modules.QWEN_IMAGE_SDNQ_MODULE_AVAILABLE
 
 # 添加 Z-Image 模块变量赋值
 create_z_image_ui = imported_modules.create_z_image_ui
@@ -816,7 +828,7 @@ def MultiModal_tab():
                             traceback.print_exc()
                 
                     # FLUX.1-krea图像生成子标签页
-                    with gr.TabItem("FLUX.1-图像生成"):
+                    with gr.TabItem("FLUX.1-文生图"):
                         try:
                             # 检查FLUX.1-krea模块是否可用
                             flux_krea_available = globals().get('FLUX_KREA_AVAILABLE', False)
@@ -834,10 +846,10 @@ def MultiModal_tab():
                             traceback.print_exc()
             # 添加 Qwen Image 标签页（如果可用）
             if 'QWEN_IMAGE_MODULE_AVAILABLE' in globals() and QWEN_IMAGE_MODULE_AVAILABLE:
-                with gr.TabItem("8.nunchaku加速-Qwen Image图像生成与编辑"):
+                with gr.TabItem("8.Qwen系列图像生成与编辑"):
                     try:
                         with gr.Tabs():
-                            with gr.TabItem("文生图"):
+                            with gr.TabItem("Qwen-Image文生图"):
                                 # 创建 Qwen Image 文生图 UI 组件
                                 qwen_image_components = create_qwen_image_ui()
                                 
@@ -845,19 +857,31 @@ def MultiModal_tab():
                                 if not qwen_image_components:
                                     gr.Markdown("Qwen Image文生图模块加载失败")
                             
-                            with gr.TabItem("图像编辑"):
+                            with gr.TabItem("Qwen-Image-Edit图像编辑"):
                                 # 创建 Qwen Image 图像编辑 UI 组件
                                 qwen_image_edit_components = create_qwen_image_edit_ui() if 'create_qwen_image_edit_ui' in globals() and QWEN_IMAGE_EDIT_MODULE_AVAILABLE else None
                                 
                                 # 组件已经自动显示，无需额外处理
                                 if not qwen_image_edit_components:
                                     gr.Markdown("Qwen Image图像编辑模块加载失败")
+                            
+                            # 新增：Qwen Image SDNQ 量化模型标签页
+                            with gr.TabItem("Qwen-Image-Layered图层分离"):
+                                if create_qwen_image_sdnq_ui is not None:
+                                    try:
+                                        qwen_image_sdnq_components = create_qwen_image_sdnq_ui()
+                                    except Exception as e:
+                                        gr.Markdown(f"Qwen Image SDNQ模块初始化错误: {e}")
+                                        import traceback
+                                        traceback.print_exc()
+                                else:
+                                    gr.Markdown("Qwen Image SDNQ模块当前不可用。")
                     except Exception as e:
                         gr.Markdown(f"Qwen Image模块初始化错误: {e}")
                         import traceback
                         traceback.print_exc()
             elif 'QWEN_IMAGE_MODULE_AVAILABLE' in globals() and not QWEN_IMAGE_MODULE_AVAILABLE:
-                with gr.TabItem("8.Qwen Image图像生成"):
+                with gr.TabItem("8.Qwen系列图像生成"):
                     gr.Markdown("Qwen Image模块当前不可用，可能是因为缺少模型文件或依赖项。")
             
             # 添加 Z-Image-Turbo 标签页（如果可用）

@@ -911,7 +911,7 @@ def MultiModal_tab():
                 with gr.TabItem("9.Z-Image-Turbo图像生成"):
                     gr.Markdown("Z-Image-Turbo模块当前不可用，可能是因为缺少模型文件或依赖项。")
 
-    return [(ui, "多模态插件12", "MultiModal_vision_tab")]
+    return [(ui, "多模态插件14", "MultiModal_vision_tab")]
 
 # 移除了重复的XYKC_tab函数定义，保留了第一个更完整的版本
                         
@@ -923,31 +923,26 @@ modules_status = {
 }
 
 script_callbacks.on_ui_tabs(MultiModal_tab)
-
-# 避免重复导入已经导入过的模块
-# import modules.scripts as scripts
-# import gradio as gr
-# from modules import script_callbacks
-
 # 在WebUI启动时在后台日志中显示插件信息和使用声明
 def on_app_started(*args, **kwargs):
     print("=" * 60)
-    print("多模态webui插件12 - forge版本专用")
+    print("多模态webui插件14 - forge版本专用")
     print("开发者：鸡肉爱土豆")
     print("网址：https://space.bilibili.com/403361177")
     print("声明：为创作者提供更便捷更强大无复杂工作流的插件")
     print()
     print("集成功能：")
-    print("- 图像分割")
-    print("- 图像编辑")
-    print("- 图像清理")
-    print("- 批量标注")
-    print("- 大语言模型交互")
-    print("- 智能抠图")
+    print("- Segment-Anything-图像分割")
+    print("- qwen-image图像生成与编辑")
+    print("- Qwen-Image-Layered图层分离")
+    print("- QwenVL批量标注")
+    print("- Qwen3大语言模型交互")
+    print("- cleaner-图像清理")
+    print("- rembg智能抠图")
     print("- 视频提取关键帧")
-    print("- 关键词辅助模板")
-    print("- 数字人视频生成")
-    print("- Qwen图像生成")
+    print("- index-tts2语音克隆")
+    print("- LatentSync数字人视频生成")
+    
     print()
     print("使用须知：使用此插件者请合法使用AI，不得发表不正当言论，作假新闻，二次销售，二次改装等违法行为，之后的一切行为与插件开发者无关。")
     print("=" * 60)

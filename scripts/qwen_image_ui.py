@@ -35,6 +35,10 @@ current_dir = Path(__file__).parent
 scripts_dir = current_dir
 qwen_image_dir = current_dir.parent / "qwen-image"
 
+# 添加qwen-image目录到系统路径，以便导入预处理模块
+sys.path.append(str(qwen_image_dir))
+from qwen_image_controlnet import preprocess_for_qwen_image_controlnet
+
 # 修改模型路径为指定目录
 models_dir = Path(shared.models_path) / "qwen-image"
 qwenimage_models_dir = models_dir / "qwenimage"
@@ -101,15 +105,7 @@ def get_lora_choices(lora_dir):
         
         # 查找LoRA模型文件
         lora_files = list(lora_dir.glob("*.safetensors"))
-        
-        # 如果没有找到模型文件，尝试查找.pt文件
-        if not lora_files:
-            lora_files = list(lora_dir.glob("*.pt"))
-            
-        # 如果仍然没有找到模型文件，尝试查找.bin文件
-        if not lora_files:
-            lora_files = list(lora_dir.glob("*.bin"))
-        
+              
         # 构建选项列表，始终包含"无"选项
         choices = [("无", "")]  # 添加"无"选项作为默认值
         choices.extend([(f.name, str(f)) for f in lora_files])
@@ -256,42 +252,8 @@ def get_controlnet_preprocessors():
                     full_display_name = f"[{category}] {display_name}"
                     preprocessors.append((name, full_display_name))
                 else:
-                    # 如果找不到预处理器，使用默认显示名称
-                    display_name_map = {
-                        "canny": "Canny",
-                        "depth_midas": "Depth Midas",
-                        "depth_leres": "Depth Leres",
-                        "depth_leres++": "Depth Leres++",
-                        "depth_anything": "Depth Anything",
-                        "depth_anything_v2": "Depth Anything V2",
-                        "depth_hand_refiner": "Depth Hand Refiner",
-                        "depth_marigold": "Depth Marigold",
-                        "depth_zoe": "Depth Zoe",
-                        "openpose_full": "Openpose Full",
-                        "openpose": "Openpose",
-                        "openpose_face": "Openpose Face",
-                        "openpose_faceonly": "Openpose Faceonly",
-                        "openpose_hand": "Openpose Hand",
-                        "dw_openpose_full": "DW Openpose Full",
-                        "animal_openpose": "Animal Openpose",
-                        "densepose": "Densepose (purple bg & purple torso)",
-                        "densepose_parula": "Densepose Parula (black bg & blue torso)",
-                        "lineart_standard": "Lineart Standard (from white bg & black line)",
-                        "lineart_realistic": "Lineart Realistic",
-                        "lineart_coarse": "Lineart Coarse",
-                        "lineart_anime": "Lineart Anime",
-                        "lineart_anime_denoise": "Lineart Anime Denoise",
-                        "scribble_pidinet": "Scribble Pidinet",
-                        "softedge_pidinet": "Softedge Pidinet",
-                        "softedge_pidinet_safe": "Softedge Pidinet Safe",
-                        "softedge_pidinstruct": "Softedge Pidinstruct",
-                        "softedge_hed": "Softedge Hed",
-                        "softedge_hedsafe": "Softedge Hedsafe"
-                    }
-                    display_name = display_name_map.get(name, name)
-                    # 在显示名称前加上类别前缀
-                    full_display_name = f"[{category}] {display_name}"
-                    preprocessors.append((name, full_display_name))
+                    # 如果找不到预处理器，跳过此项
+                    continue
         
         return preprocessors
     except Exception as e:
@@ -385,6 +347,58 @@ def parse_script_output(output):
         traceback.print_exc()
         return {}
 
+def preprocess_control_image(image_input, preprocessor_display_name):
+    """预处理控制图像"""
+    try:
+        # 将UI显示名称转换为内部标识符
+        mapped_preprocessor_type = CONTROLNET_PREPROCESSOR_DISPLAY_TO_INTERNAL.get(preprocessor_display_name, "none")
+        
+        # 直接使用qwen_image_controlnet.py中的预处理函数
+        processed_image = preprocess_for_qwen_image_controlnet(image_input, mapped_preprocessor_type)
+        
+        return processed_image
+
+    except Exception as e:
+        print(f"预处理控制图像时出错: {e}")
+        traceback.print_exc()
+        return image_input
+
+
+def save_processed_image(processed_image):
+    """保存预处理后的图像到临时文件"""
+    try:
+        import uuid
+        # 生成唯一文件名
+        temp_filename = f"processed_{uuid.uuid4().hex[:8]}.png"
+        temp_path = qwen_image_dir / "temp" / temp_filename
+        temp_path.parent.mkdir(exist_ok=True)
+        
+        # 如果是numpy数组，转换为PIL图像
+        if isinstance(processed_image, np.ndarray):
+            if len(processed_image.shape) == 3 and processed_image.shape[2] == 3:
+                # RGB图像
+                image = Image.fromarray(processed_image, mode='RGB')
+            elif len(processed_image.shape) == 2:
+                # 灰度图
+                image = Image.fromarray(processed_image, mode='L')
+            else:
+                # 其他情况默认转RGB
+                image = Image.fromarray(processed_image).convert('RGB')
+        elif isinstance(processed_image, Image.Image):
+            # 如果已经是PIL图像，直接使用
+            image = processed_image
+        else:
+            print(f"不支持的图像类型: {type(processed_image)}")
+            return None
+            
+        # 保存图像
+        image.save(str(temp_path), 'PNG')
+        return str(temp_path)
+    except Exception as e:
+        print(f"保存预处理图像时出错: {e}")
+        traceback.print_exc()
+        return None
+
 # 添加函数来保存numpy数组为图像文件
 def save_numpy_image(image_array, image_path):
     """将numpy数组或PIL图像保存为图像文件"""
@@ -435,154 +449,6 @@ def save_numpy_image(image_array, image_path):
     except Exception as e:
         print(f"保存图像时出错: {e}")
         traceback.print_exc()
-        return None
-
-# 添加函数来保存处理后的图像
-def save_processed_image(processed_image):
-    """保存处理后的图像到临时文件"""
-    try:
-        if processed_image is None:
-            return None
-            
-        # 创建临时目录
-        temp_dir = qwen_image_dir / "temp"
-        temp_dir.mkdir(exist_ok=True)
-        
-        # 生成唯一文件名
-        timestamp = int(time.time() * 1000)
-        temp_path = temp_dir / f"preprocess_preview_{timestamp}.png"
-        
-        # 保存图像
-        saved_path = save_numpy_image(processed_image, temp_path)
-        if saved_path and os.path.exists(saved_path):
-            return saved_path
-        else:
-            print("无法保存处理后的图像")
-            return None
-    except Exception as e:
-        print(f"保存处理后图像时出错: {e}")
-        traceback.print_exc()
-        return None
-
-def preprocess_control_image(image_input, preprocessor_display_name):
-    """预处理控制图像"""
-    try:
-        image_path = None
-        
-        # 处理输入是numpy数组的情况
-        if isinstance(image_input, np.ndarray):
-            # 为numpy数组创建临时文件
-            temp_dir = qwen_image_dir / "temp"
-            temp_dir.mkdir(exist_ok=True)
-            image_path = temp_dir / f"preprocess_input_{int(time.time() * 1000)}.png"
-            save_result = save_numpy_image(image_input, image_path)
-            if not save_result:
-                print(f"无法保存numpy数组为图像文件")
-                return None
-            image_path = str(image_path)
-        elif isinstance(image_input, str):
-            image_path = image_input
-        else:
-            print(f"不支持的图像输入类型: {type(image_input)}")
-            return None
-            
-        if not image_path or not os.path.exists(image_path):
-            print(f"预处理图像路径无效: {image_path}")
-            return None
-        
-        # 加载图像
-        from PIL import Image
-        image = Image.open(image_path).convert("RGB")
-        
-        # 调整图像尺寸以匹配模型要求（确保是64的倍数）
-        # 这可以解决"mat1 and mat2 shapes cannot be multiplied"错误
-        original_width, original_height = image.size
-        print(f"原始控制图像尺寸: {original_width}x{original_height}")
-        
-        # 将尺寸调整为64的倍数
-        target_width = ((original_width + 31) // 64) * 64  # 向上取整到最接近的64倍数
-        target_height = ((original_height + 31) // 64) * 64
-        
-        # 但也要确保不超过合理范围
-        target_width = max(256, min(2048, target_width))
-        target_height = max(256, min(2048, target_height))
-        
-        # 如果尺寸发生了变化，则调整图像
-        if target_width != original_width or target_height != original_height:
-            print(f"调整控制图像尺寸: {original_width}x{original_height} -> {target_width}x{target_height}")
-            image = image.resize((target_width, target_height), Image.Resampling.LANCZOS)
-        
-        # 将UI显示名称转换为内部标识符
-        mapped_preprocessor_type = CONTROLNET_PREPROCESSOR_DISPLAY_TO_INTERNAL.get(preprocessor_display_name, "none")
-        print(f"开始使用预处理器 {preprocessor_display_name} ({mapped_preprocessor_type}) 处理图像: {image_path}")
-        
-        # 调用预处理脚本
-        args = {
-            "image_path": image_path,
-            "preprocessor_type": mapped_preprocessor_type  # 使用映射后的预处理器名称
-        }
-        
-        args_file = qwen_image_dir / "temp_preprocess_args.json"
-        with open(args_file, "w", encoding="utf-8") as f:
-            json.dump(args, f, ensure_ascii=False, indent=2)
-        
-        # 构建命令
-        args_file_str = str(args_file).replace('\\', '/')
-        scripts_dir_str = str(scripts_dir).replace('\\', '/')
-        
-        cmd = [
-            main_python,
-            "-c",
-            f"import sys; sys.path.append('{scripts_dir_str}'); from qwen_image_scripts import run_preprocess_control_image; run_preprocess_control_image('{args_file_str}')"
-        ]
-        
-        print(f"执行预处理命令: {' '.join(cmd)}")
-        
-        # 执行命令
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(qwen_image_dir), timeout=1200)
-        
-        # 删除临时参数文件
-        if args_file.exists():
-            args_file.unlink()
-        
-        print(f"预处理命令返回码: {result.returncode}")
-        if result.stdout:
-            print(f"预处理命令输出: {result.stdout}")
-        if result.stderr:
-            print(f"预处理命令错误: {result.stderr}")
-        
-        if result.returncode != 0:
-            print(f"预处理失败: {result.stderr}")
-            # 即使预处理失败，也尝试返回原始图像
-            return image
-        
-        # 解析输出，查找处理后的图像路径
-        output_lines = result.stdout.strip().split('\n')
-        processed_image_path = None
-        for line in output_lines:
-            if line.startswith("SUCCESS:"):
-                processed_image_path = line[8:].strip()  # 移除 "SUCCESS:" 前缀
-                break
-        
-        if processed_image_path and os.path.exists(processed_image_path):
-            print(f"成功找到预处理图像: {processed_image_path}")
-            # 加载并返回处理后的图像
-            processed_image = Image.open(processed_image_path)
-            return processed_image
-        else:
-            print("未找到有效的预处理图像，返回原始图像")
-            return image
-            
-    except Exception as e:
-        print(f"预处理控制图像时出错: {e}")
-        traceback.print_exc()
-        # 出错时返回原始图像
-        try:
-            if image_path and os.path.exists(image_path):
-                from PIL import Image
-                return Image.open(image_path).convert("RGB")
-        except:
-            pass
         return None
 
 # ==================== ControlNet 模型相关 ====================
@@ -759,7 +625,7 @@ def run_text_to_image(prompt, negative_prompt, width, height, steps, cfg_scale,
         # 执行命令
         print(f"执行命令: {' '.join(cmd)}")
         print(f"工作目录: {qwen_image_dir}")
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(qwen_image_dir), timeout=1200)
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(qwen_image_dir), timeout=300)
         
         # 删除临时参数文件
         if args_file.exists():
@@ -908,7 +774,7 @@ def on_preprocess_params_change(image_path, preprocessor_type, preprocess_refres
         # 只有在提供了图像且预处理器不是"none"时才进行预处理
         if preprocess_refresh and image_path is not None and ((isinstance(image_path, str) and os.path.exists(image_path)) or isinstance(image_path, np.ndarray)) and preprocessor_type != "none":
             processed_image = preprocess_control_image(image_path, preprocessor_type)
-            if processed_image:
+            if processed_image is not None and hasattr(processed_image, 'size') and processed_image.size > 0:
                 temp_path = save_processed_image(processed_image)
                 if temp_path:
                     print(f"预览图像已保存到: {temp_path}")
@@ -1101,7 +967,7 @@ def create_qwen_image_ui():
                             # Add base model selection dropdown
                             text_to_image_model = gr.Dropdown(
                                 choices=qwenimage_model_choices,
-                                label="基础模型选择",
+                                label="非50系使用int4模型，50系使用fp4模型，魔搭社区下载",
                                 value=None,
                                 interactive=True,
                                 min_width=150
@@ -1330,32 +1196,7 @@ def create_qwen_image_ui():
                                             step=0.05,
                                             label="结束时间步"
                                         )
-                        
-                        # 删除与Inpainting模型相关的事件处理
-                        
-                        # 添加故障排除指南折叠模块
-                        with gr.Accordion("Qwen模型报错排查指南", open=False):
-                            gr.Markdown(
-                                """
-                                ### 常见问题及解决方案
-                                
-                                1. **显存要求**：推荐使用12GB及以上显存。低于12GB显存时生成时间会很漫长，且容易因显存不足而崩溃。
-
-                                2.下载完整的模型组件，而不是仅下载模型文件
-
-                                3. **非50系显卡模型选择**：对于非RTX 50系列显卡，推荐下载以下模型版本以获得更好兼容性：
-                                   - `svdq-int4_r128-qwen-image.safetensors`
-                                   - `svdq-int4_r128-qwen-image-lightningv1.1-8steps.safetensors`
-
-                                4. 生成时间过长或爆显存可选择r32 lightningv1.1-4steps版本模型
-
-                                5. **ControlNet图像尺寸限制**：在ControlNet控制模块中请勿上传超过1500像素的图像，否则可能会因显存不足而报错。  
-                                                
-                                6. **模型下载地址**：
-                                   - [Qwen Image Models on ModelScope](https://www.modelscope.cn/models/nunchaku-tech/nunchaku-qwen-image)
-                                """
-                            )
-                    
+                                   
                     # 将输出组件放在右侧列中（在按钮点击事件之前定义）
                     with gr.Column():
                         # 调整图像组件的显示尺寸，使用Gallery组件显示多个图像
@@ -1567,128 +1408,4 @@ def create_qwen_image_ui():
 
 # ==================== 模块可用性变量 ====================
 QWEN_IMAGE_MODULE_AVAILABLE = QWEN_IMAGE_AVAILABLE
-
-# ==================== CSS 和 JS ====================
-# 添加CSS样式以增强负面提示词输入框的可见性
-custom_css = """
-.negative_prompt input, .negative_prompt textarea {
-    background-color: #111827 !important;
-    color: #ffffff !important;
-    font-weight: normal !important;
-    font-size: 14px !important;
-    border: 1px solid #4b5563 !important;
-    border-radius: 4px !important;
-    padding: 8px !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) inset !important;
-}
-
-.negative_prompt label {
-    color: #f9fafb !important;
-    font-weight: 500 !important;
-    margin-bottom: 4px !important;
-}
-
-/* 限制ControlNet图像的最大显示尺寸 */
-.controlnet-image-container {
-    max-width: 300px;
-    max-height: 300px;
-    overflow: hidden;
-    border: 1px solid #4b5563;
-    border-radius: 4px;
-    margin: 10px 0;
-    position: relative;
-}
-
-/* 尺寸预览容器 */
-.size-preview-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    position: relative;
-    background-color: rgba(0, 0, 0, 0.1);
-    border: 1px dashed #6b7280;
-    border-radius: 4px;
-}
-
-/* 尺寸预览边框 */
-.size-preview-border {
-    position: absolute;
-    top: 0;
-    left: 0;
-    border: 2px solid #3b82f6;
-    border-radius: 4px;
-    pointer-events: none;
-}
-
-/* 尺寸预览文本 */
-.size-preview-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: #3b82f6;
-    font-size: 12px;
-    font-weight: bold;
-    text-align: center;
-    white-space: nowrap;
-}
-
-/* 预处理效果图容器 */
-.preprocess-preview-container {
-    max-width: 300px;
-    max-height: 300px;
-    margin: 10px 0;
-    border: 1px solid #4b5563;
-    border-radius: 4px;
-    padding: 5px;
-}
-
-/* LoRA模型下拉框悬停提示 */
-.lora-model-dropdown {
-    cursor: pointer;
-}
-
-/* LoRA网址链接 */
-.lora-url-link {
-    font-size: 0.85em;
-    color: #aaaaaa;
-    margin-top: 2px;
-    margin-bottom: 5px;
-}
-"""
-
-# 添加JavaScript代码来处理尺寸预览
-custom_js = """
-<script>
-function updateSizePreview(width, height) {
-    const container = document.querySelector('.size-preview-container');
-    if (!container) return;
-    
-    // 获取容器的实际尺寸
-    const containerWidth = container.clientWidth;
-    const containerHeight = container.clientHeight;
-    
-    // 计算缩放比例
-    const scale = Math.min(containerWidth / width, containerHeight / height);
-    
-    // 设置边框尺寸和位置
-    const border = document.querySelector('.size-preview-border');
-    if (border) {
-        border.style.width = `${width * scale}px`;
-        border.style.height = `${height * scale}px`;
-        border.style.left = `${(containerWidth - width * scale) / 2}px`;
-        border.style.top = `${(containerHeight - height * scale) / 2}px`;
-    }
-    
-    // 更新文本内容
-    const text = document.querySelector('.size-preview-text');
-    if (text) {
-        text.textContent = `${width}×${height}`;
-    }
-}
-</script>
-"""
-
 

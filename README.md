@@ -93,6 +93,7 @@ WebUI Forge安装使用介绍：
 2025/12/30
 - 添加Z-Image-Turbo-SDNQ-uint4-svd-r32 量化模型支持（全位量化）存储更低，显存降低 速度提升
 - 添加Z-Image-Turbo nuchaku量化模型支持（transformer主模型量化），显存降低 速度提升
+- 添加Qwen-Image-Edit-2511-SDNQ-uint4量化模型支持
 - 添加Qwen-Image-Layered图层分离
 - 添加nunchuku flux ControlNet 支持 （补全缺失模块）
 - 下载sd-webui-forge-aki-v5.0 整合包

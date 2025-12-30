@@ -1,3 +1,11 @@
+import os
+import sys
+from pathlib import Path
+import numpy as np
+import cv2
+from PIL import Image
+
+
 def preprocess_for_qwen_image_controlnet(image_path, preprocessor_type, mask_path=None):
     """为Qwen-Image-ControlNet预处理图像"""
     try:
@@ -7,7 +15,6 @@ def preprocess_for_qwen_image_controlnet(image_path, preprocessor_type, mask_pat
         
         # 加载图像
         image = Image.open(image_path).convert("RGB")
-        # 移除调试日志: print(f"开始使用预处理器 {preprocessor_type} 处理图像: {image_path}")
         
         # 使用WebUI的预处理器管理系统
         try:
@@ -24,7 +31,6 @@ def preprocess_for_qwen_image_controlnet(image_path, preprocessor_type, mask_pat
             for path in paths_to_add:
                 if path not in sys.path:
                     sys.path.append(path)
-                    # 减少调试日志: print(f"已添加路径到sys.path: {path}")
             
             # 导入WebUI的预处理器管理模块
             from modules_forge.shared import supported_preprocessors
@@ -36,9 +42,7 @@ def preprocess_for_qwen_image_controlnet(image_path, preprocessor_type, mask_pat
             # 手动导入inpaint预处理器以确保预处理器被正确加载
             try:
                 import forge_preprocessor_inpaint.scripts.preprocessor_inpaint
-                # 减少调试日志: print("成功加载forge_preprocessor_inpaint模块")
             except Exception as e:
-                # 减少调试日志: print(f"加载forge_preprocessor_inpaint模块时出错: {e}")
                 # 即使导入失败，也要确保预处理器在supported_preprocessors中
                 try:
                     # 尝试直接导入并注册inpaint预处理器
@@ -63,39 +67,28 @@ def preprocess_for_qwen_image_controlnet(image_path, preprocessor_type, mask_pat
                     if not inpaint_only_registered:
                         inpaint_only_preprocessor = PreprocessorInpaintOnly()
                         add_supported_preprocessor(inpaint_only_preprocessor)
-                        # 减少调试日志: print("手动注册inpaint_only预处理器成功")
                     
                     if not inpaint_global_harmonious_registered:
                         inpaint_preprocessor = PreprocessorInpaint()
                         add_supported_preprocessor(inpaint_preprocessor)
-                        # 减少调试日志: print("手动注册inpaint_global_harmonious预处理器成功")
                     
                     if not inpaint_lama_registered:
                         inpaint_lama_preprocessor = PreprocessorInpaintLama()
                         add_supported_preprocessor(inpaint_lama_preprocessor)
-                        # 减少调试日志: print("手动注册inpaint_lama预处理器成功")
                         
                 except Exception as manual_register_error:
-                    # 减少调试日志: print(f"手动注册inpaint预处理器失败: {manual_register_error}")
                     pass
             
             # 手动导入legacy_preprocessors以确保预处理器被正确加载
             try:
                 import forge_legacy_preprocessors.scripts.legacy_preprocessors
-                # 减少调试日志: print("成功加载legacy_preprocessors模块")
             except Exception as e:
-                # 减少调试日志: print(f"加载legacy_preprocessors模块时出错: {e}")
                 pass
-            
-            # 尝试直接使用预处理器类型名称获取预处理器对象
-            # 根据WebUI源码，预处理器的名称就是其在supported_preprocessors中的键
-            # 移除调试日志: print(f"尝试查找预处理器: {preprocessor_type}")
             
             # 特殊处理"none"预处理器 - 直接返回原始图像
             if preprocessor_type.lower() in ["none", "无", "none (default)"]:
-                # 移除调试日志: print("使用无预处理模式，直接返回原始图像")
                 if isinstance(image, np.ndarray):
-                    return image
+                    return np.array(image)
                 else:
                     return np.array(image)
             
@@ -138,7 +131,6 @@ def preprocess_for_qwen_image_controlnet(image_path, preprocessor_type, mask_pat
                 for variant in variants:
                     if variant in supported_preprocessors:
                         preprocessor = supported_preprocessors[variant]
-                        # 移除调试日志: print(f"通过变体名称找到预处理器: {variant}")
                         break
             
             # 特殊处理"inpaint_only"预处理器名称
@@ -152,20 +144,14 @@ def preprocess_for_qwen_image_controlnet(image_path, preprocessor_type, mask_pat
                 # 尝试查找"inpaint_only"
                 if "inpaint_only" in supported_preprocessors:
                     preprocessor = supported_preprocessors["inpaint_only"]
-                    # 移除调试日志: print("通过特殊处理找到预处理器: inpaint_only")
             
-            # 如果还是找不到，直接报错而不是回退到canny
+            # 如果还是找不到，直接报错
             if preprocessor is None:
                 print(f"错误：未找到预处理器 {preprocessor_type}")
                 raise ValueError(f"未找到预处理器: {preprocessor_type}，请检查预处理器名称是否正确")
             
-            # 移除调试日志: print(f"成功找到预处理器: {preprocessor.name}")
-            
             # 使用预处理器处理图像
             # 注意：WebUI预处理器通常接受RGB格式的numpy数组，值范围为0-255
-            # 移除调试日志: print(f"使用预处理器 {preprocessor.name} 处理图像: {image_path}")
-            
-            # 确保图像数据是正确的格式
             if isinstance(image, np.ndarray):
                 # 如果图像是numpy数组格式
                 image_array = image
@@ -273,8 +259,6 @@ def preprocess_for_qwen_image_controlnet(image_path, preprocessor_type, mask_pat
                     # 一些预处理器可能需要特殊的调用方式
                     processed_image_array = preprocessor(image_array)
                 
-                # 移除调试日志: print("预处理器调用成功")
-                
                 # 确保输出是正确的格式
                 if isinstance(processed_image_array, tuple):
                     # 有些预处理器返回元组，第一个元素是图像
@@ -314,6 +298,8 @@ def preprocess_for_qwen_image_controlnet(image_path, preprocessor_type, mask_pat
                 
             except Exception as process_error:
                 print(f"使用WebUI预处理器时出错: {process_error}")
+                import traceback
+                traceback.print_exc()
                 # 出错时不再回退，直接抛出异常
                 raise
             

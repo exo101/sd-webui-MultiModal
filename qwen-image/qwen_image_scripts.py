@@ -566,15 +566,21 @@ def run_text_to_image(args_file):
         
         # 设置模型卸载 - 根据VRAM管理策略规范，始终启用低VRAM模式
         try:
-            # 根据规范，始终启用低VRAM模式（逐层卸载），仅在GPU上保留1个模型块
-            if hasattr(transformer, 'set_offload'):
-                transformer.set_offload(True, use_pin_memory=False, num_blocks_on_gpu=1)
-                if hasattr(pipeline, '_exclude_from_cpu_offload'):
-                    pipeline._exclude_from_cpu_offload.append("transformer")
-            pipeline.enable_sequential_cpu_offload()
-            print("启用顺序CPU卸载（低VRAM模式）")
+            # 从nunchaku.utils导入get_gpu_memory函数
+            from nunchaku.utils import get_gpu_memory
+            
+            if get_gpu_memory() > 18:
+                pipeline.enable_model_cpu_offload()
+            else:
+                # use per-layer offloading for low VRAM. This only requires 3-4GB of VRAM.
+                transformer.set_offload(
+                    True, use_pin_memory=False, num_blocks_on_gpu=1
+                )  # increase num_blocks_on_gpu if you have more VRAM
+                pipeline._exclude_from_cpu_offload.append("transformer")
+                pipeline.enable_sequential_cpu_offload()
+            print("启用模型CPU卸载")
         except Exception as e:
-            print(f"设置低VRAM模式失败: {e}")
+            print(f"设置模型CPU卸载失败: {e}")
             import traceback
             traceback.print_exc()
 
@@ -905,6 +911,12 @@ def run_image_editing(args_file):
         cfg_scale = args["cfg_scale"]
         scheduler_type = args["scheduler"]
         
+        # 添加LoRA模型参数
+        lora_model_1 = args.get("lora_model_1")
+        lora_model_2 = args.get("lora_model_2")
+        lora_weight_1 = args.get("lora_weight_1", 1.0)
+        lora_weight_2 = args.get("lora_weight_2", 1.0)
+        
         # 添加参数详细信息日志
         print(f"输入图像路径: {input_images}")
         print(f"提示词: {prompt}")
@@ -912,6 +924,8 @@ def run_image_editing(args_file):
         print(f"推理步数: {steps}")
         print(f"CFG Scale: {cfg_scale}")
         print(f"调度器类型: {scheduler_type}")
+        print(f"LoRA模型1: {lora_model_1}, 权重: {lora_weight_1}")
+        print(f"LoRA模型2: {lora_model_2}, 权重: {lora_weight_2}")
         
         # 查找第一个非空的图像路径作为输入图像，第二个非空路径作为控制图像（如果存在）
         input_image_path = None
@@ -1271,20 +1285,25 @@ def run_image_editing(args_file):
                 
                 print("模型加载完成")
                 
-                # 设置Nunchaku模型的内存管理 - 按照官方示例方式
-                from nunchaku.utils import get_gpu_memory
-                if get_gpu_memory() > 18:
-                    pipeline.enable_model_cpu_offload()
-                    print("为Nunchaku启用模型CPU卸载")
-                else:
-                    # use per-layer offloading for low VRAM. This only requires 3-4GB of VRAM.
-                    transformer.set_offload(
-                        True, use_pin_memory=False, num_blocks_on_gpu=1
-                    )  # increase num_blocks_on_gpu if you have more VRAM
-                    if hasattr(pipeline, '_exclude_from_cpu_offload'):
+                # 设置Nunchaku模型的内存管理 - 根据VRAM管理策略规范，始终启用低VRAM模式
+                try:
+                    # 从nunchaku.utils导入get_gpu_memory函数
+                    from nunchaku.utils import get_gpu_memory
+                    
+                    if get_gpu_memory() > 18:
+                        pipeline.enable_model_cpu_offload()
+                    else:
+                        # use per-layer offloading for low VRAM. This only requires 3-4GB of VRAM.
+                        transformer.set_offload(
+                            True, use_pin_memory=False, num_blocks_on_gpu=1
+                        )  # increase num_blocks_on_gpu if you have more VRAM
                         pipeline._exclude_from_cpu_offload.append("transformer")
-                    pipeline.enable_sequential_cpu_offload()
-                    print("为Nunchaku启用顺序CPU卸载（低VRAM模式）")
+                        pipeline.enable_sequential_cpu_offload()
+                    print("为Nunchaku启用模型CPU卸载")
+                except Exception as e:
+                    print(f"设置Nunchaku模型CPU卸载失败: {e}")
+                    import traceback
+                    traceback.print_exc()
             else:
                 # 没有启用Nunchaku或SDNQ模型，使用传统模型加载方式
                 steps = args["steps"]
@@ -1366,15 +1385,21 @@ def run_image_editing(args_file):
                 
                 # 设置模型卸载 - 根据VRAM管理策略规范，始终启用低VRAM模式
                 try:
-                    # 根据规范，始终启用低VRAM模式（逐层卸载），仅在GPU上保留1个模型块
-                    if hasattr(transformer, 'set_offload'):
-                        transformer.set_offload(True, use_pin_memory=False, num_blocks_on_gpu=1)
-                        if hasattr(pipeline, '_exclude_from_cpu_offload'):
-                            pipeline._exclude_from_cpu_offload.append("transformer")
-                    pipeline.enable_sequential_cpu_offload()
-                    print("启用顺序CPU卸载（低VRAM模式）")
+                    # 从nunchaku.utils导入get_gpu_memory函数
+                    from nunchaku.utils import get_gpu_memory
+                    
+                    if get_gpu_memory() > 18:
+                        pipeline.enable_model_cpu_offload()
+                    else:
+                        # use per-layer offloading for low VRAM. This only requires 3-4GB of VRAM.
+                        transformer.set_offload(
+                            True, use_pin_memory=False, num_blocks_on_gpu=1
+                        )  # increase num_blocks_on_gpu if you have more VRAM
+                        pipeline._exclude_from_cpu_offload.append("transformer")
+                        pipeline.enable_sequential_cpu_offload()
+                    print("启用模型CPU卸载")
                 except Exception as e:
-                    print(f"设置低VRAM模式失败: {e}")
+                    print(f"设置模型CPU卸载失败: {e}")
                     import traceback
                     traceback.print_exc()
             

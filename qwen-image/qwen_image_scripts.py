@@ -1536,8 +1536,14 @@ def run_image_editing(args_file):
         else:
             # 对于普通编辑模式，只传递输入图像
             generation_params["image"] = init_image
-            
-        images = pipeline(**generation_params).images
+
+        # 为SDNQ模型添加官方推荐的参数
+        if sdnq_enable:
+            generation_params["guidance_scale"] = 1.0  # 官方示例中的参数
+
+        # 生成图像 - 使用torch.inference_mode优化性能
+        with torch.inference_mode():
+            images = pipeline(**generation_params).images
         
         print("图像生成完成")
         

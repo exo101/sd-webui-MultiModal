@@ -70,7 +70,6 @@ def load_model_if_needed(model_type='original', nunchaku_precision='fp4', nuncha
                     return f"检查SDNQ模型路径时出错: {sdnq_model_path} - {str(e)}"
 
                 # 导入SDNQ相关库
-                import torch
                 import diffusers
                 try:
                     # 尝试从系统导入sdnq库

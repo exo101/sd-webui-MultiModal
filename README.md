@@ -89,8 +89,11 @@ WebUI Forge安装使用介绍：
 | `Adobe Photoshop 2024`|`Plug-ins`|`sd-ppp_PS`| ps插件目录 |
 | `Adobe Photoshop 2024`|`Plug-ins`|`Auto.Photoshop.SD.plugin_v1.4.1`| ps插件目录  |
   
-模型已存至网盘
-<img width="1440" height="781" alt="555555" src="https://github.com/user-attachments/assets/ac43e986-4108-48f0-a336-85ea4771f5d2" />
+
+### 更新内容
+2025/12/31
+- 添加Qwen-Image-Edit-2511-ControlNet支持
+  
 ### 更新内容
 2025/12/30
 - 添加Z-Image-Turbo-SDNQ-uint4-svd-r32 量化模型支持（全位量化）存储更低，显存降低 速度提升

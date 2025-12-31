@@ -1059,21 +1059,39 @@ def run_image_editing(args_file):
         if sdnq_enable:
             # 自动检测SDNQ模型路径
             # 优先检查用户指定的路径
-            sdnq_model_path = Path("D:/sd-webui-forge-aki-v4.9/models/Qwen-Image-Edit-2511-SDNQ-uint4-svd-r32")
+            sdnq_model_path = None
             
-            # 如果上面的路径不存在，回退到默认路径
-            if not sdnq_model_path.exists():
-                sdnq_model_path = models_dir / "Qwen-Image-Edit-2511-SDNQ-uint4-svd-r32"
+            # 首先尝试从参数中获取模型路径
+            model_dir = args.get("model_dir")
+            if model_dir:
+                sdnq_model_path = Path(model_dir)
+            else:
+                # 尝试从标准模型目录查找
+                from modules import shared
+                models_dir = Path(shared.models_path) if hasattr(shared, 'models_path') else Path(__file__).parent.parent.parent.parent / "models"
+                
+                # 优先查找SDNQ模型
+                sdnq_candidates = [
+                    models_dir / "Qwen-Image-Edit-2511-SDNQ-uint4-svd-r32",
+                    models_dir / "qwen-image" / "Qwen-Image-Edit-2511-SDNQ-uint4-svd-r32",
+                    models_dir / "qwen-image-edit" / "Qwen-Image-Edit-2511-SDNQ-uint4-svd-r32"
+                ]
+                
+                for candidate_path in sdnq_candidates:
+                    if candidate_path.exists():
+                        sdnq_model_path = candidate_path
+                        break
             
-            # 如果还是不存在，尝试扫描models目录下可能的SDNQ模型
-            if not sdnq_model_path.exists():
+            # 如果还是没找到，尝试扫描models目录下可能的SDNQ模型
+            if sdnq_model_path is None or not sdnq_model_path.exists():
+                models_dir = Path(shared.models_path) if hasattr(shared, 'models_path') else Path(__file__).parent.parent.parent.parent / "models"
                 for item in models_dir.iterdir():
                     if item.is_dir() and "SDNQ" in item.name and "uint4" in item.name:
                         sdnq_model_path = models_dir / item.name
                         break
             
             # 如果仍然不存在，返回错误
-            if not sdnq_model_path.exists():
+            if sdnq_model_path is None or not sdnq_model_path.exists():
                 print(f"SDNQ模型路径不存在: {sdnq_model_path}")
                 return
             

@@ -23,18 +23,19 @@
 - 🌟 **Qwen-Image复杂文本渲染和qwen-image-edit-2509精确图像编辑
 
 ## 各项目配置显存要求
-
-- Qwen-Image: 12GB /内存64g
-- Qwen-Image-Layered：16GB
-- Qwen3vL: 10GB
-- Z-Image-Turbo:10g
-- LatentSync: 12GB
-- Index-TTS: 12GB
-- FLUX.1-Kontext:8GB
-- FLUX:8GB
-- XL: 8GB
-- Cleaner: 6GB以上
-- Segment Anything: 10GB
+- Qwen-Image-Edit-2511-SDNQ-uint4-svd-r32： 显存 14GB
+- nuchuku加速 Qwen-Image-Edit-2511: 10GB /内存64g
+- nuchuku加速 Qwen-Image: 显存10GB /内存64g
+- Qwen-Image-Layered：显存14GB
+- Qwen3vL: 显存10GB
+- Z-Image-Turbo:显存10g
+- LatentSync: 显存12GB
+- Index-TTS: 显存12GB
+- FLUX.1-Kontext:显存8GB
+- FLUX:显存8GB
+- XL: 显存8GB
+- Cleaner: 显存6GB以上
+- Segment Anything: 显存10GB
 
 个人主页：[https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click ](https://space.bilibili.com/403361177?spm_id_from=333.40164.0.0) 
 

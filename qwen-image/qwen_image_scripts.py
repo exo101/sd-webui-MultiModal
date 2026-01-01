@@ -564,7 +564,7 @@ def run_text_to_image(args_file):
             pipeline = None
             return
         
-        # 设置模型卸载 - 根据VRAM管理策略规范，始终启用低VRAM模式
+        # 设置模型卸载 - 与官方示例保持一致
         try:
             # 从nunchaku.utils导入get_gpu_memory函数
             from nunchaku.utils import get_gpu_memory
@@ -1179,7 +1179,7 @@ def run_image_editing(args_file):
             else:
                 print("未启用INT8 MatMul优化（Triton不可用或无GPU）")
             
-            # 设置SDNQ模型的内存管理 - 根据VRAM管理策略规范
+            # 设置SDNQ模型的内存管理 - 与官方示例保持一致
             try:
                 pipeline.enable_model_cpu_offload()
                 print("为SDNQ启用模型CPU卸载")
@@ -1285,7 +1285,7 @@ def run_image_editing(args_file):
                 
                 print("模型加载完成")
                 
-                # 设置Nunchaku模型的内存管理 - 根据VRAM管理策略规范，始终启用低VRAM模式
+                # 设置Nunchaku模型的内存管理 - 与官方示例保持一致
                 try:
                     # 从nunchaku.utils导入get_gpu_memory函数
                     from nunchaku.utils import get_gpu_memory
@@ -1305,103 +1305,8 @@ def run_image_editing(args_file):
                     import traceback
                     traceback.print_exc()
             else:
-                # 没有启用Nunchaku或SDNQ模型，使用传统模型加载方式
-                steps = args["steps"]
-                
-                # 获取模型路径
-                model_dir = args.get("model_dir")
-                if model_dir:
-                    qwenimage_edit_models_dir = Path(model_dir)
-                else:
-                    # 根据项目规范，使用正确的模型目录
-                    # 模型应位于 shared.models_path / "qwen-image" / "qwen-image-edit" 目录下
-                    from pathlib import Path
-                    import sys
-                    from modules import shared
-                    models_dir = Path(shared.models_path) / "qwen-image"
-                    qwenimage_edit_models_dir = models_dir / "qwen-image-edit"
-                
-                # 获取用户选择的模型文件
-                model_file = args.get("model_file")
-                
-                # 检查model_file是否有效
-                if not model_file or model_file == "无" or model_file == "None" or model_file == "":
-                    print("错误: 未选择模型文件")
-                    return
-                
-                # 使用用户选择的模型文件
-                model_path = qwenimage_edit_models_dir / model_file
-                
-                print(f"用户选择步数: {steps}")
-                print(f"模型路径: {model_path}")
-                
-                # 检查模型文件是否存在
-                if not model_path.exists():
-                    print(f"模型文件不存在: {model_path}")
-                    return
-                
-                # 加载模型
-                print("开始加载模型...")
-                transformer = EditTransformer.from_pretrained(
-                    str(model_path),
-                    torch_dtype=torch.bfloat16
-                )
-                
-                # 使用传统模型路径
-                base_model_path = model_path.parent.parent  # 获取models/qwen-image目录
-                base_model_path = base_model_path.resolve()  # 获取绝对路径
-                
-                print(f"模型根目录: {base_model_path}")
-                
-                # 确保基础路径存在
-                if not base_model_path.exists():
-                    print(f"模型根目录不存在: {base_model_path}")
-                    return
-                    
-                # 使用本地组件创建pipeline
-                pipeline = QwenImageEditPlusPipeline.from_pretrained(
-                    str(base_model_path),
-                    transformer=transformer,
-                    scheduler=scheduler,
-                    torch_dtype=torch.bfloat16
-                )
-                
-                # 检查并修复Qwen2_5_VLConfig缺少的属性
-                if hasattr(pipeline, 'text_encoder') and hasattr(pipeline.text_encoder, 'config'):
-                    text_config = pipeline.text_encoder.config
-                    # 确保必要的视觉token id存在
-                    if not hasattr(text_config, 'vision_start_token_id'):
-                        setattr(text_config, 'vision_start_token_id', 151652)
-                    if not hasattr(text_config, 'vision_end_token_id'):
-                        setattr(text_config, 'vision_end_token_id', 151653)
-                    if not hasattr(text_config, 'vision_token_id'):
-                        setattr(text_config, 'vision_token_id', 151654)
-                    if not hasattr(text_config, 'image_token_id'):
-                        setattr(text_config, 'image_token_id', 151655)
-                    if not hasattr(text_config, 'video_token_id'):
-                        setattr(text_config, 'video_token_id', 151656)
-                
-                print("模型加载完成")
-                
-                # 设置模型卸载 - 根据VRAM管理策略规范，始终启用低VRAM模式
-                try:
-                    # 从nunchaku.utils导入get_gpu_memory函数
-                    from nunchaku.utils import get_gpu_memory
-                    
-                    if get_gpu_memory() > 18:
-                        pipeline.enable_model_cpu_offload()
-                    else:
-                        # use per-layer offloading for low VRAM. This only requires 3-4GB of VRAM.
-                        transformer.set_offload(
-                            True, use_pin_memory=False, num_blocks_on_gpu=1
-                        )  # increase num_blocks_on_gpu if you have more VRAM
-                        pipeline._exclude_from_cpu_offload.append("transformer")
-                        pipeline.enable_sequential_cpu_offload()
-                    print("启用模型CPU卸载")
-                except Exception as e:
-                    print(f"设置模型CPU卸载失败: {e}")
-                    import traceback
-                    traceback.print_exc()
+                print("错误: 未启用Nunchaku或SDNQ模型")
+                return
             
             # 确保pipeline已定义后再加载LoRA模型
             try:
@@ -1565,6 +1470,8 @@ def run_image_editing(args_file):
         # 为SDNQ模型添加官方推荐的参数
         if sdnq_enable:
             generation_params["guidance_scale"] = 1.0  # 官方示例中的参数
+            # SDNQ模型需要negative_prompt参数，即使为空格
+            generation_params["negative_prompt"] = negative_prompt if negative_prompt else " "
 
         # 生成图像 - 使用torch.inference_mode优化性能
         with torch.inference_mode():

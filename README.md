@@ -24,7 +24,7 @@
 
 ## 各项目配置显存要求
 - Qwen-Image-Edit-2511-SDNQ-uint4-svd-r32： 显存 14GB
-- nuchuku加速 Qwen-Image-Edit-2501: 10GB /内存64g
+- nuchuku加速 Qwen-Image-Edit-2501: 显存10GB /内存64g
 - nuchuku加速 Qwen-Image: 显存10GB /内存64g
 - Qwen-Image-Layered：显存14GB
 - Qwen3vL: 显存10GB

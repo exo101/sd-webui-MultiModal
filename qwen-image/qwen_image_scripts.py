@@ -680,6 +680,7 @@ def run_text_to_image(args_file):
                     print(f"跳过LoRA模型加载（未选择模型或模型路径为空）: {model_name}")
                     return False  # 返回False表示未加载
                 
+                from pathlib import Path
                 model_path = Path(model_path_str)
                 
                 print(f"尝试加载LoRA模型: {model_path}")
@@ -1512,4 +1513,3 @@ def run_image_editing(args_file):
         return
 
         return
-

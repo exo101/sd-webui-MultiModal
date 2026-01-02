@@ -674,14 +674,13 @@ def run_text_to_image(args_file):
         
         # 尝试加载LoRA模型
         try:
-            def load_lora_model(model_path_str, weight, model_name, pipeline):
+            def load_lora_model(model_path_str, weight, model_name, pipeline, transformer=None):
                 # 检查model_path_str是否为"无"、"None"或空字符串
                 if not model_path_str or model_path_str == "无" or model_path_str == "None" or model_path_str == "":
                     print(f"跳过LoRA模型加载（未选择模型或模型路径为空）: {model_name}")
                     return False  # 返回False表示未加载
                 
-                from pathlib import Path
-                model_path = Path(model_path_str)
+                model_path = Path(model_path_str)  # 使用外部导入的Path
                 
                 print(f"尝试加载LoRA模型: {model_path}")
                 
@@ -691,77 +690,80 @@ def run_text_to_image(args_file):
                 
                 print(f"加载LoRA模型 {model_name}: {model_path} (强度: {weight})")
                 try:
-                    # 使用importlib.util直接从文件导入，避免触发整个nunchaku包的加载
-                    import importlib.util
-                    import sys
-                    from pathlib import Path
+                    # 直接从nunchaku导入LoRA模块
+                    from nunchaku.lora.flux.v1.lora_flux_v2 import update_lora_params_v2, set_lora_strength_v2, reset_lora_v2
                     
-                    # 构建LoRA模块文件路径
-                    lora_module_path = Path(__file__).parent.parent / "nunchaku-2_lora_concat" / "nunchaku" / "lora" / "flux" / "v1" / "lora_flux_v2.py"
-                    
-                    # 检查模块文件是否存在
-                    if lora_module_path.exists():
-                        spec = importlib.util.spec_from_file_location("lora_flux_v2", str(lora_module_path))
-                        lora_module = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(lora_module)
-                        
-                        # 获取所需函数
-                        update_lora_params = getattr(lora_module, 'update_lora_params_v2', None)
-                        set_lora_strength_v2 = getattr(lora_module, 'set_lora_strength_v2', None)
-                        
-                        if update_lora_params:
-                            # 加载LoRA权重
-                            lora_state_dict = load_state_dict_in_safetensors(model_path)
-                            if lora_state_dict:
+                    # 加载LoRA权重
+                    lora_state_dict = load_state_dict_in_safetensors(model_path)
+                    if lora_state_dict:
+                        try:
+                            # 尝试应用LoRA权重
+                            if transformer is not None:
+                                # 对于Nunchaku模型，直接对transformer应用LoRA权重
+                                update_lora_params_v2(transformer, lora_state_dict, strength=weight, allow_expand=True)
+                            else:
+                                # 对于普通模型，应用到pipeline.transformer
+                                update_lora_params_v2(pipeline.transformer, lora_state_dict, strength=weight, allow_expand=True)
+                            
+                            print(f"LoRA模型 {model_name} 加载成功")
+                            
+                            # 重新初始化CPU卸载管理器以适应LoRA加载后模型参数维度的变化
+                            if hasattr(pipeline, 'transformer') and hasattr(pipeline.transformer, 'offload') and pipeline.transformer.offload:
+                                print("重新初始化CPU卸载管理器以适应LoRA模型参数")
                                 try:
-                                    # 尝试应用LoRA权重
-                                    update_lora_params(pipeline.transformer, lora_state_dict, strength=weight)
-                                    print(f"LoRA模型 {model_name} 加载成功")
-                                        
-                                        # 重新初始化CPU卸载管理器以适应LoRA加载后模型参数维度的变化
-                                    if hasattr(pipeline, 'transformer') and hasattr(pipeline.transformer, 'offload') and pipeline.transformer.offload:
-                                            print("重新初始化CPU卸载管理器以适应LoRA模型参数")
-                                            try:
-                                                # 保存当前的卸载设置
-                                                use_pin_memory = getattr(pipeline.transformer.offload_manager, 'use_pin_memory', True)
-                                                num_blocks_on_gpu = getattr(pipeline.transformer.offload_manager, 'num_blocks_on_gpu', 1)
-                                                
-                                                # 重新设置卸载
-                                                pipeline.transformer.set_offload(False)  # 先关闭
-                                                pipeline.transformer.set_offload(True, use_pin_memory=use_pin_memory, num_blocks_on_gpu=num_blocks_on_gpu)  # 再开启
-                                            except Exception as e:
-                                                print(f"重新初始化CPU卸载管理器时出错: {e}")
-                                        
-                                    return True
+                                    # 保存当前的卸载设置
+                                    use_pin_memory = getattr(pipeline.transformer.offload_manager, 'use_pin_memory', True)
+                                    num_blocks_on_gpu = getattr(pipeline.transformer.offload_manager, 'num_blocks_on_gpu', 1)
+                                    
+                                    # 重新设置卸载
+                                    pipeline.transformer.set_offload(False)  # 先关闭
+                                    pipeline.transformer.set_offload(True, use_pin_memory=use_pin_memory, num_blocks_on_gpu=num_blocks_on_gpu)  # 再开启
                                 except Exception as e:
-                                    print(f"应用LoRA模型时发生错误: {e}")
-                                    import traceback
-                                    traceback.print_exc()
-                                    return False
-                                else:
-                                    print(f"LoRA模型 {model_name} 加载失败: 无法加载权重")
-                                    return False
-                        else:
-                            print(f"LoRA模块缺少必要的函数: update_lora_params_v2")
-                            return False
+                                    print(f"重新初始化CPU卸载管理器时出错: {e}")
+                            
+                            return True
+                        except RuntimeError as e:
+                            if "size of tensor" in str(e) and "must match" in str(e):
+                                # 尝试重置LoRA（如果可能）
+                                try:
+                                    reset_lora_v2(pipeline.transformer)
+                                except:
+                                    pass
+                                print(f"LoRA模型 {model_name} 加载失败: 张量尺寸不匹配")
+                                return False
+                            elif "unexpected" in str(e):
+                                print(f"LoRA模型 {model_name} 加载失败: 不兼容的参数")
+                                return False
+                            else:
+                                print(f"LoRA模型 {model_name} 加载失败: {e}")
+                                return False
+                        except ValueError as e:
+                            if "mismatch" in str(e).lower() or "shape" in str(e).lower():
+                                print(f"LoRA模型 {model_name} 加载失败: 形状不匹配")
+                                return False
+                            else:
+                                print(f"LoRA模型 {model_name} 加载失败: {e}")
+                                return False
                     else:
-                        print(f"LoRA模块文件不存在: {lora_module_path}")
+                        print(f"LoRA模型 {model_name} 加载失败: 无法加载权重")
                         return False
+                except ImportError as e:
+                    print(f"无法导入Nunchaku LoRA模块: {e}")
+                    return False
                 except Exception as e:
                     print(f"LoRA模型 {model_name} 加载过程中出现错误: {e}")
                     import traceback
                     traceback.print_exc()
                     return False
-                
-            # 确保pipeline已定义后再加载LoRA模型
+        # 确保pipeline已定义后再加载LoRA模型
             try:
-                if 'pipeline' in locals() and pipeline is not None:
+                if pipeline is not None:
                     # 加载两个LoRA模型
                     if lora_model_1 and lora_model_1 != "无" and lora_model_1 != "None":
-                        load_lora_model(lora_model_1, lora_weight_1, "1", pipeline)
+                        load_lora_model(lora_model_1, lora_weight_1, "1", pipeline, transformer)
                         
                     if lora_model_2 and lora_model_2 != "无" and lora_model_2 != "None":
-                        load_lora_model(lora_model_2, lora_weight_2, "2", pipeline)
+                        load_lora_model(lora_model_2, lora_weight_2, "2", pipeline, transformer)
                 else:
                     print("警告: pipeline变量未定义，跳过LoRA模型加载")
             except Exception as e:
@@ -806,15 +808,15 @@ def run_text_to_image(args_file):
         traceback.print_exc()
         return
 
-def load_lora_model(model_path_str, weight, model_name, pipeline):
+def load_lora_model(model_path_str, weight, model_name, pipeline, transformer=None):
     """加载LoRA模型到pipeline"""
     try:
-        # 检查model_path_str是否为"无"或空字符串
+        # 检查model_path_str是否为"无"、"None"或空字符串
         if not model_path_str or model_path_str == "无" or model_path_str == "None" or model_path_str == "":
             print(f"跳过LoRA模型加载（未选择模型或模型路径为空）: {model_name}")
             return False  # 返回False表示未加载
         
-        model_path = Path(model_path_str)
+        model_path = Path(model_path_str)  # 使用外部导入的Path
         
         print(f"尝试加载LoRA模型: {model_path}")
         
@@ -822,24 +824,77 @@ def load_lora_model(model_path_str, weight, model_name, pipeline):
             print(f"LoRA模型文件不存在: {model_path}")
             return False
         
-        # 加载LoRA模型
-        lora_state_dict = load_state_dict_in_safetensors(model_path)
-        
-        # 尝试将LoRA模型加载到pipeline
-        if hasattr(pipeline, 'load_lora_weights'):
-            pipeline.load_lora_weights(lora_state_dict)
-        
-            # 设置LoRA缩放
-            if hasattr(pipeline, 'set_lora_tensor_split'):
-                pipeline.set_lora_tensor_split([weight] * len(lora_state_dict.keys()))
-            elif hasattr(pipeline, 'set_adapters'):
-                # 尝试其他可能的设置方法
-                pass  # 可能需要根据实际pipeline类型调整
-        
-        print(f"成功加载LoRA模型: {model_path} (权重: {weight})")
-        return True  # 返回True表示已加载
+        print(f"加载LoRA模型 {model_name}: {model_path} (强度: {weight})")
+        try:
+            # 使用importlib.util直接从文件导入，避免触发整个nunchaku包的加载
+            import importlib.util
+            import sys
+            
+            # 构建LoRA模块文件路径
+            lora_module_path = Path(__file__).parent.parent / "nunchaku-2_lora_concat" / "nunchaku" / "lora" / "flux" / "v1" / "lora_flux_v2.py"
+            
+            # 检查模块文件是否存在
+            if lora_module_path.exists():
+                spec = importlib.util.spec_from_file_location("lora_flux_v2", str(lora_module_path))
+                lora_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(lora_module)
+                
+                # 获取所需函数
+                update_lora_params = getattr(lora_module, 'update_lora_params_v2', None)
+                set_lora_strength_v2 = getattr(lora_module, 'set_lora_strength_v2', None)
+                
+                if update_lora_params:
+                    # 加载LoRA权重
+                    lora_state_dict = load_state_dict_in_safetensors(model_path)
+                    if lora_state_dict:
+                        try:
+                            # 尝试应用LoRA权重
+                            if transformer is not None:
+                                # 对于Nunchaku模型，直接对transformer应用LoRA权重
+                                update_lora_params(transformer, lora_state_dict, strength=weight)
+                            else:
+                                # 对于普通模型，应用到pipeline.transformer
+                                update_lora_params(pipeline.transformer, lora_state_dict, strength=weight)
+                            
+                            print(f"LoRA模型 {model_name} 加载成功")
+                                
+                                # 重新初始化CPU卸载管理器以适应LoRA加载后模型参数维度的变化
+                            if hasattr(pipeline, 'transformer') and hasattr(pipeline.transformer, 'offload') and pipeline.transformer.offload:
+                                    print("重新初始化CPU卸载管理器以适应LoRA模型参数")
+                                    try:
+                                        # 保存当前的卸载设置
+                                        use_pin_memory = getattr(pipeline.transformer.offload_manager, 'use_pin_memory', True)
+                                        num_blocks_on_gpu = getattr(pipeline.transformer.offload_manager, 'num_blocks_on_gpu', 1)
+                                        
+                                        # 重新设置卸载
+                                        pipeline.transformer.set_offload(False)  # 先关闭
+                                        pipeline.transformer.set_offload(True, use_pin_memory=use_pin_memory, num_blocks_on_gpu=num_blocks_on_gpu)  # 再开启
+                                    except Exception as e:
+                                        print(f"重新初始化CPU卸载管理器时出错: {e}")
+                            
+                            return True
+                        except Exception as e:
+                            print(f"应用LoRA模型时发生错误: {e}")
+                            import traceback
+                            traceback.print_exc()
+                            return False
+                    else:
+                        print(f"LoRA模型 {model_name} 加载失败: 无法加载权重")
+                        return False
+                else:
+                    print(f"LoRA模块缺少必要的函数: update_lora_params_v2")
+                    return False
+            else:
+                print(f"LoRA模块文件不存在: {lora_module_path}")
+                return False
+        except Exception as e:
+            print(f"LoRA模型 {model_name} 加载过程中出现错误: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
     except Exception as e:
         print(f"加载LoRA模型时出错: {e}")
+        print(f"错误详情: 可能是LoRA模型与基础模型不兼容，请确保LoRA模型与当前使用的Nunchaku模型版本和rank匹配")
         import traceback
         traceback.print_exc()
         return False
@@ -1314,10 +1369,10 @@ def run_image_editing(args_file):
                 if pipeline is not None:  # 修复：检查pipeline是否为None而不是使用'pipeline' in locals()
                     # 加载两个LoRA模型
                     if lora_model_1 and lora_model_1 != "无" and lora_model_1 != "None":
-                        load_lora_model(lora_model_1, lora_weight_1, "1", pipeline)
+                        load_lora_model(lora_model_1, lora_weight_1, "1", pipeline, transformer)
                         
                     if lora_model_2 and lora_model_2 != "无" and lora_model_2 != "None":
-                        load_lora_model(lora_model_2, lora_weight_2, "2", pipeline)
+                        load_lora_model(lora_model_2, lora_weight_2, "2", pipeline, transformer)
                 else:
                     print("警告: pipeline变量未定义，跳过LoRA模型加载")
             except Exception as e:

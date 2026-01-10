@@ -43,6 +43,19 @@ except ImportError:
     LORA_SUPPORTED = False
     print("警告: LoRA支持不可用，因为diffusers版本不支持LoRA功能")
 
+def list_lora_models():
+    """列出可用的LoRA模型"""
+    lora_dir = os.path.join(shared.models_path, "Lora")
+    if not os.path.exists(lora_dir):
+        return []
+    
+    lora_files = []
+    for file in os.listdir(lora_dir):
+        if file.endswith('.safetensors') or file.endswith('.ckpt') or file.endswith('.pt'):
+            lora_files.append(file)
+    
+    return lora_files
+
 from transformers import (
     CLIPTextModel,
     CLIPTokenizer,
@@ -76,20 +89,6 @@ LOADED_LORA = None
 LOADED_LORA_WEIGHT = 0.0
 
 SELECTED_MODEL = None
-
-def list_lora_models():
-    """列出所有可用的LoRA模型"""
-    lora_dir = os.path.join(shared.models_path, "Lora")
-    
-    if not os.path.exists(lora_dir):
-        return []
-    
-    lora_files = []
-    for file in os.listdir(lora_dir):
-        if file.endswith(".safetensors") or file.endswith(".pt") or file.endswith(".bin"):
-            lora_files.append(file)
-    
-    return lora_files
 
 def load_lora_weights(pipe, lora_path, weight=0.5):
     """加载LoRA权重到模型中"""
@@ -911,11 +910,11 @@ def create_flux_kontext_ui():
                         )
                         
                     with gr.Row():
-                        dual_lora_weight = gr.Slider(
+                        dual_lora_weight = gr.Number(
                             label="LoRA权重",
                             minimum=0.0,
-                            maximum=1.0,
-                            step=0.05,
+                            maximum=5.0,  # 设置最大值为5.0
+                            step=0.01,    # 设置步长为0.01，允许精确输入
                             value=0.5,
                             info="控制LoRA模型的影响强度"
                         )
@@ -1062,8 +1061,28 @@ def create_flux_kontext_ui():
                 
                 # 如果启用了LoRA，加载LoRA模型
                 if lora_enable and lora_model:
-                    # 注意：这里需要根据实际情况实现LoRA加载逻辑
-                    print(f"LoRA功能暂未完全实现: {lora_model}")
+                    try:
+                        # 获取transformer对象
+                        transformer = pipe.transformer
+                        
+                        # 检查transformer是否支持Lora
+                        if hasattr(transformer, 'update_lora_params'):
+                            # 构建LoRA模型路径
+                            lora_path = os.path.join(shared.models_path, "Lora", lora_model)
+                            
+                            print(f"正在加载LoRA模型: {lora_path}")
+                            
+                            # 加载LoRA
+                            transformer.update_lora_params(lora_path)
+                            transformer.set_lora_strength(lora_weight)
+                            
+                            print(f"LoRA已应用: {lora_model}, 权重: {lora_weight}")
+                        else:
+                            print("警告: 当前管道不支持LoRA功能")
+                    except Exception as e:
+                        print(f"应用LoRA时出错: {e}")
+                        import traceback
+                        traceback.print_exc()
                 
                 # 生成图像
                 # 修复参数传递问题，将image包装成列表，edit_prompt包装成列表

@@ -24,11 +24,10 @@ try:
         DPMSolverMultistepScheduler,
         EulerAncestralDiscreteScheduler,
         UniPCMultistepScheduler,
-        T5EncoderModel
     )
     DIFFUSERS_AVAILABLE = True
 except ImportError:
-    DIFFUSERS_AVAILABLE = True  # 即使导入失败也设为True，因为我们有这些依赖
+    DIFFUSERS_AVAILABLE = False
 
 # 尝试导入nunchaku和ControlNet相关模块
 try:
@@ -58,16 +57,46 @@ except ImportError:
 FLUX_KREA_AVAILABLE = True  # 直接设为True因为我们有所有需要的依赖
 
 # 支持的采样器列表（使用WebUI原生采样器）
-def get_webui_samplers():
-    """获取WebUI原生采样器列表"""
+def get_flux_compatible_samplers():
+    """获取与FLUX模型兼容的采样器列表"""
     try:
-        # 使用WebUI原生采样器
-        samplers = [sampler.name for sampler in sd_samplers.visible_samplers()]
-        return samplers if samplers else ["Euler"]
+        # 只返回与FLUX模型兼容的采样器
+        # FLUX模型只兼容特定的调度器，因此我们只列出兼容的选项
+        compatible_samplers = [
+            "Euler",
+            "Euler a"
+        ]
+        
+        # 检查WebUI中是否提供了这些采样器
+        available_samplers = [sampler.name for sampler in sd_samplers.visible_samplers()]
+        flux_samplers = [sampler for sampler in compatible_samplers if sampler in available_samplers]
+        
+        return flux_samplers if flux_samplers else ["Euler"]
     except Exception as e:
-        print(f"获取WebUI采样器失败: {e}")
+        print(f"获取FLUX兼容采样器失败: {e}")
         # 回退到默认采样器列表
-        return ["Euler", "DPM++ 2M", "Euler Ancestral", "UniPC"]
+        return ["Euler", "Euler a"]
+
+
+def get_available_upscalers():
+    """获取可用的放大算法列表"""
+    try:
+        # 从WebUI获取可用的放大器列表
+        from modules import shared
+        
+        # 检查是否有upscaler相关的属性
+        if hasattr(shared, 'sd_upscalers'):
+            upscaler_names = [upscaler.name for upscaler in shared.sd_upscalers]
+            # 过滤掉空名称并确保列表不为空
+            upscaler_names = [name for name in upscaler_names if name]
+            if upscaler_names:
+                return upscaler_names
+        
+        # 如果无法从shared获取，返回一些默认选项
+        return ['Lanczos', 'Nearest', 'ESRGAN_4x', 'RealESRGAN_x4plus', ' LDSR']
+    except Exception as e:
+        print(f"获取放大算法列表失败: {e}")
+        return ['Lanczos', 'Nearest', 'ESRGAN_4x', 'RealESRGAN_x4plus', 'LDSR']
 
 
 def preprocess_image(image, preprocessor_name, width=1024, height=1024):
@@ -516,51 +545,6 @@ def load_flux_krea_model(model_type, enable_cpu_offload=True, enable_controlnet=
         # 构建本地模型路径
         local_model_path = os.path.join(shared.models_path, "FLUX.1-Kontext-dev")
         
-        # 检查是否存在量化T5模型
-        quantized_t5_path = os.path.join(local_model_path, "awq-int4-flux.1-t5xxl.safetensors")
-        text_encoder_2_path = os.path.join(local_model_path, "text_encoder_2")
-        
-        if os.path.exists(quantized_t5_path) and NUNCHAKU_T5_AVAILABLE:
-            print(f"加载量化T5模型从路径: {quantized_t5_path}")
-            try:
-                # 使用NunchakuT5EncoderModel加载量化模型
-                from nunchaku import NunchakuT5EncoderModel
-                text_encoder_2 = NunchakuT5EncoderModel.from_pretrained(quantized_t5_path)
-                print("成功加载量化T5模型")
-            except Exception as e:
-                print(f"加载量化T5模型失败，回退到标准T5模型: {e}")
-                import traceback
-                traceback.print_exc()
-                
-                # 回退到标准T5模型加载方式
-                if os.path.exists(text_encoder_2_path):
-                    text_encoder_2 = T5EncoderModel.from_pretrained(
-                        text_encoder_2_path,
-                        torch_dtype=torch.bfloat16,
-                        low_cpu_mem_usage=True,
-                    )
-                    print("成功加载标准T5模型")
-                else:
-                    raise Exception(f"T5文本编码器路径不存在: {text_encoder_2_path}")
-        elif os.path.exists(text_encoder_2_path):
-            print(f"加载标准T5模型从路径: {text_encoder_2_path}")
-            try:
-                text_encoder_2 = T5EncoderModel.from_pretrained(
-                    text_encoder_2_path,
-                    torch_dtype=torch.bfloat16,
-                    low_cpu_mem_usage=True,
-                )
-                print("成功加载标准T5模型")
-            except Exception as e:
-                print(f"加载T5模型失败: {e}")
-                import traceback
-                traceback.print_exc()
-                # 修改：提供更具体的错误信息
-                raise Exception(f"无法加载T5文本编码器，请检查 {text_encoder_2_path} 目录中的文件是否完整: {str(e)}")
-        else:
-            # 修改：提供更具体的错误信息
-            raise Exception(f"T5文本编码器路径不存在: {text_encoder_2_path}，请确保该目录包含T5模型文件")
-        
         if enable_controlnet and CONTROLNET_AVAILABLE:
             # 加载ControlNet模型
             print("正在加载ControlNet模型...")
@@ -572,11 +556,10 @@ def load_flux_krea_model(model_type, enable_cpu_offload=True, enable_controlnet=
             )
             controlnet = FluxMultiControlNetModel([controlnet_union])
             
-            # 创建ControlNet管道
+            # 创建ControlNet管道 - 让pipeline自动处理text_encoder_2
             CONTROLNET_PIPE = FluxControlNetPipeline.from_pretrained(
                 local_model_path,
                 transformer=transformer,
-                text_encoder_2=text_encoder_2,
                 controlnet=controlnet,
                 torch_dtype=torch.bfloat16
             )
@@ -592,11 +575,10 @@ def load_flux_krea_model(model_type, enable_cpu_offload=True, enable_controlnet=
             print("FLUX.1-krea ControlNet模型加载完成")
             return CONTROLNET_PIPE
         else:
-            # 创建普通FLUX管道
+            # 创建普通FLUX管道 - 让pipeline自动处理text_encoder_2
             pipe = FluxPipeline.from_pretrained(
                 local_model_path,
                 transformer=transformer,
-                text_encoder_2=text_encoder_2,
                 torch_dtype=torch.bfloat16
             )
             
@@ -627,37 +609,28 @@ def update_sampler(sampler_name):
         return
     
     try:
-        # 查找WebUI采样器配置
-        sampler = None
-        for s in sd_samplers.visible_samplers():
-            if s.name == sampler_name:
-                sampler = s
-                break
-        
-        # 如果找不到匹配的采样器，使用默认的Euler调度器
-        if sampler is None:
-            pipe.scheduler = FlowMatchEulerDiscreteScheduler.from_config(pipe.scheduler.config)
-            print(f"未找到采样器 {sampler_name}，使用默认Euler调度器")
-            return
-        
-        # 对于FLUX模型，我们直接使用diffusers的调度器类
-        # 建立WebUI采样器名称到diffusers调度器类的映射
-        scheduler_map = {
+        # 对于FLUX模型，只使用兼容的调度器
+        # FLUX模型仅支持特定的调度器，避免使用不兼容的调度器
+        flux_scheduler_map = {
             "Euler": FlowMatchEulerDiscreteScheduler,
-            "DPM++ 2M": DPMSolverMultistepScheduler,
             "Euler a": EulerAncestralDiscreteScheduler,
-            "UniPC": UniPCMultistepScheduler
         }
         
-        # 查找对应的调度器类
-        scheduler_class = scheduler_map.get(sampler_name)
-        if scheduler_class:
-            pipe.scheduler = scheduler_class.from_config(pipe.scheduler.config)
-            print(f"采样器已更新为: {sampler_name}")
+        # 检查请求的调度器是否与FLUX模型兼容
+        if sampler_name in flux_scheduler_map:
+            scheduler_class = flux_scheduler_map[sampler_name]
+            try:
+                pipe.scheduler = scheduler_class.from_config(pipe.scheduler.config)
+                print(f"采样器已更新为: {sampler_name}")
+            except Exception as e:
+                print(f"更新调度器 {sampler_name} 时出错: {e}")
+                # 出错时回退到默认调度器
+                pipe.scheduler = FlowMatchEulerDiscreteScheduler.from_config(pipe.scheduler.config)
+                print("已回退到默认Euler调度器")
         else:
-            # 如果没有找到对应的调度器类，使用默认的Euler调度器
+            # 如果请求了不支持的调度器，使用默认的Euler调度器
             pipe.scheduler = FlowMatchEulerDiscreteScheduler.from_config(pipe.scheduler.config)
-            print(f"未找到 {sampler_name} 对应的调度器类，使用默认Euler调度器")
+            print(f"调度器 {sampler_name} 不支持FLUX模型，使用默认Euler调度器")
             
     except Exception as e:
         print(f"更新采样器时出错: {e}")
@@ -673,7 +646,8 @@ def generate_image(prompt, negative_prompt="", width=1024, height=1024,
                    guidance_scale=3.5, num_inference_steps=20, seed=0, 
                    sampler_name="Euler", batch_size=1, enable_controlnet=False, control_image=None, 
                    controlnet_conditioning_scale=0.5, preprocessor_name="none",
-                   enable_hires_fix=False, hires_scale=2.0, hires_steps=10, hires_upscaler="Latent"):
+                   enable_hires_fix=False, hires_scale=2.0, hires_steps=10, hires_upscaler="Latent",
+                   lora_enable=False, lora_model="", lora_weight=0.5):
     """生成图像"""
     global pipe, CONTROLNET_PIPE
     
@@ -742,6 +716,31 @@ def generate_image(prompt, negative_prompt="", width=1024, height=1024,
     if not enable_controlnet:  # 普通生成时才更新采样器
         update_sampler(sampler_name)
     
+    # 如果启用了Lora
+    if lora_enable and lora_model:
+        try:
+            # 获取transformer对象
+            transformer = current_pipe.transformer
+            
+            # 检查transformer是否支持Lora
+            if hasattr(transformer, 'update_lora_params'):
+                # 构建LoRA模型路径
+                lora_path = os.path.join(shared.models_path, "Lora", lora_model)
+                
+                print(f"正在加载LoRA模型: {lora_path}")
+                
+                # 加载LoRA
+                transformer.update_lora_params(lora_path)
+                transformer.set_lora_strength(lora_weight)
+                
+                print(f"LoRA已应用: {lora_model}, 权重: {lora_weight}")
+            else:
+                print("警告: 当前管道不支持LoRA功能")
+        except Exception as e:
+            print(f"应用LoRA时出错: {e}")
+            import traceback
+            traceback.print_exc()
+
     # 设置随机种子
     if seed == 0:
         seed = torch.randint(0, 2**32 - 1, (1,)).item()
@@ -845,7 +844,7 @@ def generate_image(prompt, negative_prompt="", width=1024, height=1024,
             image_paths = []
             for i, image in enumerate(hires_images):
                 timestamp = int(time.time())
-                filename = f"flux_krea_{'controlnet_' if enable_controlnet else ''}{'hires_' if enable_hires_fix and not enable_controlnet else ''}{timestamp}_{i}.png"
+                filename = f"flux_krea_{'controlnet_' if enable_controlnet else ''}{'hires_' if enable_hires_fix and not enable_controlnet else ''}{'lora_' if lora_enable else ''}{timestamp}_{i}.png"
                 save_path = os.path.join(save_dir, filename)
                 image.save(save_path)
                 image_paths.append(save_path)
@@ -860,7 +859,7 @@ def generate_image(prompt, negative_prompt="", width=1024, height=1024,
         image_paths = []
         for i, image in enumerate(images):
             timestamp = int(time.time())
-            filename = f"flux_krea_{'controlnet_' if enable_controlnet else ''}{'hires_' if enable_hires_fix and not enable_controlnet else ''}{timestamp}_{i}.png"
+            filename = f"flux_krea_{'controlnet_' if enable_controlnet else ''}{'hires_' if enable_hires_fix and not enable_controlnet else ''}{'lora_' if lora_enable else ''}{timestamp}_{i}.png"
             save_path = os.path.join(save_dir, filename)
             image.save(save_path)
             image_paths.append(save_path)
@@ -1133,15 +1132,14 @@ def create_flux_krea_ui():
                             )
                             
                         with gr.Row():
-                            krea_lora_weight = gr.Slider(
+                            krea_lora_weight = gr.Number(
                                 label="LoRA权重",
                                 minimum=0.0,
-                                maximum=1.0,
-                                step=0.05,
+                                maximum=5.0,  # 设置最大值为5.0
+                                step=0.01,    # 设置步长为0.01，允许精确输入
                                 value=0.5,
                                 info="控制LoRA模型的影响强度"
                             )
-                        
                         # 添加刷新LoRA模型列表按钮
                         with gr.Row():
                             refresh_lora_button = gr.Button("刷新LoRA模型列表")
@@ -1248,9 +1246,9 @@ def create_flux_krea_ui():
                     with gr.Row():
                         krea_sampler = gr.Dropdown(
                             label="采样器",
-                            choices=get_webui_samplers(),
-                            value="Euler" if "Euler" in get_webui_samplers() else get_webui_samplers()[0],
-                            info="选择图像生成的采样算法"
+                            choices=get_flux_compatible_samplers(),
+                            value="Euler" if "Euler" in get_flux_compatible_samplers() else get_flux_compatible_samplers()[0],
+                            info="选择图像生成的采样算法（仅显示与FLUX模型兼容的选项）"
                         )
             
             # 右半边：生成相关控件区域
@@ -1484,7 +1482,10 @@ def create_flux_krea_ui():
                     enable_hires_fix=enable_hires_fix,
                     hires_scale=hires_scale,
                     hires_steps=hires_steps,
-                    hires_upscaler=hires_upscaler
+                    hires_upscaler=hires_upscaler,
+                    lora_enable=lora_enable,  # 传递Lora启用状态
+                    lora_model=lora_model,    # 传递Lora模型名称
+                    lora_weight=lora_weight   # 传递Lora权重
                 )
                 
                 seed_text = f"使用的种子: {used_seed}"
@@ -1525,7 +1526,7 @@ def create_flux_krea_ui():
                 krea_hires_upscaler
             ], 
             outputs=[krea_generated_images, krea_seed_info]
-        )
+         )
         
         return flux_krea_ui
 

@@ -84,15 +84,8 @@ def import_modules():
         except ImportError: 
             create_sam_ui = None
             SAM_AVAILABLE = False
-
-        # 添加 Qwen Image SDNQ 模块导入
-        try: 
-            from qwen_image_sdnq_ui import create_qwen_image_sdnq_ui, QWEN_IMAGE_SDNQ_MODULE_AVAILABLE
-        except ImportError: 
-            create_qwen_image_sdnq_ui = None
-            QWEN_IMAGE_SDNQ_MODULE_AVAILABLE = True  # 默认设为True，因为这是新功能，不一定需要外部依赖
-
-         # 尝试导入FLUX.1-krea模块
+        
+        # 尝试导入FLUX.1-krea模块
         try: 
             from flux_krea_ui import create_flux_krea_ui, FLUX_KREA_AVAILABLE
         except ImportError: 
@@ -102,31 +95,23 @@ def import_modules():
          # 添加Z-Image模块导入
         try: 
             from z_image_ui import create_z_image_ui as z_image_create_func, Z_IMAGE_MODULE_AVAILABLE
-            print(f"Z-Image模块导入成功，可用性标志: {Z_IMAGE_MODULE_AVAILABLE}")
-        except ImportError as e:
-            print(f"Z-Image模块导入失败: {e}")
+        except ImportError: 
             z_image_create_func = None
             Z_IMAGE_MODULE_AVAILABLE = False
             
-        # 尝试单独导入Z_IMAGE_MODULE_AVAILABLE，以防它在z_image_ui.py中定义而不是作为导出变量
-        if not 'Z_IMAGE_MODULE_AVAILABLE' in locals():
-            try:
-                from z_image_ui import Z_IMAGE_MODULE_AVAILABLE
-                print(f"Z-Image模块可用性标志单独导入成功: {Z_IMAGE_MODULE_AVAILABLE}")
-            except ImportError:
-                try:
-                    from z_image_ui import MODELScope_AVAILABLE as Z_IMAGE_MODULE_AVAILABLE
-                    print(f"Z-Image模块可用性标志通过MODELScope_AVAILABLE导入成功: {Z_IMAGE_MODULE_AVAILABLE}")
-                except ImportError as e:
-                    print(f"Z-Image模块可用性标志导入失败: {e}")
-                    Z_IMAGE_MODULE_AVAILABLE = False
-            try:
-                from z_image_ui import create_z_image_ui as z_image_create_func
-                print("Z-Image UI创建函数导入成功")
-            except ImportError as e:
-                print(f"Z-Image UI创建函数导入失败: {e}")
-                z_image_create_func = None
-            
+        # 添加Qwen API模块导入
+        try: 
+            from qwen_api_ui import create_qwen_api_ui
+        except ImportError: 
+            create_qwen_api_ui = None
+
+        # 添加Qwen视频生成模块导入 - 直接导入重构后的模块
+        try: 
+            from qwen_video import create_qwen_video_gen_ui, QWEN_VIDEO_GEN_AVAILABLE
+        except ImportError: 
+            create_qwen_video_gen_ui = None
+            QWEN_VIDEO_GEN_AVAILABLE = False
+
         # 返回命名空间对象
         import types
         namespace = types.SimpleNamespace()
@@ -152,13 +137,36 @@ def import_modules():
         namespace.SAM_AVAILABLE = SAM_AVAILABLE
         namespace.create_flux_krea_ui = create_flux_krea_ui
         namespace.FLUX_KREA_AVAILABLE = FLUX_KREA_AVAILABLE
-        namespace.create_qwen_image_sdnq_ui = create_qwen_image_sdnq_ui  # 新增：Qwen Image SDNQ模块
-        namespace.QWEN_IMAGE_SDNQ_MODULE_AVAILABLE = QWEN_IMAGE_SDNQ_MODULE_AVAILABLE  # 新增：Qwen Image SDNQ模块可用性
 
-           # 添加 Z-Image 模块到命名空间
+        # 添加 Z-Image 模块到命名空间
+        try:
+            from z_image_ui import create_z_image_ui as z_image_create_func, Z_IMAGE_MODULE_AVAILABLE
+        except ImportError: 
+            z_image_create_func = None
+            Z_IMAGE_MODULE_AVAILABLE = False
+
         namespace.create_z_image_ui = z_image_create_func
         namespace.Z_IMAGE_MODULE_AVAILABLE = Z_IMAGE_MODULE_AVAILABLE
-        print(f"Z-Image模块添加到命名空间，可用性标志: {Z_IMAGE_MODULE_AVAILABLE}")
+        
+        # 添加Qwen API模块到命名空间
+        try: 
+            from qwen_api_ui import create_qwen_api_ui, QWEN_API_AVAILABLE
+        except ImportError: 
+            create_qwen_api_ui = None
+            QWEN_API_AVAILABLE = False
+
+        namespace.create_qwen_api_ui = create_qwen_api_ui
+        namespace.QWEN_API_AVAILABLE = QWEN_API_AVAILABLE
+        
+        # 添加Qwen视频生成模块到命名空间 - 直接从重构模块导入
+        try: 
+            from qwen_video import create_qwen_video_gen_ui, QWEN_VIDEO_GEN_AVAILABLE
+        except ImportError: 
+            create_qwen_video_gen_ui = None
+            QWEN_VIDEO_GEN_AVAILABLE = False
+
+        namespace.create_qwen_video_gen_ui = create_qwen_video_gen_ui
+        namespace.QWEN_VIDEO_GEN_AVAILABLE = QWEN_VIDEO_GEN_AVAILABLE
         
         return namespace
         
@@ -200,38 +208,22 @@ QWEN_IMAGE_MODULE_AVAILABLE = imported_modules.QWEN_IMAGE_MODULE_AVAILABLE
 create_qwen_image_edit_ui = imported_modules.create_qwen_image_edit_ui
 QWEN_IMAGE_EDIT_MODULE_AVAILABLE = imported_modules.QWEN_IMAGE_EDIT_MODULE_AVAILABLE
 
-# 新增：Qwen Image SDNQ 模块变量赋值
-create_qwen_image_sdnq_ui = imported_modules.create_qwen_image_sdnq_ui
-QWEN_IMAGE_SDNQ_MODULE_AVAILABLE = imported_modules.QWEN_IMAGE_SDNQ_MODULE_AVAILABLE
 
 # 添加 Z-Image 模块变量赋值
 create_z_image_ui = imported_modules.create_z_image_ui
-print(f"Z-Image UI创建函数赋值: {create_z_image_ui is not None}")
-
-# 确保即使在导入失败的情况下也能定义变量
-if not hasattr(imported_modules, 'Z_IMAGE_MODULE_AVAILABLE'):
-    # 双重检查机制
-    try:
-        from z_image_ui import Z_IMAGE_MODULE_AVAILABLE as fallback_z_image_available
-        Z_IMAGE_MODULE_AVAILABLE = fallback_z_image_available
-        print(f"Z-Image模块可用性标志通过后备机制获取: {Z_IMAGE_MODULE_AVAILABLE}")
-    except ImportError:
-        try:
-            from z_image_ui import MODELScope_AVAILABLE as fallback_z_image_available
-            Z_IMAGE_MODULE_AVAILABLE = fallback_z_image_available
-            print(f"Z-Image模块可用性标志通过MODELScope获取: {Z_IMAGE_MODULE_AVAILABLE}")
-        except ImportError:
-            Z_IMAGE_MODULE_AVAILABLE = False
-            print("Z-Image模块不可用")
-else:
-    Z_IMAGE_MODULE_AVAILABLE = imported_modules.Z_IMAGE_MODULE_AVAILABLE
-    print(f"Z-Image模块可用性标志从导入模块获取: {Z_IMAGE_MODULE_AVAILABLE}")
-
-print(f"最终Z-Image模块可用性标志: {Z_IMAGE_MODULE_AVAILABLE}")
+Z_IMAGE_MODULE_AVAILABLE = imported_modules.Z_IMAGE_MODULE_AVAILABLE
 
 # 添加FLUX KREA模块变量赋值
 create_flux_krea_ui = imported_modules.create_flux_krea_ui
 FLUX_KREA_AVAILABLE = imported_modules.FLUX_KREA_AVAILABLE
+
+# 添加Qwen API模块变量赋值
+create_qwen_api_ui = imported_modules.create_qwen_api_ui
+QWEN_API_AVAILABLE = imported_modules.QWEN_API_AVAILABLE
+
+# 添加Qwen视频生成模块变量赋值 - 直接使用重构后的模块
+create_qwen_video_gen_ui = imported_modules.create_qwen_video_gen_ui
+QWEN_VIDEO_GEN_AVAILABLE = imported_modules.QWEN_VIDEO_GEN_AVAILABLE
 
 current_dir = os.path.abspath(os.getcwd())
 python_interpreter = sys.executable
@@ -405,6 +397,9 @@ vision_model_names = [
     "qwen3-vl:4b",
     "qwen2.5vl:3b",    
     "qwen3-vl:2b",
+    "qwen3-vl-abliterated:8b",
+    "qwen3-vl-abliterated:4b",
+    "qwen3-vl-abliterated:b",
 ]
 
 # 定义支持的语言模型
@@ -828,7 +823,7 @@ def MultiModal_tab():
                             traceback.print_exc()
                 
                     # FLUX.1-krea图像生成子标签页
-                    with gr.TabItem("FLUX.1-文生图"):
+                    with gr.TabItem("FLUX.1-图像生成"):
                         try:
                             # 检查FLUX.1-krea模块是否可用
                             flux_krea_available = globals().get('FLUX_KREA_AVAILABLE', False)
@@ -846,10 +841,10 @@ def MultiModal_tab():
                             traceback.print_exc()
             # 添加 Qwen Image 标签页（如果可用）
             if 'QWEN_IMAGE_MODULE_AVAILABLE' in globals() and QWEN_IMAGE_MODULE_AVAILABLE:
-                with gr.TabItem("8.Qwen系列图像生成与编辑"):
+                with gr.TabItem("8.nunchaku加速-Qwen Image图像生成与编辑"):
                     try:
                         with gr.Tabs():
-                            with gr.TabItem("Qwen-Image文生图"):
+                            with gr.TabItem("文生图"):
                                 # 创建 Qwen Image 文生图 UI 组件
                                 qwen_image_components = create_qwen_image_ui()
                                 
@@ -857,61 +852,71 @@ def MultiModal_tab():
                                 if not qwen_image_components:
                                     gr.Markdown("Qwen Image文生图模块加载失败")
                             
-                            with gr.TabItem("Qwen-Image-Edit图像编辑"):
+                            with gr.TabItem("图像编辑"):
                                 # 创建 Qwen Image 图像编辑 UI 组件
                                 qwen_image_edit_components = create_qwen_image_edit_ui() if 'create_qwen_image_edit_ui' in globals() and QWEN_IMAGE_EDIT_MODULE_AVAILABLE else None
                                 
                                 # 组件已经自动显示，无需额外处理
                                 if not qwen_image_edit_components:
                                     gr.Markdown("Qwen Image图像编辑模块加载失败")
-                            
-                            # 新增：Qwen Image SDNQ 量化模型标签页
-                            with gr.TabItem("Qwen-Image-Layered图层分离"):
-                                if create_qwen_image_sdnq_ui is not None:
-                                    try:
-                                        qwen_image_sdnq_components = create_qwen_image_sdnq_ui()
-                                    except Exception as e:
-                                        gr.Markdown(f"Qwen Image SDNQ模块初始化错误: {e}")
-                                        import traceback
-                                        traceback.print_exc()
-                                else:
-                                    gr.Markdown("Qwen Image SDNQ模块当前不可用。")
                     except Exception as e:
                         gr.Markdown(f"Qwen Image模块初始化错误: {e}")
                         import traceback
                         traceback.print_exc()
             elif 'QWEN_IMAGE_MODULE_AVAILABLE' in globals() and not QWEN_IMAGE_MODULE_AVAILABLE:
-                with gr.TabItem("8.Qwen系列图像生成"):
+                with gr.TabItem("8.nunchaku加速-Qwen Image图像生成与编辑"):
                     gr.Markdown("Qwen Image模块当前不可用，可能是因为缺少模型文件或依赖项。")
             
             # 添加 Z-Image-Turbo 标签页（如果可用）
-            print(f"检查Z-Image模块可用性: {'Z_IMAGE_MODULE_AVAILABLE' in globals()} and {Z_IMAGE_MODULE_AVAILABLE if 'Z_IMAGE_MODULE_AVAILABLE' in globals() else 'N/A'}")
             if 'Z_IMAGE_MODULE_AVAILABLE' in globals() and Z_IMAGE_MODULE_AVAILABLE:
-                print("Z-Image模块可用，创建标签页")
                 with gr.TabItem("9.Z-Image-Turbo图像生成"):
                     try:
                         with gr.Tabs():
                             with gr.TabItem("文生图"):
                                 # 创建 Z-Image-Turbo 文生图 UI 组件
-                                z_image_components = create_z_image_ui() if 'create_z_image_ui' in globals() else None
+                                z_image_components = create_z_image_ui()
                                 
                                 # 组件已经自动显示，无需额外处理
                                 if not z_image_components:
                                     gr.Markdown("Z-Image-Turbo文生图模块加载失败")
-                                    print("Z-Image-Turbo文生图模块加载失败")
-                            print("Z-Image标签页创建完成")
                     except Exception as e:
                         gr.Markdown(f"Z-Image-Turbo模块初始化错误: {e}")
                         import traceback
                         traceback.print_exc()
-                        print(f"Z-Image-Turbo模块初始化错误: {e}")
-                        print(traceback.format_exc())
             elif 'Z_IMAGE_MODULE_AVAILABLE' in globals() and not Z_IMAGE_MODULE_AVAILABLE:
-                print("Z-Image模块不可用，显示提示信息")
                 with gr.TabItem("9.Z-Image-Turbo图像生成"):
                     gr.Markdown("Z-Image-Turbo模块当前不可用，可能是因为缺少模型文件或依赖项。")
+            
+            # 添加 Qwen API 标签页（如果可用）
+            if 'QWEN_API_AVAILABLE' in globals() and QWEN_API_AVAILABLE:
+                with gr.TabItem("10.API调用模型"):
+                    try:
+                        with gr.Tabs():
+                            with gr.TabItem("Qwen图像生成与编辑API调用"):
+                                # 创建 Qwen API UI 组件
+                                qwen_api_components = create_qwen_api_ui()
+                                
+                                # 组件已经自动显示，无需额外处理
+                                if not qwen_api_components:
+                                    gr.Markdown("Qwen API模块加载失败")
+                            
+                            # 如果视频生成UI可用，也添加进来作为子页面
+                            if 'QWEN_VIDEO_GEN_AVAILABLE' in globals() and QWEN_VIDEO_GEN_AVAILABLE:
+                                with gr.TabItem("wan系列视频生成API调用"):
+                                    qwen_video_gen_components = create_qwen_video_gen_ui()
+                                    
+                                    # 组件已经自动显示，无需额外处理
+                                    if not qwen_video_gen_components:
+                                        gr.Markdown("Qwen视频生成模块加载失败")
+                    except Exception as e:
+                        gr.Markdown(f"Qwen API模块初始化错误: {e}")
+                        import traceback
+                        traceback.print_exc()
+            elif 'QWEN_API_AVAILABLE' in globals() and not QWEN_API_AVAILABLE:
+                with gr.TabItem("10.Qwen API调用"):
+                    gr.Markdown("Qwen API模块当前不可用，可能是因为缺少模型文件或依赖项。")
 
-    return [(ui, "多模态插件14", "MultiModal_vision_tab")]
+    return [(ui, "多模态插件12", "MultiModal_vision_tab")]
 
 # 移除了重复的XYKC_tab函数定义，保留了第一个更完整的版本
                         
@@ -923,26 +928,31 @@ modules_status = {
 }
 
 script_callbacks.on_ui_tabs(MultiModal_tab)
+
+# 避免重复导入已经导入过的模块
+# import modules.scripts as scripts
+# import gradio as gr
+# from modules import script_callbacks
+
 # 在WebUI启动时在后台日志中显示插件信息和使用声明
 def on_app_started(*args, **kwargs):
     print("=" * 60)
-    print("多模态webui插件14 - forge版本专用")
+    print("多模态webui插件12 - forge版本专用")
     print("开发者：鸡肉爱土豆")
     print("网址：https://space.bilibili.com/403361177")
     print("声明：为创作者提供更便捷更强大无复杂工作流的插件")
     print()
     print("集成功能：")
-    print("- Segment-Anything-图像分割")
-    print("- qwen-image图像生成与编辑")
-    print("- Qwen-Image-Layered图层分离")
-    print("- QwenVL批量标注")
-    print("- Qwen3大语言模型交互")
-    print("- cleaner-图像清理")
-    print("- rembg智能抠图")
+    print("- 图像分割")
+    print("- 图像编辑")
+    print("- 图像清理")
+    print("- 批量标注")
+    print("- 大语言模型交互")
+    print("- 智能抠图")
     print("- 视频提取关键帧")
-    print("- index-tts2语音克隆")
-    print("- LatentSync数字人视频生成")
-    
+    print("- 关键词辅助模板")
+    print("- 数字人视频生成")
+    print("- Qwen图像生成")
     print()
     print("使用须知：使用此插件者请合法使用AI，不得发表不正当言论，作假新闻，二次销售，二次改装等违法行为，之后的一切行为与插件开发者无关。")
     print("=" * 60)
@@ -955,4 +965,10 @@ modules_status = {
     'flux_kontext': FLUX_KONTEXT_AVAILABLE,
     'cleaner': CLEANER_AVAILABLE,
     'sam': SAM_AVAILABLE,
+    'qwen_image': QWEN_IMAGE_MODULE_AVAILABLE,
+    'qwen_image_edit': QWEN_IMAGE_EDIT_MODULE_AVAILABLE,
+    'qwen_api': QWEN_API_AVAILABLE,
+    'qwen_video_gen': QWEN_VIDEO_GEN_AVAILABLE,
+    'flux_krea': FLUX_KREA_AVAILABLE,
+    'z_image': Z_IMAGE_MODULE_AVAILABLE,
 }

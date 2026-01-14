@@ -20,19 +20,141 @@ except ImportError as e:
     MODELScope_AVAILABLE = False
     ModelScopeZImagePipeline = None
 
+# 尝试导入图生图功能
+try:
+    import importlib.util
+    import os
+    from pathlib import Path
+    
+    # 获取当前文件所在目录
+    current_dir = Path(__file__).parent
+    img2img_path = current_dir / "z_image_img2img_ui.py"
+
+    if img2img_path.exists():
+        spec = importlib.util.spec_from_file_location("z_image_img2img_ui", str(img2img_path))
+        img2img_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(img2img_module)
+        create_z_image_img2img_ui = img2img_module.create_z_image_img2img_ui
+        IMG2IMG_UI_AVAILABLE = True
+    else:
+        create_z_image_img2img_ui = None
+        IMG2IMG_UI_AVAILABLE = False
+except Exception as e:
+    print(f"[WARNING] 图生图功能模块导入失败: {e}")
+    create_z_image_img2img_ui = None
+    IMG2IMG_UI_AVAILABLE = False
+
+
+def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, seed, sampler, batch_size=1,
+                   enable_hr=False, hr_scale=2.0, hr_upscaler=None, hr_second_pass_steps=0, denoising_strength=0.7,
+                   use_nunchaku=False, nunchaku_precision='fp4', nunchaku_rank=128,
+                   use_fp8=False, fp8_model_name=None, lora_enable=False, lora_model_1=None, lora_weight_1=0.8, lora_model_2=None, lora_weight_2=0.8):
+    """生成图像"""
+    try:
+        if MODELScope_AVAILABLE:
+            pipeline = ModelScopeZImagePipeline(
+                model='Qwen/Qwen1.5-7B-Chat',
+                torch_dtype=torch.float16,
+                device_map="auto",
+                use_nunchaku=use_nunchaku,
+                nunchaku_precision=nunchaku_precision,
+                nunchaku_rank=nunchaku_rank,
+                use_fp8=use_fp8,
+                fp8_model_name=fp8_model_name,
+                lora_enable=lora_enable,
+                lora_model_1=lora_model_1,
+                lora_weight_1=lora_weight_1,
+                lora_model_2=lora_model_2,
+                lora_weight_2=lora_weight_2,
+            )
+            image = pipeline(
+                prompt=prompt,
+                negative_prompt=negative_prompt,
+                width=width,
+                height=height,
+                num_inference_steps=steps,
+                guidance_scale=cfg_scale,
+                seed=seed,
+                scheduler=sampler,
+                num_images_per_prompt=batch_size,
+                enable_hr=enable_hr,
+                hr_scale=hr_scale,
+                hr_upscaler=hr_upscaler,
+                hr_second_pass_steps=hr_second_pass_steps,
+                denoising_strength=denoising_strength,
+            ).images[0]
+            return image, None
+        else:
+            return "错误：无法加载ModelScope模块", None
+    except Exception as e:
+        error_details = traceback.format_exc()
+        return f"图像生成失败: {str(e)}\n详细错误信息:\n{error_details}", None
+
+
+def generate_image_img2img(init_image, prompt, negative_prompt, width, height, steps, cfg_scale, seed, sampler, batch_size=1,
+                           strength=0.6, enable_hr=False, hr_scale=2.0, hr_upscaler=None, hr_second_pass_steps=0, denoising_strength=0.7,
+                           use_nunchaku=False, nunchaku_precision='fp4', nunchaku_rank=128,
+                           use_fp8=False, fp8_model_name=None, lora_enable=False, lora_model_1=None, lora_weight_1=0.8, lora_model_2=None, lora_weight_2=0.8):
+    """这是一个占位函数，实际实现在z_image_img2img_ui.py中"""
+    # 导入独立模块中的实际实现
+    import importlib.util
+    img2img_path = os.path.join(os.path.dirname(__file__), 'z_image_img2img_ui.py')
+    spec = importlib.util.spec_from_file_location("z_image_img2img_ui", img2img_path)
+    img2img_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(img2img_module)
+    generate_image_img2img_impl = img2img_module.generate_image_img2img
+    
+    return generate_image_img2img_impl(init_image, prompt, negative_prompt, width, height, steps, cfg_scale, seed, sampler, batch_size,
+                                      strength, enable_hr, hr_scale, hr_upscaler, hr_second_pass_steps, denoising_strength,
+                                      use_nunchaku, nunchaku_precision, nunchaku_rank,
+                                      use_fp8, fp8_model_name, lora_enable, lora_model_1, lora_weight_1, lora_model_2, lora_weight_2)
+
+
+"""尝试导入图生图功能（如果文件存在）"""
+import importlib.util
+import os
+import sys
+from pathlib import Path
+
+# 获取当前文件所在目录
+current_dir = Path(__file__).parent
+img2img_path = current_dir / "z_image_img2img_ui.py"
+
+# 检查图生图文件是否存在
+if img2img_path.exists():
+    try:
+        # 动态导入图生图模块
+        spec = importlib.util.spec_from_file_location("z_image_img2img_ui", str(img2img_path))
+        img2img_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(img2img_module)
+        generate_image_img2img = img2img_module.generate_image_img2img
+    except Exception as e:
+        print(f"[WARNING] 图生图功能模块导入失败: {e}")
+        
+        # 定义一个占位函数
+        def generate_image_img2img(*args, **kwargs):
+            return "错误：图生图功能模块导入失败", None
+else:
+    print(f"[WARNING] 图生图功能模块未找到: {img2img_path}")
+    
+    # 定义一个占位函数
+    def generate_image_img2img(*args, **kwargs):
+        return "错误：图生图功能模块未找到", None
+
+
+    ModelScopeZImagePipeline = None
+
 # 检查模型文件是否存在
 models_dir = Path(shared.models_path) / "Tongyi-MAI" / "Z-Image-Turbo"
 model_exists = models_dir.exists() and any(models_dir.iterdir())
 
 # 模块是否可用的标志 - 仅基于ModelScope是否可用，不依赖模型文件是否存在
 Z_IMAGE_MODULE_AVAILABLE = MODELScope_AVAILABLE
-print(f"Z-Image-Turbo：模块可用性：{Z_IMAGE_MODULE_AVAILABLE}")
 
 # 确保模块可以被正确导入
 if __name__ != "__main__":
     # 当作为模块导入时，进行简单的初始化检查
     if Z_IMAGE_MODULE_AVAILABLE:
-        print("Z-Image-Turbo：模块初始化完成，准备就绪")
         if not model_exists:
             print("Z-Image-Turbo：模型文件不存在，将在首次使用时提示用户下载")
     else:
@@ -51,24 +173,10 @@ def ensure_model_directory():
         print(f"[INFO] 请将Z-Image-Turbo模型文件放置在上述路径中")
         return False
     else:
-        print(f"[INFO] Z-Image-Turbo模型目录存在且非空: {models_dir}")
         return True
 
 # 检查并确保模型目录存在
 ensure_model_directory()
-
-# 检查其他可能需要的依赖
-try:
-    import diffusers
-    print("[DEBUG] Successfully imported diffusers")
-except ImportError as e:
-    print(f"[DEBUG] Failed to import diffusers: {e}")
-
-try:
-    import transformers
-    print("[DEBUG] Successfully imported transformers")
-except ImportError as e:
-    print(f"[DEBUG] Failed to import transformers: {e}")
 
 # 模型和输出目录
 models_dir = Path(shared.models_path) / "Tongyi-MAI" / "Z-Image-Turbo"
@@ -187,13 +295,11 @@ def load_model_if_needed(model_type='original', nunchaku_precision='fp4', nuncha
 
                 # 设置为FP8模型类型
                 current_model_type = 'fp8'
-                print(f"[INFO] FP8模型加载成功")
                 
             except Exception as e:
                 error_msg = str(e)
-                print(f"[ERROR] 加载FP8模型时出错: {error_msg}")
                 import traceback
-                print(f"[ERROR] 详细错误信息:\n{traceback.format_exc()}")
+                print(f"[ERROR] 加载FP8模型时出错: {error_msg}\n{traceback.format_exc()}")
                 return f"FP8模型加载失败: {str(e)}"
                 
         elif model_type == 'nunchaku':
@@ -247,18 +353,15 @@ def load_model_if_needed(model_type='original', nunchaku_precision='fp4', nuncha
             # 使用模型自带的设备管理机制
             # 启用模型CPU卸载以节省显存
             if hasattr(pipe, 'enable_model_cpu_offload'):
-                print("[INFO] 启用模型CPU卸载以节省显存")
                 pipe.enable_model_cpu_offload()
             elif hasattr(pipe, 'enable_sequential_cpu_offload'):
-                print("[INFO] 启用顺序CPU卸载")
                 pipe.enable_sequential_cpu_offload()
             else:
                 # 如果没有CPU卸载功能，则尝试将模型移动到GPU
                 try:
-                    print("[INFO] 将模型移动到CUDA设备")
                     pipe = pipe.to("cuda")
                 except Exception as move_error:
-                    print(f"[WARNING] 将模型移动到CUDA设备失败: {move_error}")
+                    pass
 
             # 记录Nunchaku参数
             if pipe is not None:
@@ -297,18 +400,15 @@ def load_model_if_needed(model_type='original', nunchaku_precision='fp4', nuncha
             # 使用模型自带的设备管理机制
             # 启用模型CPU卸载以节省显存
             if hasattr(pipe, 'enable_model_cpu_offload'):
-                print("[INFO] 启用模型CPU卸载以节省显存")
                 pipe.enable_model_cpu_offload()
             elif hasattr(pipe, 'enable_sequential_cpu_offload'):
-                print("[INFO] 启用顺序CPU卸载")
                 pipe.enable_sequential_cpu_offload()
             else:
                 # 如果没有CPU卸载功能，则尝试将模型移动到GPU
                 try:
-                    print("[INFO] 将模型移动到CUDA设备")
                     pipe = pipe.to("cuda")
                 except Exception as move_error:
-                    print(f"[WARNING] 将模型移动到CUDA设备失败: {move_error}")
+                    pass
 
             current_model_type = 'original'
 
@@ -418,6 +518,11 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
         if pipe is None:
             return f"错误：管道未正确初始化。模型类型: {model_type}, 加载状态: {status}", None
 
+        # 确保宽高符合VAE要求
+        vae_scale = 8  # VAE缩放因子通常是8
+        width = width - (width % vae_scale)
+        height = height - (height % vae_scale)
+
         # 为Turbo模型设置合适的参数
         actual_steps = min(steps, 10)  # Turbo模型通常只需要很少的步数
         actual_guidance = 0.0  # 根据官方示例，Turbo模型应该使用0.0的guidance_scale
@@ -455,8 +560,8 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
                                 if temp_path.exists():
                                     lora_path_2 = temp_path
                                     break
-                        if lora_path_2.exists():
-                            lora_paths.append((str(lora_path_2), lora_weight_2))
+                            if lora_path_2.exists():
+                                lora_paths.append((str(lora_path_2), lora_weight_2))
                     
                     # 应用LoRA到FP8模型的transformer
                     for lora_path, lora_weight in lora_paths:
@@ -480,7 +585,7 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
                         except RuntimeError as e:
                             if "must match the size of tensor" in str(e):
                                 print(f"[WARNING] LoRA与FP8模型不兼容: {str(e)}")
-                                print(f"[INFO] FP8量化模型与LoRA的维度不匹配，无法加载此LoRA")
+                                print(f"[INFO] FP8量化模型与LoRA的维度不匹配，无法加载此LORA")
                                 return f"LoRA与FP8模型不兼容: 维度不匹配。LoRA通常是针对特定基础模型训练的，可能与量化后的FP8模型不兼容。", None
                             else:
                                 raise e  # 重新抛出其他RuntimeError
@@ -584,118 +689,220 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
 
         # 生成图像 - 使用ModelScope官方示例方式
         try:
-            # ZImagePipeline 不支持 enable_hr 等参数，所以我们只传递支持的参数
             generator = torch.Generator().manual_seed(seed)
             
             print(f"[INFO] 开始生成图像，参数: 提示词='{prompt[:50]}...', 尺寸={width}x{height}, 步数={actual_steps}, 批次大小={batch_size}")
             if lora_applied:
                 print(f"[INFO] LoRA已应用，模型类型: {current_model_type}")
             
-            # 对于FP8模型，我们可能需要特别处理以确保正确的数值范围
-            if model_type == 'fp8':
-                print(f"[INFO] 使用FP8模型生成图像")
-                # FP8模型可能需要不同的处理方式
-                images = pipe(
-                    prompt=prompt,
-                    negative_prompt=negative_prompt,
-                    width=width,
-                    height=height,
-                    num_inference_steps=actual_steps,
-                    guidance_scale=actual_guidance,
-                    generator=generator,
-                    num_images_per_prompt=batch_size,
-                    # 确保输出值在正确范围内
-                    output_type="pil"  # 明确指定输出类型
-                ).images
-            else:
-                images = pipe(
-                    prompt=prompt,
-                    negative_prompt=negative_prompt,
-                    width=width,
-                    height=height,
-                    num_inference_steps=actual_steps,
-                    guidance_scale=actual_guidance,
-                    generator=generator,
-                    num_images_per_prompt=batch_size
-                ).images
-
-            # 确保生成的图像不是空的或全是黑色的
-            processed_images = []
-            for i, image in enumerate(images):
-                # 检查图像是否有像素值
-                import numpy as np
-                img_array = np.array(image)
+            # 高分辨率修复逻辑
+            if enable_hr:
+                print(f"[INFO] 启用高分辨率修复，缩放比例: {hr_scale}")
                 
-                # 检查图像是否全黑（所有像素值都接近0）
-                if np.mean(img_array) < 5:  # 平均像素值低于5，认为是黑图
-                    print(f"[WARNING] 检测到可能是黑图（平均像素值: {np.mean(img_array):.2f}），尝试重新生成")
+                # 第一阶段：生成低分辨率图像
+                low_res_width = width
+                low_res_height = height
+                
+                # 计算高分辨率尺寸，确保它们是8的倍数
+                high_res_width = int(width * hr_scale)
+                high_res_height = int(height * hr_scale)
+                high_res_width = high_res_width - (high_res_width % vae_scale)
+                high_res_height = high_res_height - (high_res_height % vae_scale)
+                
+                print(f"[INFO] 低分辨率: {low_res_width}x{low_res_height}, 高分辨率: {high_res_width}x{high_res_height}")
+                
+                # 生成低分辨率图像
+                if model_type == 'fp8':
+                    low_res_images = pipe(
+                        prompt=prompt,
+                        negative_prompt=negative_prompt,
+                        width=low_res_width,
+                        height=low_res_height,
+                        num_inference_steps=actual_steps,
+                        guidance_scale=actual_guidance,
+                        generator=generator,
+                        num_images_per_prompt=batch_size,
+                        output_type="pil"
+                    ).images
+                else:
+                    low_res_images = pipe(
+                        prompt=prompt,
+                        negative_prompt=negative_prompt,
+                        width=low_res_width,
+                        height=low_res_height,
+                        num_inference_steps=actual_steps,
+                        guidance_scale=actual_guidance,
+                        generator=generator,
+                        num_images_per_prompt=batch_size
+                    ).images
+                
+                # 对每张低分辨率图像进行高分辨率修复
+                processed_images = []
+                for i, low_res_image in enumerate(low_res_images):
+                    # 从低分辨率图像开始进行高分辨率修复
+                    # 使用ZImageImg2ImgPipeline进行高分辨率修复
+                    from diffusers import ZImageImg2ImgPipeline
                     
-                    # 对于FP8模型，尝试更多推理步骤
+                    # 将当前pipe转换为img2img pipeline
+                    img2img_pipe = ZImageImg2ImgPipeline(
+                        vae=pipe.vae,
+                        text_encoder=pipe.text_encoder,
+                        tokenizer=pipe.tokenizer,
+                        transformer=pipe.transformer,
+                        scheduler=pipe.scheduler
+                    )
+
+                    # 使用模型自带的设备管理机制
+                    if hasattr(img2img_pipe, 'enable_model_cpu_offload'):
+                        print("[INFO] 启用模型CPU卸载以节省显存")
+                        img2img_pipe.enable_model_cpu_offload()
+                    elif hasattr(img2img_pipe, 'enable_sequential_cpu_offload'):
+                        print("[INFO] 启用顺序CPU卸载")
+                        img2img_pipe.enable_sequential_cpu_offload()
+                    else:
+                        # 如果没有CPU卸载功能，则尝试将模型移动到GPU
+                        try:
+                            print("[INFO] 将模型移动到CUDA设备")
+                            img2img_pipe = img2img_pipe.to("cuda")
+                        except Exception as move_error:
+                            print(f"[WARNING] 将模型移动到CUDA设备失败: {move_error}")
+
+                    # 调整低分辨率图像到高分辨率尺寸
+                    upscaled_image = low_res_image.resize((high_res_width, high_res_height), resample=Image.LANCZOS)
+                    
+                    # 使用高分辨率参数进行第二次生成
+                    hr_steps = hr_second_pass_steps if hr_second_pass_steps > 0 else actual_steps
+                    hr_strength = denoising_strength if denoising_strength > 0 else 0.6
+                    
                     if model_type == 'fp8':
-                        print(f"[INFO] 使用FP8模型重新生成，增加推理步数")
-                        re_images = pipe(
+                        hr_image = img2img_pipe(
                             prompt=prompt,
                             negative_prompt=negative_prompt,
-                            width=width,
-                            height=height,
-                            num_inference_steps=min(actual_steps + 4, 20),  # 增加步数，但不超过20
+                            image=upscaled_image,
+                            strength=hr_strength,
+                            num_inference_steps=hr_steps,
                             guidance_scale=actual_guidance,
                             generator=generator,
-                            num_images_per_prompt=1,  # 只重新生成一张
+                            num_images_per_prompt=1,
                             output_type="pil"
-                        ).images
+                        ).images[0]
+                    else:
+                        hr_image = img2img_pipe(
+                            prompt=prompt,
+                            negative_prompt=negative_prompt,
+                            image=upscaled_image,
+                            strength=hr_strength,
+                            num_inference_steps=hr_steps,
+                            guidance_scale=actual_guidance,
+                            generator=generator,
+                            num_images_per_prompt=1
+                        ).images[0]
+                    
+                    processed_images.append(hr_image)
+            else:
+                # 非高分辨率修复模式，直接生成图像
+                if model_type == 'fp8':
+                    images = pipe(
+                        prompt=prompt,
+                        negative_prompt=negative_prompt,
+                        width=width,
+                        height=height,
+                        num_inference_steps=actual_steps,
+                        guidance_scale=actual_guidance,
+                        generator=generator,
+                        num_images_per_prompt=batch_size,
+                        # 确保输出值在正确范围内
+                        output_type="pil"  # 明确指定输出类型
+                    ).images
+                else:
+                    images = pipe(
+                        prompt=prompt,
+                        negative_prompt=negative_prompt,
+                        width=width,
+                        height=height,
+                        num_inference_steps=actual_steps,
+                        guidance_scale=actual_guidance,
+                        generator=generator,
+                        num_images_per_prompt=batch_size
+                    ).images
+
+                # 确保生成的图像不是空的或全是黑色的
+                processed_images = []
+                for i, image in enumerate(images):
+                    # 检查图像是否有像素值
+                    import numpy as np
+                    img_array = np.array(image)
+                    
+                    # 检查图像是否全黑（所有像素值都接近0）
+                    if np.mean(img_array) < 5:  # 平均像素值低于5，认为是黑图
+                        print(f"[WARNING] 检测到可能是黑图（平均像素值: {np.mean(img_array):.2f}），尝试重新生成")
                         
-                        # 再次检查重新生成的图像
-                        re_img_array = np.array(re_images[0])
-                        if np.mean(re_img_array) < 5:
-                            print(f"[WARNING] 重新生成后仍是黑图（平均像素值: {np.mean(re_img_array):.2f}），尝试调整参数")
-                            
-                            # 如果仍然是黑图，尝试使用不同的随机种子
-                            alt_generator = torch.Generator().manual_seed(seed + 12345)
+                        # 对于FP8模型，尝试更多推理步骤
+                        if model_type == 'fp8':
+                            print(f"[INFO] 使用FP8模型重新生成，增加推理步数")
                             re_images = pipe(
                                 prompt=prompt,
                                 negative_prompt=negative_prompt,
                                 width=width,
                                 height=height,
-                                num_inference_steps=min(actual_steps + 8, 25),  # 进一步增加步数
+                                num_inference_steps=min(actual_steps + 4, 20),  # 增加步数，但不超过20
                                 guidance_scale=actual_guidance,
-                                generator=alt_generator,
+                                generator=generator,
+                                num_images_per_prompt=1,  # 只重新生成一张
+                                output_type="pil"
+                            ).images
+                            
+                            # 再次检查重新生成的图像
+                            re_img_array = np.array(re_images[0])
+                            if np.mean(re_img_array) < 5:
+                                print(f"[WARNING] 重新生成后仍是黑图（平均像素值: {np.mean(re_img_array):.2f}），尝试调整参数")
+                                
+                                # 如果仍然是黑图，尝试使用不同的随机种子
+                                alt_generator = torch.Generator().manual_seed(seed + 12345)
+                                re_images = pipe(
+                                    prompt=prompt,
+                                    negative_prompt=negative_prompt,
+                                    width=width,
+                                    height=height,
+                                    num_inference_steps=min(actual_steps + 8, 25),  # 进一步增加步数
+                                    guidance_scale=actual_guidance,
+                                    generator=alt_generator,
+                                    num_images_per_prompt=1,
+                                    output_type="pil"
+                                ).images
+                                
+                                # 最终检查
+                                final_img_array = np.array(re_images[0])
+                                if np.mean(final_img_array) < 5:
+                                    print(f"[WARNING] 多次尝试后仍是黑图（平均像素值: {np.mean(final_img_array):.2f}），使用原图像")
+                                    processed_images.append(image)  # 使用原图像
+                                else:
+                                    print(f"[INFO] 重新生成成功（平均像素值: {np.mean(final_img_array):.2f}）")
+                                    processed_images.append(re_images[0])  # 使用新图像
+                            else:
+                                print(f"[INFO] 重新生成成功（平均像素值: {np.mean(re_img_array):.2f}）")
+                                processed_images.append(re_images[0])  # 使用新图像
+                        else:
+                            # 非FP8模型，按原方式处理
+                            alt_images = pipe(
+                                prompt=prompt,
+                                negative_prompt=negative_prompt,
+                                width=width,
+                                height=height,
+                                num_inference_steps=max(actual_steps, 8),
+                                guidance_scale=actual_guidance,
+                                generator=torch.Generator().manual_seed(seed + 1000),
                                 num_images_per_prompt=1,
                                 output_type="pil"
                             ).images
                             
-                            # 最终检查
-                            final_img_array = np.array(re_images[0])
-                            if np.mean(final_img_array) < 5:
-                                print(f"[WARNING] 多次尝试后仍是黑图（平均像素值: {np.mean(final_img_array):.2f}），使用原图像")
+                            alt_img_array = np.array(alt_images[0])
+                            if np.mean(alt_img_array) < 5:
                                 processed_images.append(image)  # 使用原图像
                             else:
-                                print(f"[INFO] 重新生成成功（平均像素值: {np.mean(final_img_array):.2f}）")
-                                processed_images.append(re_images[0])  # 使用新图像
-                        else:
-                            print(f"[INFO] 重新生成成功（平均像素值: {np.mean(re_img_array):.2f}）")
-                            processed_images.append(re_images[0])  # 使用新图像
+                                processed_images.append(alt_images[0])  # 使用新图像
                     else:
-                        # 非FP8模型，按原方式处理
-                        alt_images = pipe(
-                            prompt=prompt,
-                            negative_prompt=negative_prompt,
-                            width=width,
-                            height=height,
-                            num_inference_steps=max(actual_steps, 8),
-                            guidance_scale=actual_guidance,
-                            generator=torch.Generator().manual_seed(seed + 1000),
-                            num_images_per_prompt=1,
-                            output_type="pil"
-                        ).images
-                        
-                        alt_img_array = np.array(alt_images[0])
-                        if np.mean(alt_img_array) < 5:
-                            processed_images.append(image)  # 使用原图像
-                        else:
-                            processed_images.append(alt_images[0])  # 使用新图像
-                else:
-                    processed_images.append(image)  # 图像正常，直接添加
+                        processed_images.append(image)  # 图像正常，直接添加
 
             # 保存图像
             output_images = []
@@ -704,17 +911,14 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
                 image.save(output_image_path)
                 output_images.append(output_dir / f"{seed}_{idx}.png")
 
-            print(f"[INFO] 图像生成完成，共生成 {len(processed_images)} 张图像")
             return "生成成功", output_images
         except Exception as e:
-            print(f"[ERROR] 生成失败: {str(e)}")
             import traceback
-            print(f"[ERROR] 详细错误信息:\n{traceback.format_exc()}")
+            print(f"[ERROR] 生成失败: {str(e)}\n{traceback.format_exc()}")
             return f"生成失败: {str(e)}", None
 
     except Exception as e:
         error_details = traceback.format_exc()
-        print(f"[ERROR] 图像生成失败: {str(e)}\n详细错误信息:\n{error_details}")
         return f"图像生成失败: {str(e)}\n详细错误信息:\n{error_details}", None
 
 
@@ -744,188 +948,203 @@ def create_z_image_ui():
 
     with gr.Blocks() as demo:
         gr.Markdown("# Z-Image-Turbo 图像生成")
-        gr.Markdown("基于 ModelScope 的超快速文生图模型")
+        gr.Markdown("基于 ModelScope 的超快速文生图/图生图模型")
 
-        with gr.Row():
-            with gr.Column():  # 左半边 - 参数设置
-                prompt = gr.Textbox(
-                    label="提示词",
-                    placeholder="输入您的提示词，例如：一只可爱的猫"
-                )
-
-                negative_prompt = gr.Textbox(
-                    label="负面提示词",
-                    placeholder="输入您不希望出现在图像中的内容"
-                )
-
+        # 创建选项卡用于切换文生图和图生图
+        with gr.Tabs():
+            with gr.TabItem("文生图 (Text-to-Image)"):
                 with gr.Row():
-                    width = gr.Slider(
-                        minimum=256, maximum=2048, step=64, value=1024, label="宽度"
-                    )
-                    height = gr.Slider(
-                        minimum=256, maximum=2048, step=64, value=1024, label="高度"
-                    )
-
-                with gr.Row():
-                    steps = gr.Slider(
-                        minimum=1, maximum=50, step=1, value=8, label="推理步数"
-                    )
-                    cfg_scale = gr.Slider(
-                        minimum=0.0, maximum=20.0, step=0.1, value=0.0, label="CFG Scale"
-                    )
-
-                with gr.Row():
-                    seed = gr.Number(
-                        label="随机种子 (-1为随机)", value=-1, precision=0
-                    )
-                    batch_size = gr.Slider(
-                        minimum=1, maximum=8, step=1, value=1, label="生成批次"
-                    )
-
-                sampler = gr.Dropdown(
-                    choices=sampler_names,
-                    value=default_sampler,
-                    label="采样方法"
-                )
-
-                # 添加Nunchaku模型选项
-                with gr.Accordion("Nunchaku 加速模型选项", open=False):
-                    use_nunchaku = gr.Checkbox(label="使用 Nunchaku 加速模型", value=False)
-                    with gr.Group() as nunchaku_options:
-                        gr.Markdown("提示：50系显卡推荐使用 fp4，其他显卡推荐使用 int4")
-                        nunchaku_precision = gr.Dropdown(
-                            choices=["int4", "fp4"],
-                            value="fp4",
-                            label="量化精度",
-                            interactive=True
-                        )
-                        nunchaku_rank = gr.Dropdown(
-                            choices=[32, 64, 128],
-                            value=128,
-                            label="Rank值 (较低值速度更快，较高值质量更好)",
-                            interactive=True
+                    with gr.Column():  # 左半边 - 参数设置
+                        prompt = gr.Textbox(
+                            label="提示词",
+                            placeholder="输入您的提示词，例如：一只可爱的猫"
                         )
 
-                # 添加FP8模型选项
-                with gr.Accordion("FP8 量化模型选项", open=False):
-                    use_fp8 = gr.Checkbox(label="使用 FP8 量化模型", value=False)
-                    with gr.Group(visible=False) as fp8_options:
-                        # 动态获取FP8模型列表
-                        fp8_model_choices = []
-                        try:
-                            # 检查主模型目录下的FP8文件
-                            model_path = Path(shared.models_path)
-                            fp8_files = list(model_path.rglob("*.fp8")) + list(model_path.rglob("*fp8*.safetensors"))  # 递归搜索FP8和safetensors文件
-                            
-                            # 也检查Tongyi-MAI/Z-Image-Turbo目录
-                            zimage_fp8_path = model_path / "Tongyi-MAI" / "Z-Image-Turbo"
-                            if zimage_fp8_path.exists():
-                                fp8_files.extend(list(zimage_fp8_path.glob("*.fp8")))
-                                fp8_files.extend(list(zimage_fp8_path.glob("*fp8*.safetensors")))
-                            
-                            fp8_model_choices = [f.name for f in fp8_files]
-                        except Exception as e:
-                            print(f"[ERROR] 获取FP8模型列表时出错: {e}")
-                        
-                        fp8_model_name = gr.Dropdown(
-                            choices=fp8_model_choices,
-                            value=fp8_model_choices[0] if fp8_model_choices else None,
-                            label="FP8模型文件",
-                            interactive=True
+                        negative_prompt = gr.Textbox(
+                            label="负面提示词",
+                            placeholder="输入您不希望出现在图像中的内容"
                         )
-                        gr.Markdown("注意：FP8模型支持LoRA功能")
 
-                    use_fp8.change(
-                        fn=lambda x: gr.update(visible=x),
-                        inputs=[use_fp8],
-                        outputs=[fp8_options]
-                    )
-
-                # 添加LoRA支持选项
-                with gr.Accordion("LoRA 支持", open=False):
-                    lora_enable = gr.Checkbox(label="启用 LoRA", value=False)
-                    with gr.Group(visible=False) as lora_options:
-                        # 获取LoRA列表
-                        lora_choices = get_lora_list()
-                        
                         with gr.Row():
-                            # 支持多选的下拉框
-                            lora_model_1 = gr.Dropdown(
-                                choices=lora_choices,
-                                label="LoRA 模型 1",
+                            width = gr.Slider(
+                                minimum=256, maximum=2048, step=64, value=1024, label="宽度"
+                            )
+                            height = gr.Slider(
+                                minimum=256, maximum=2048, step=64, value=1024, label="高度"
+                            )
+
+                        with gr.Row():
+                            steps = gr.Slider(
+                                minimum=1, maximum=50, step=1, value=8, label="推理步数"
+                            )
+                            cfg_scale = gr.Slider(
+                                minimum=0.0, maximum=20.0, step=0.1, value=0.0, label="CFG Scale"
+                            )
+
+                        with gr.Row():
+                            seed = gr.Number(
+                                label="随机种子 (-1为随机)", value=-1, precision=0
+                            )
+                            batch_size = gr.Slider(
+                                minimum=1, maximum=8, step=1, value=1, label="生成批次"
+                            )
+
+                        sampler = gr.Dropdown(
+                            choices=sampler_names,
+                            value=default_sampler,
+                            label="采样方法"
+                        )
+
+                        # 添加Nunchaku模型选项
+                        use_nunchaku = gr.Checkbox(label="使用 Nunchaku 加速模型", value=False)
+                        with gr.Group(visible=False) as nunchaku_options:
+                            gr.Markdown("提示：50系显卡推荐使用 fp4，其他显卡推荐使用 int4")
+                            nunchaku_precision = gr.Dropdown(
+                                choices=["int4", "fp4"],
+                                value="fp4",
+                                label="量化精度",
                                 interactive=True
                             )
-                            lora_model_2 = gr.Dropdown(
-                                choices=lora_choices,
-                                label="LoRA 模型 2",
+                            nunchaku_rank = gr.Dropdown(
+                                choices=[32, 64, 128],
+                                value=128,
+                                label="Rank值 (较低值速度更快，较高值质量更好)",
                                 interactive=True
                             )
-                        
-                        with gr.Row():
-                            lora_weight_1 = gr.Slider(minimum=0.0, maximum=2.0, step=0.05, label="LoRA 权重 1", value=0.8)
-                            lora_weight_2 = gr.Slider(minimum=0.0, maximum=2.0, step=0.05, label="LoRA 权重 2", value=0.8)
-                            
-                        with gr.Row():
-                            refresh_lora_btn = gr.Button("刷新LoRA列表", size="sm")
 
-                    # 刷新LoRA列表的函数
-                    def refresh_lora_list():
-                        try:
+                        # 添加FP8模型选项
+                        use_fp8 = gr.Checkbox(label="使用 FP8 量化模型", value=False)
+                        with gr.Group(visible=False) as fp8_options_group:
+                            # 动态获取FP8模型列表
+                            fp8_model_choices = []
+                            try:
+                                # 检查主模型目录下的FP8文件
+                                model_path = Path(shared.models_path)
+                                fp8_files = list(model_path.rglob("*.fp8")) + list(model_path.rglob("*fp8*.safetensors"))  # 递归搜索FP8和safetensors文件
+                                
+                                # 也检查Tongyi-MAI/Z-Image-Turbo目录
+                                zimage_fp8_path = model_path / "Tongyi-MAI" / "Z-Image-Turbo"
+                                if zimage_fp8_path.exists():
+                                    fp8_files.extend(list(zimage_fp8_path.glob("*.fp8")))
+                                    fp8_files.extend(list(zimage_fp8_path.glob("*fp8*.safetensors")))
+                                
+                                fp8_model_choices = [f.name for f in fp8_files]
+                            except Exception as e:
+                                print(f"[ERROR] 获取FP8模型列表时出错: {e}")
+                            
+                            fp8_model_name = gr.Dropdown(
+                                choices=fp8_model_choices,
+                                value=fp8_model_choices[0] if fp8_model_choices else None,
+                                label="FP8模型文件",
+                                interactive=True
+                            )
+                            gr.Markdown("注意：FP8模型支持LoRA功能")
+
+                        # 添加LoRA支持选项
+                        lora_enable = gr.Checkbox(label="启用 LoRA", value=False)
+                        with gr.Group(visible=False) as lora_options_group:
+                            # 获取LoRA列表
                             lora_choices = get_lora_list()
-                            return [gr.update(choices=lora_choices), gr.update(choices=lora_choices)]
-                        except Exception as e:
-                            print(f"刷新LoRA列表失败: {e}")
-                            return [gr.update(), gr.update()]
+                            
+                            with gr.Row():
+                                # 支持多选的下拉框
+                                lora_model_1 = gr.Dropdown(
+                                    choices=lora_choices,
+                                    label="LoRA 模型 1",
+                                    interactive=True
+                                )
+                                lora_model_2 = gr.Dropdown(
+                                    choices=lora_choices,
+                                    label="LoRA 模型 2",
+                                    interactive=True
+                                )
+                            
+                            with gr.Row():
+                                lora_weight_1 = gr.Slider(minimum=0.0, maximum=2.0, step=0.05, label="LoRA 权重 1", value=0.8)
+                                lora_weight_2 = gr.Slider(minimum=0.0, maximum=2.0, step=0.05, label="LoRA 权重 2", value=0.8)
+                                
+                            with gr.Row():
+                                refresh_lora_btn = gr.Button("刷新LoRA列表", size="sm")
 
-                    refresh_lora_btn.click(
-                        fn=refresh_lora_list,
-                        inputs=[],
-                        outputs=[lora_model_1, lora_model_2]
-                    )
+                            # 刷新LoRA列表的函数
+                            def refresh_lora_list():
+                                try:
+                                    lora_choices = get_lora_list()
+                                    return [gr.update(choices=lora_choices), gr.update(choices=lora_choices)]
+                                except Exception as e:
+                                    print(f"刷新LoRA列表失败: {e}")
+                                    return [gr.update(), gr.update()]
 
-                    lora_enable.change(
-                        fn=lambda x: gr.update(visible=x),
-                        inputs=[lora_enable],
-                        outputs=[lora_options]
-                    )
+                            refresh_lora_btn.click(
+                                fn=refresh_lora_list,
+                                inputs=[],
+                                outputs=[lora_model_1, lora_model_2]
+                            )
 
-                # 添加高分辨率修复(Hires.fix)选项
-                with gr.Accordion("高分辨率修复", open=False):
-                    enable_hr = gr.Checkbox(label="启用高分辨率修复", value=False)
-                    with gr.Group(visible=False) as hr_options:
-                        hr_scale = gr.Slider(minimum=1.0, maximum=4.0, step=0.05, label="放大倍数", value=2.0)
-                        hr_upscaler = gr.Dropdown(
-                            label="放大算法",
-                            choices=[*shared.latent_upscale_modes, *[x.name for x in shared.sd_upscalers]],
-                            value=shared.latent_upscale_default_mode
+                        # 添加高分辨率修复(Hires.fix)选项
+                        enable_hr = gr.Checkbox(label="启用高分辨率修复", value=False)
+                        with gr.Group(visible=False) as hr_options_group:
+                            hr_scale = gr.Slider(minimum=1.0, maximum=4.0, step=0.05, label="放大倍数", value=2.0)
+                            hr_upscaler = gr.Dropdown(
+                                label="放大算法",
+                                choices=[*shared.latent_upscale_modes, *[x.name for x in shared.sd_upscalers]],
+                                value=shared.latent_upscale_default_mode
+                            )
+                            hr_second_pass_steps = gr.Slider(minimum=0, maximum=150, step=1, label="高分辨率修复步数", value=0)
+                            denoising_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label="重绘幅度", value=0.7)
+
+                        # 切换高级选项可见性
+                        use_nunchaku.change(
+                            fn=lambda x: gr.update(visible=x),
+                            inputs=[use_nunchaku],
+                            outputs=[nunchaku_options]
                         )
-                        hr_second_pass_steps = gr.Slider(minimum=0, maximum=150, step=1, label="高分辨率修复步数", value=0)
-                        denoising_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label="重绘幅度", value=0.7)
 
-                    enable_hr.change(
-                        fn=lambda x: gr.update(visible=x),
-                        inputs=[enable_hr],
-                        outputs=[hr_options]
-                    )
+                        use_fp8.change(
+                            fn=lambda x: gr.update(visible=x),
+                            inputs=[use_fp8],
+                            outputs=[fp8_options_group]
+                        )
 
-            with gr.Column():  # 右半边 - 输出
-                output_info = gr.Textbox(label="输出信息")
-                output_images = gr.Gallery(label="生成的图像")
+                        lora_enable.change(
+                            fn=lambda x: gr.update(visible=x),
+                            inputs=[lora_enable],
+                            outputs=[lora_options_group]
+                        )
 
-                generate_btn = gr.Button("生成图像", variant="primary")
+                        enable_hr.change(
+                            fn=lambda x: gr.update(visible=x),
+                            inputs=[enable_hr],
+                            outputs=[hr_options_group]
+                        )
 
-                generate_btn.click(
-                    fn=generate_image,
-                    inputs=[
-                        prompt, negative_prompt, width, height,
-                        steps, cfg_scale, seed, sampler, batch_size,
-                        enable_hr, hr_scale, hr_upscaler, hr_second_pass_steps, denoising_strength,
-                        use_nunchaku, nunchaku_precision, nunchaku_rank,  # 添加Nunchaku相关参数
-                        use_fp8, fp8_model_name, lora_enable, lora_model_1, lora_weight_1, lora_model_2, lora_weight_2  # 添加FP8和LoRA相关参数，移除4位量化参数
-                    ],
-                    outputs=[output_info, output_images]
-                )
-                
-                # 移除4位量化按钮和相关功能 
+                    with gr.Column():  # 右半边 - 输出
+                        output_info = gr.Textbox(label="输出信息")
+                        output_images = gr.Gallery(label="生成的图像")
+
+                        generate_btn = gr.Button("生成图像", variant="primary")
+
+                        generate_btn.click(
+                            fn=generate_image,
+                            inputs=[
+                                prompt, negative_prompt, width, height,
+                                steps, cfg_scale, seed, sampler, batch_size,
+                                enable_hr, hr_scale, hr_upscaler, hr_second_pass_steps, denoising_strength,
+                                use_nunchaku, nunchaku_precision, nunchaku_rank,  # 添加Nunchaku相关参数
+                                use_fp8, fp8_model_name, lora_enable, lora_model_1, lora_weight_1, lora_model_2, lora_weight_2  # 添加FP8和LoRA相关参数，移除4位量化参数
+                            ],
+                            outputs=[output_info, output_images]
+                        )
+                        
+                        # 移除4位量化按钮和相关功能 
+
+            # 从独立模块加载图生图选项卡
+            if IMG2IMG_UI_AVAILABLE and create_z_image_img2img_ui:
+                with gr.TabItem("图生图 (Image-to-Image)"):
+                    img2img_interface = create_z_image_img2img_ui()
+                    gr.components.HTML("<p>图生图功能已加载</p>")
+            else:
+                with gr.TabItem("图生图 (Image-to-Image)"):
+                    gr.components.HTML("<p>图生图功能模块未找到</p>")
 
         return demo

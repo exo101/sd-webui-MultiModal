@@ -275,7 +275,9 @@ def preprocess_image(image, preprocessor_name, width=1024, height=1024):
                 "depth_anything_v2": ["depth_anything", "depth anything v2", "depth-anything-v2"],
                 "softedge_hed": ["hed", "softedge_hed", "softedge-hed"],
                 "lineart_standard": ["lineart", "lineart_standard", "lineart-standard"],
-                "lineart_realistic": ["lineart_realistic", "lineart-realistic"],
+                "lineart": ["lineart_standard", "lineart", "lineart_standard"],
+                "lineart_realistic": ["lineart_realistic", "lineart_realistic"],
+                "lineart_anime": ["lineart_anime", "lineart_anime"],
                 "lineart_anime_denoise": ["lineart_anime", "lineart-anime-denoise", "lineart_anime_denoise"],
                 "canny": ["canny"],
                 "cannyf": ["canny"],
@@ -283,7 +285,6 @@ def preprocess_image(image, preprocessor_name, width=1024, height=1024):
                 "scribble_thr": ["scribble"],
                 "scribble_xdog": ["scribble"],
                 "lineart_coarse": ["lineart"],
-                "lineart_anime": ["lineart_anime"],
                 "softedge_pidisafe": ["softedge_pidinet"],
                 "softedge_pidiscan": ["softedge_pidinet"],
                 "openpose_face": ["openpose"],
@@ -291,6 +292,11 @@ def preprocess_image(image, preprocessor_name, width=1024, height=1024):
                 "openpose_hand": ["openpose"],
                 "openpose_body": ["openpose"],
                 "animal_openpose": ["animal_openpose"],
+                "invert": ["invert (from white bg & black line)", "invert"],
+                "lineart_coarse": ["lineart_coarse", "lineart-coarse"],
+                "lineart_anime_denoise": ["lineart_anime_denoise", "lineart-anime-denoise"],
+                "lineart_realistic": ["lineart_realistic", "lineart-realistic"],
+                "invert": ["invert (from white bg & black line)", "invert", "inversion"]
             }
             
             # 如果当前预处理器类型在常见变体映射中，添加这些变体
@@ -1005,6 +1011,9 @@ def create_flux_krea_ui():
                                             "lineart_anime", 
                                             "lineart_coarse",
                                             "lineart_standard",
+                                            "lineart_realistic",  # 添加缺失的预处理器
+                                            "invert",             # 添加invert预处理器
+                                            "lineart_anime_denoise",  # 添加动漫线稿去噪预处理器
                                             "inpaint", 
                                             "inpaint_only",
                                             "inpaint_only+lama",
@@ -1022,7 +1031,7 @@ def create_flux_krea_ui():
                                             "threshold",
                                             "color",
                                             "leres",
-                                            "zoedepth",
+                                            "zoedepath",
                                             "midas",
                                             "animal_openpose",
                                             "oneformer_coco",
@@ -1307,23 +1316,24 @@ def create_flux_krea_ui():
                 "dw_openpose_full",
                 "pidinet", 
                 "lineart", "lineart_anime", "lineart_coarse",
-                "lineart_standard", "inpaint", "inpaint_only", "inpaint_only+lama", "segmentation", "seg_ufade20k",
+                "lineart_standard", "lineart_realistic", "invert", "lineart_anime_denoise",  # 添加缺失的线稿预处理器
+                "inpaint", "inpaint_only", "inpaint_only+lama", "segmentation", "seg_ufade20k",
                 "seg_ofade20k", "seg_ade20k", "fake_scribble", "scribble", "scribble_hed", "mediapipe_face",
-                "tile", "tile_color_fix", "tile_color_various", "threshold", "color", "leres", "zoedepth", "midas",
+                "tile", "tile_color_fix", "tile_color_various", "threshold", "color", "leres", "zoedepath", "midas",
                 "animal_openpose", "oneformer_coco", "oneformer_ade20k"
             ],
             "Canny": ["canny", "threshold"],
             "Depth": [
                 "depth", "depth_leres", "depth_midas", "depth_zoe", "depth_hand_refiner",
-                "depth_anything", "depth_anything_v2", "leres", "zoedepth", "midas"
+                "depth_anything", "depth_anything_v2", "leres", "zoedepath", "midas"
             ],
             "Pose": [
                 "openpose", "openpose_hand", "openpose_face", "openpose_full", 
                 "dw_openpose_full",
                 "animal_openpose", "oneformer_coco", "oneformer_ade20k", "mediapipe_face"
             ],
-            "Lineart": ["lineart", "lineart_anime", "lineart_coarse", "lineart_standard"],
-            "Softedge": ["hed", "pidinet", "scribble_hed"],
+            "Lineart": ["lineart", "lineart_anime", "lineart_coarse", "lineart_standard", "lineart_realistic", "invert", "lineart_anime_denoise"],  # 添加所有线稿预处理器
+            "Softedge": ["hed", "pidinet", "scribble_hed", "lineart_anime_denoise"],  # 添加lineart_anime_denoise到softedge类别
             "Segmentation": ["segmentation", "seg_ufade20k", "seg_ofade20k", "seg_ade20k"],
             "Inpaint": ["inpaint", "inpaint_only", "inpaint_only+lama"],
             "Scribble": ["fake_scribble", "scribble"],

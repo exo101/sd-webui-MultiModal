@@ -26,13 +26,12 @@
 - Qwen-Image-Edit-2511-SDNQ-uint4-svd-r32： 显存 14GB
 - nuchuku加速 Qwen-Image-Edit-2501: 显存10GB /内存64g
 - nuchuku加速 Qwen-Image: 显存10GB /内存64g
-- Qwen-Image-Layered：显存14GB
 - Qwen3vL: 显存10GB
-- Z-Image-Turbo:显存10g
+- Z-Image-Turbo:显存12g
 - LatentSync: 显存12GB
 - Index-TTS: 显存12GB
-- FLUX.1-Kontext:显存8GB
-- FLUX:显存8GB
+- nunchaku加速-FLUX.1-Kontext:显存8GB
+- nunchaku加速FLUX:显存8GB
 - XL: 显存8GB
 - Cleaner: 显存6GB以上
 - Segment Anything: 显存10GB
@@ -72,11 +71,6 @@ WebUI Forge安装使用介绍：
 | `sd-webui-forge-aki`|`models`|`FLUX.1-Kontext-dev`| nunchuku量化fluX系列模型目录 |
 | `sd-webui-forge-aki`|`models`|`ControlNet`| ControlNet控制模型目录 |
 | `sd-webui-forge-aki`|`models`|`ControlNetPreprocessor`| ControlNet预处理器目录 |
-| `sd-webui-forge-aki`|`models`|`insightface`| 换脸插件模型 |
-| `sd-webui-forge-aki`|`models`|`faceswaplab`| 换脸插件模型 |
-| `sd-webui-forge-aki`|`models`|`GFPGAN`| 换脸插件放大模型 |
-| `sd-webui-forge-aki`|`models`|`Codeformer`| 换脸插件放大模型 |
-| `sd-webui-forge-aki`|`models`|`roop`| 换脸插件模型目录 |
 | `sd-webui-forge-aki`|`models`|`sam`| 图像分割模型目录 |
 | `sd-webui-forge-aki`|`models`|`Stable-diffusion`| 传统flux.XL.1.5模型目录 |
 | `sd-webui-forge-aki`|`models`|`Tongyi-MAl`| Z-Image模型目录 |
@@ -88,7 +82,13 @@ WebUI Forge安装使用介绍：
 |---------------------|--------|-----------|-----------|
 | `Adobe Photoshop 2024`|`Plug-ins`|`sd-ppp_PS`| ps插件目录 |
 | `Adobe Photoshop 2024`|`Plug-ins`|`Auto.Photoshop.SD.plugin_v1.4.1`| ps插件目录  |
-  
+
+### 更新内容
+
+2025/1/19
+- 添加Z-Image-Turbo fp8模型支持 lora支持，图生图支持
+- 添加qwen，wan系列api调用模型功能（qwenmix，qwenEdit，wan2.6，wan2.5文生视频，图生视频，首尾帧等）
+- 为qwen，flux，Z-Image，等一众模型界面添加多角度提示词可视化选择器插件
 
 ### 更新内容
 2025/12/31
@@ -96,7 +96,6 @@ WebUI Forge安装使用介绍：
   
 ### 更新内容
 2025/12/30
-- 添加Z-Image-Turbo-SDNQ-uint4-svd-r32 量化模型支持（全位量化）存储更低，显存降低 速度提升
 - 添加Z-Image-Turbo nuchaku量化模型支持（transformer主模型量化），显存降低 速度提升
 - 添加Qwen-Image-Edit-2511-SDNQ-uint4量化模型支持
 - 添加Qwen-Image-Layered图层分离

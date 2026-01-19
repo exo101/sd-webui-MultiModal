@@ -393,6 +393,30 @@ except ImportError as e:
     print(f"Qwen Image 模块导入失败: {e}")
     traceback.print_exc()
 
+# 尝试导入angle_selector模块 - 为编辑模式创建专用的组件
+try:
+    import importlib.util
+    import os
+    from pathlib import Path
+    
+    # 获取当前文件所在目录
+    current_dir = Path(__file__).parent
+    angle_selector_path = current_dir / "qwen_image_edit_angle_selector.py"
+
+    if angle_selector_path.exists():
+        spec = importlib.util.spec_from_file_location("qwen_image_edit_angle_selector", str(angle_selector_path))
+        angle_selector_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(angle_selector_module)
+        create_angle_visualization_component = angle_selector_module.create_qwen_image_edit_angle_visualization_component
+        ANGLE_SELECTOR_AVAILABLE = True
+    else:
+        create_angle_visualization_component = None
+        ANGLE_SELECTOR_AVAILABLE = False
+except Exception as e:
+    print(f"[WARNING] Qwen编辑模式多角度提示词可视化选择器模块导入失败: {e}")
+    create_angle_visualization_component = None
+    ANGLE_SELECTOR_AVAILABLE = False
+
 # ==================== 图像处理辅助函数 ====================
 def parse_script_output(output):
     """解析脚本输出，提取图像路径和信息文件路径"""

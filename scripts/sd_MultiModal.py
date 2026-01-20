@@ -393,13 +393,13 @@ class ChatProcessor:
 
 # 定义支持的视觉模型
 vision_model_names = [
-     "qwen3-vl:8b",
+    "qwen3-vl:8b",
     "qwen3-vl:4b",
     "qwen2.5vl:3b",    
     "qwen3-vl:2b",
-    "qwen3-vl-abliterated:8b",
-    "qwen3-vl-abliterated:4b",
-    "qwen3-vl-abliterated:b",
+    "huihui_ai/qwen3-vl-abliterated:8b",
+    "huihui_ai/qwen3-vl-abliterated:4b",
+    "huihui_ai/qwen3-vl-abliterated:2b",
 ]
 
 # 定义支持的语言模型
@@ -959,3 +959,4 @@ modules_status = {
     'flux_krea': FLUX_KREA_AVAILABLE,
     'z_image': Z_IMAGE_MODULE_AVAILABLE,
 }
+

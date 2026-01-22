@@ -538,8 +538,8 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
         if pipe is None:
             return f"错误：管道未正确初始化。模型类型: {model_type}, 加载状态: {status}", None
 
-        # 确保宽高符合VAE要求
-        vae_scale = 8  # VAE缩放因子通常是8
+        # 自动调整尺寸为16的倍数，这是Z-Image-Turbo模型的要求
+        vae_scale = 16
         width = width - (width % vae_scale)
         height = height - (height % vae_scale)
 
@@ -1182,3 +1182,4 @@ def create_z_image_ui():
                     gr.components.HTML("<p>图生图功能模块未找到</p>")
 
         return demo
+

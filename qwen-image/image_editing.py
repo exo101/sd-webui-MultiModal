@@ -512,6 +512,77 @@ def run_image_editing(args_file):
                 except KeyboardInterrupt:
                     print("用户中断了内存管理设置")
                     return []
+                
+                # 为Nunchaku模型设置max_txt_seq_len属性，以避免运行时错误
+                if hasattr(pipeline, 'transformer') and pipeline.transformer is not None:
+                    # 检查是否是Nunchaku模型，如果是则设置必要的属性
+                    transformer_class_name = pipeline.transformer.__class__.__name__
+                    if "Nunchaku" in transformer_class_name or "nunchaku" in transformer_class_name.lower():
+                        print(f"检测到Nunchaku模型: {transformer_class_name}")
+                        # 设置Nunchaku模型需要的参数
+                        if not hasattr(pipeline.transformer, 'max_txt_seq_len'):
+                            setattr(pipeline.transformer, 'max_txt_seq_len', 256)
+                            print("已为Nunchaku模型设置max_txt_seq_len=256")
+                        if hasattr(pipeline.transformer, 'config') and not hasattr(pipeline.transformer.config, 'max_txt_seq_len'):
+                            setattr(pipeline.transformer.config, 'max_txt_seq_len', 256)
+                            print("已为Nunchaku模型config设置max_txt_seq_len=256")
+                        
+                        # 重写forward方法，以提供默认的txt_seq_lens值
+                        original_forward = pipeline.transformer.forward
+                        
+                        def patched_forward(
+                            hidden_states,
+                            encoder_hidden_states=None,
+                            encoder_hidden_states_mask=None,
+                            timestep=None,
+                            img_shapes=None,
+                            txt_seq_lens=None,
+                            guidance=None,
+                            attention_kwargs=None,
+                            controlnet_block_samples=None,
+                            return_dict=True,
+                        ):
+                            # 如果txt_seq_lens未提供，尝试从encoder_hidden_states推断或使用默认值
+                            if txt_seq_lens is None:
+                                if encoder_hidden_states is not None:
+                                    # 使用encoder_hidden_states的实际序列长度
+                                    seq_len = encoder_hidden_states.size(1)  # 获取序列长度维度
+                                    batch_size = encoder_hidden_states.size(0) if encoder_hidden_states.dim() > 0 else 1
+                                    txt_seq_lens = [seq_len] * batch_size
+                                else:
+                                    # 如果没有encoder_hidden_states，使用一个足够大的默认值
+                                    txt_seq_lens = [256]  # 使用256作为默认值，与max_txt_seq_len一致
+                            elif isinstance(txt_seq_lens, int):
+                                # 如果txt_seq_lens是单个整数，将其转换为列表
+                                txt_seq_lens = [txt_seq_lens]
+                            
+                            return original_forward(
+                                hidden_states=hidden_states,
+                                encoder_hidden_states=encoder_hidden_states,
+                                encoder_hidden_states_mask=encoder_hidden_states_mask,
+                                timestep=timestep,
+                                img_shapes=img_shapes,
+                                txt_seq_lens=txt_seq_lens,
+                                guidance=guidance,
+                                attention_kwargs=attention_kwargs,
+                                controlnet_block_samples=controlnet_block_samples,
+                                return_dict=return_dict,
+                            )
+                        
+                        # 替换forward方法
+                        pipeline.transformer.forward = patched_forward
+                        print("已为Nunchaku模型patch forward方法以处理txt_seq_lens参数")
+                    else:
+                        # 即使不是Nunchaku模型，也要尝试设置属性，以防是QwenImageTransformer的变种
+                        try:
+                            if not hasattr(pipeline.transformer, 'max_txt_seq_len'):
+                                setattr(pipeline.transformer, 'max_txt_seq_len', 256)
+                                print("已为QwenImageTransformer设置max_txt_seq_len=256")
+                            if hasattr(pipeline.transformer, 'config') and not hasattr(pipeline.transformer.config, 'max_txt_seq_len'):
+                                setattr(pipeline.transformer.config, 'max_txt_seq_len', 256)
+                                print("已为QwenImageTransformer config设置max_txt_seq_len=256")
+                        except Exception as e:
+                            print(f"设置max_txt_seq_len属性时出错: {e}")
             else:
                 print("错误: 未启用Nunchaku或SDNQ模型")
                 return

@@ -16,20 +16,16 @@
 - ✂️ **智能抠图**: 基于 rembg 实现一键背景移除
 - 🖌️ **图像分割**: 集成 Segment Anything Model (SAM) 进行精确图像分割
 - 🧹 **图像清理**: 提供图像清理和修复功能
-- 🎬 **视频关键帧提取**: 从视频中提取关键帧用于进一步处理
-- 🤖 **数字人视频生成**: 基于 LatentSync 实现音频驱动的数字人唇形同步视频生成
-- 🔊 **TTS语音合成**: 集成 Index-TTS 实现高质量文本转语音
 - 🌟 **FLUX.1 图像编辑**: 集成 FLUX.1-Kontext 进行上下文感知的图像编辑
 - 🌟 **Qwen-Image复杂文本渲染和qwen-image-edit-2509精确图像编辑
 
 ## 各项目配置显存要求
+- FLUX.2-klein-4B 显存 13GB
 - Qwen-Image-Edit-2511-SDNQ-uint4-svd-r32： 显存 14GB
 - nuchuku加速 Qwen-Image-Edit-2501: 显存10GB /内存64g
 - nuchuku加速 Qwen-Image: 显存10GB /内存64g
 - Qwen3vL: 显存10GB
 - Z-Image-Turbo:显存12g
-- LatentSync: 显存12GB
-- Index-TTS: 显存12GB
 - nunchaku加速-FLUX.1-Kontext:显存8GB
 - nunchaku加速FLUX:显存8GB
 - XL: 显存8GB
@@ -65,9 +61,7 @@ WebUI Forge安装使用介绍：
 | `sd-webui-forge-aki`|`models`|`RealESRGAN`| 高清放大算法目录 |
 | `sd-webui-forge-aki`|`models`|`ESRGAN`| 高清放大算法目录 |
 | `sd-webui-forge-aki`|`models`|`lora`| LoRA微调模型目录 |
-| `sd-webui-forge-aki`|`models`|`LatentSync`| 数字人视频生成模型目录 |
 | `sd-webui-forge-aki`|`models`|`qwen-image`| qwen模型与组件总目录 |
-| `sd-webui-forge-aki`|`models`|`index-tts2`| Index-TTS语音合成模型目录 |
 | `sd-webui-forge-aki`|`models`|`FLUX.1-Kontext-dev`| nunchuku量化fluX系列模型目录 |
 | `sd-webui-forge-aki`|`models`|`ControlNet`| ControlNet控制模型目录 |
 | `sd-webui-forge-aki`|`models`|`ControlNetPreprocessor`| ControlNet预处理器目录 |
@@ -75,7 +69,6 @@ WebUI Forge安装使用介绍：
 | `sd-webui-forge-aki`|`models`|`Stable-diffusion`| 传统flux.XL.1.5模型目录 |
 | `sd-webui-forge-aki`|`models`|`Tongyi-MAl`| Z-Image模型目录 |
 | `sd-webui-forge-aki`|`models`|`vae`| 图像编解码模型 |
-| `C:`|`ffmpeg\`| 语音与视频合成依赖文件 |
 
 ## ps插件
 | ps目录 | 插件目录 | 子目录 |说明 |
@@ -84,6 +77,11 @@ WebUI Forge安装使用介绍：
 | `Adobe Photoshop 2024`|`Plug-ins`|`Auto.Photoshop.SD.plugin_v1.4.1`| ps插件目录  |
 
 ### 更新内容
+2025/1/23
+- 为了避免插件功能过多导致内存增加，多模态插件分裂成了两个插件，sd-webui-MultiModal只负责图像处理，ai绘画模型
+- sd-webui-multimodal-media负责，处理视频，音乐，语音，多媒体，模型位置不变
+- 增加 FLUX.2-klein-4b模型，此模型局部文生图，图像编辑，局部编辑等多模态能力
+- 为每个模型类界面添加了多视角可视化选择器，任务队列功能
 
 2025/1/19
 - 添加Z-Image-Turbo fp8模型支持 lora支持，图生图支持
@@ -202,27 +200,6 @@ WebUI Forge安装使用介绍：
 - 示例教程：https://www.bilibili.com/video/BV1YRehz1EBz?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
 - 图像去噪和修复功能，支持多种清理模式
 - 简单易用的界面<img width="1835" height="741" alt="11" src="https://github.com/user-attachments/assets/4ac7c40d-971c-4364-8cc1-73a872fcec79" />
-
-### 4. 视频关键帧提取
-- 示例教程：https://www.bilibili.com/video/BV1nFarzjExK?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
-- 多种提取模式（关键帧/等间隔/场景变化）
-- 可调节提取质量，支持多种视频格式
-
-### 5. 数字人视频生成 
-- 示例教程：https://www.bilibili.com/video/BV1Vr8XzcE2a?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
-- 基于 LatentSync 的音频驱动视频生成， 需要清晰人脸的视频作为输入，唇形同步
-
-### 6. Index-TTS语音合成
-
-- 示例教程：https://www.bilibili.com/video/BV1ngpHzvETn?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
-- 集成 Index-TTS 实现高质量语音合成
-- 支持中文和多语言合成，可调节语速、音调等参数
-- 开始菜单搜索环境变量， 添加C:\ffmpeg\bin到环境变量
-- <img width="722" height="479" alt="QQ20251018-013019" src="https://github.com/user-attachments/assets/4fe32403-16bd-47c2-9639-59390b7cd741" />
-- <img width="1693" height="734" alt="QQ20251011-134442" src="https://github.com/user-attachments/assets/651fa968-f16d-4084-b6af-db12ac26632d" />
-- <img width="1786" height="805" alt="23" src="https://github.com/user-attachments/assets/1318c3fa-c979-4c93-8003-639e5f43f7f6" />
-- <img width="1788" height="428" alt="17" src="https://github.com/user-attachments/assets/52ed7801-36f3-4145-9386-f2ae7285ea11" />
-   [output_1760002640.wav](https://github.com/user-attachments/files/22794279/output_1760002640.wav)
 
 
 ### 7. FLUX.1-Kontext图像编辑

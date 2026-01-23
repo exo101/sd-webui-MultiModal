@@ -1529,10 +1529,8 @@ def create_flux_klein_ui():
                             # 详细队列状态显示
                             inpaint_detailed_queue_status = gr.Textbox(label="详细任务列表", interactive=False, lines=5, max_lines=10)
                     
-                    with gr.Row():
-                        # 生成按钮和打开目录按钮
-                        inpaint_btn = gr.Button("局部重绘", variant="primary")
-                        inpaint_open_outputs_btn = gr.Button("打开输出目录", variant="secondary")
+                    # 生成按钮
+                    inpaint_btn = gr.Button("局部重绘", variant="primary")
                 
                 with gr.Column():
                     # 结果展示画廊
@@ -1545,6 +1543,9 @@ def create_flux_klein_ui():
                         height="auto",
                     )
                     inpaint_result_status = gr.Textbox(label="状态信息", interactive=False)
+                    
+                    # 打开输出目录按钮
+                    inpaint_open_outputs_btn = gr.Button("打开输出目录", variant="secondary")
             
             # 事件绑定 - 局部重绘部分
             inpaint_btn.click(
@@ -1752,8 +1753,25 @@ def create_flux_klein_ui():
                                 inputs=[],
                                 outputs=outpaint_lora_model
                             )
+                 
+                
+                with gr.Column():
+                    # 结果展示画廊
+                    outpaint_result_gallery = gr.Gallery(
+                        label="图像扩展结果",
+                        show_label=True,
+                        elem_id="flux_outpaint_gallery",
+                        columns=2,
+                        object_fit="contain",
+                        height="auto",
+                    )
+                    outpaint_result_status = gr.Textbox(label="状态信息", interactive=False)
                     
-                    # 队列功能区域
+                    # 打开输出目录按钮
+                    outpaint_open_outputs_btn = gr.Button("打开输出目录", variant="secondary")
+                
+                   
+                # 队列功能区域
                     with gr.Accordion("任务队列", open=False):
                         with gr.Group():
                             outpaint_queue_status_text = gr.Textbox(label="队列状态", value="当前队列大小: 0", interactive=False)
@@ -1770,22 +1788,8 @@ def create_flux_klein_ui():
                             # 详细队列状态显示
                             outpaint_detailed_queue_status = gr.Textbox(label="详细任务列表", interactive=False, lines=5, max_lines=10)
                     
-                    with gr.Row():
-                        # 生成按钮和打开目录按钮
-                        outpaint_btn = gr.Button("图像扩展", variant="primary")
-                        outpaint_open_outputs_btn = gr.Button("打开输出目录", variant="secondary")
-                
-                with gr.Column():
-                    # 结果展示画廊
-                    outpaint_result_gallery = gr.Gallery(
-                        label="图像扩展结果",
-                        show_label=True,
-                        elem_id="flux_outpaint_gallery",
-                        columns=2,
-                        object_fit="contain",
-                        height="auto",
-                    )
-                    outpaint_result_status = gr.Textbox(label="状态信息", interactive=False)
+                    # 生成按钮
+                    outpaint_btn = gr.Button("图像扩展", variant="primary")
                     
                     # 事件绑定 - 图像扩展部分
                     outpaint_btn.click(

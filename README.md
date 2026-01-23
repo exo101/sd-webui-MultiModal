@@ -33,20 +33,12 @@
 - Segment Anything: 显存10GB
 
 个人主页：[https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click ](https://space.bilibili.com/403361177?spm_id_from=333.40164.0.0) 
-
-WebUI Forge安装使用介绍：
-[https://www.bilibili.com/video/BV1BCHXzJE1C?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37  ](https://www.bilibili.com/video/BV1FWtBzbEiR?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37)
-
-多模态插件安装使用介绍：
-[https://www.bilibili.com/video/BV1DSW4zTEGR?spm_id_from=333.788.player.switch&vd_source=343e49b703fb5b4137cd6c1987846f37&p=2](https://www.bilibili.com/video/BV1DSW4zTEGR?spm_id_from=333.788.player.switch&vd_source=343e49b703fb5b4137cd6c1987846f37&p=2)
-
-最新WebUI Forge整合包与插件模型下载链接可在视频简介下方查看由百度网盘地址
+查看多模态webui forge使用教程合集视频，整合包与插件模型下载链接可在视频简介下方查看由百度网盘与夸克网盘
 
 ### 前置要求
 
   - 旧整合包已不适用日益更新的AI应用与50系显卡，我为此更新了新整合包环境，补充落后的webui forge生态
-  - https://github.com/exo101/sd-webui-forge-aki-v4.5
-  - 下载sd-webui-MultiModal插件文件到sd-webui-forge-aki-v4.5/extensions目录
+  - 下载sd-webui-MultiModal插件文件到/extensions目录
     
  ## 插件目录
  
@@ -82,6 +74,7 @@ WebUI Forge安装使用介绍：
 - sd-webui-multimodal-media负责，处理视频，音乐，语音，多媒体，模型位置不变
 - 增加 FLUX.2-klein-4b模型，此模型具备文生图，图像编辑，局部编辑，扩图，等多模态能力
 - 为每个模型类界面添加了多视角可视化选择器，任务队列功能
+- 使用最新模型需到python目录上方输入cmd执行命令 python -m pip install git+https://github.com/huggingface/diffusers
 
 2025/1/19
 - 添加Z-Image-Turbo fp8模型支持 lora支持，图生图支持

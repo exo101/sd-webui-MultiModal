@@ -16,7 +16,7 @@
 - ✂️ **智能抠图**: 基于 rembg 实现一键背景移除
 - 🖌️ **图像分割**: 集成 Segment Anything Model (SAM) 进行精确图像分割
 - 🧹 **图像清理**: 提供图像清理和修复功能
-- 🌟 **FLUX.1 图像编辑**: 集成 FLUX.1-Kontext 进行上下文感知的图像编辑
+- 🌟 **FLUX.2 图像编辑**: 集成 FLUX.1-Kontext 进行上下文感知的图像编辑
 - 🌟 **Qwen-Image复杂文本渲染和qwen-image-edit-2509精确图像编辑
 
 ## 各项目配置显存要求
@@ -34,7 +34,8 @@
 
 个人主页：[https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click ](https://space.bilibili.com/403361177?spm_id_from=333.40164.0.0) 
 AI交流群，整合包与模型在群公告
-##<img width="1284" height="2283" alt="qrcode_1769336555813" src="https://github.com/user-attachments/assets/7fe8030b-6613-42f1-b25f-76192b864ecb" />
+<img width="1284" height="2283" alt="qrcode_1769336728185" src="https://github.com/user-attachments/assets/52a43322-f56f-4b7e-9728-6276b939e419" />
+
 # 前置要求
 
   - 旧整合包已不适用日益更新的AI应用与50系显卡，我为此更新了新整合包环境，补充落后的webui forge生态
@@ -54,6 +55,7 @@ AI交流群，整合包与模型在群公告
 | `sd-webui-forge-aki`|`models`|`ESRGAN`| 高清放大算法目录 |
 | `sd-webui-forge-aki`|`models`|`lora`| LoRA微调模型目录 |
 | `sd-webui-forge-aki`|`models`|`qwen-image`| qwen模型与组件总目录 |
+| `sd-webui-forge-aki`|`models`|`FLUX.2-klein`| nunchuku量化fluX系列模型目录 |
 | `sd-webui-forge-aki`|`models`|`FLUX.1-Kontext-dev`| nunchuku量化fluX系列模型目录 |
 | `sd-webui-forge-aki`|`models`|`ControlNet`| ControlNet控制模型目录 |
 | `sd-webui-forge-aki`|`models`|`ControlNetPreprocessor`| ControlNet预处理器目录 |
@@ -69,67 +71,39 @@ AI交流群，整合包与模型在群公告
 | `Adobe Photoshop 2024`|`Plug-ins`|`Auto.Photoshop.SD.plugin_v1.4.1`| ps插件目录  |
 
 ### 更新内容
-2025/1/23
 - 为了避免插件功能过多导致内存增加，多模态插件分裂成了两个插件，sd-webui-MultiModal只负责图像处理，ai绘画模型
 - sd-webui-multimodal-media负责，处理视频，音乐，语音，多媒体，模型位置不变
 - 增加 FLUX.2-klein-4b模型，此模型具备文生图，图像编辑，局部编辑，扩图，等多模态能力
 - 为每个模型类界面添加了多视角可视化选择器，任务队列功能
 - 使用最新模型需到python目录上方输入cmd执行命令 python -m pip install git+https://github.com/huggingface/diffusers
 
-2025/1/19
 - 添加Z-Image-Turbo fp8模型支持 lora支持，图生图支持
 - 添加qwen，wan系列api调用模型功能（qwenmix，qwenEdit，wan2.6，wan2.5文生视频，图生视频，首尾帧等）
 - 为qwen，flux，Z-Image，等一众模型界面添加多角度提示词可视化选择器插件
+- 添加Qwen-Image-Edit-2511-ControlNet支持
 
 ### 更新内容
-2025/12/31
-- 添加Qwen-Image-Edit-2511-ControlNet支持
-  
-### 更新内容
-2025/12/30
 - 添加Z-Image-Turbo nuchaku量化模型支持（transformer主模型量化），显存降低 速度提升
 - 添加Qwen-Image-Edit-2511-SDNQ-uint4量化模型支持
 - 添加Qwen-Image-Layered图层分离
 - 添加nunchuku flux ControlNet 支持 （补全缺失模块）
 - 下载sd-webui-forge-aki-v5.0 整合包
-  
-
 ### 更新内容
-2025/12/9
 - 添加Z-Image-Turbo 
 - 添加Z-Image-Turbo gguf量化模型
 - 完善各类模型采样方法
   
 ### 更新内容
-2025/11/14
 - 整合包增加ui交互指南，降低使用难度，科普参数，各类模型的加载方式
 - 插件内多数模型ui模块增加了快捷打开目录，多图显示批次
 
-2025/11/6
 - 添加nunchaku-qwen-image-edit-2509 ControlNet功能实现，深度，线稿，姿势，局部编辑
 - 图像识别功能增加模型列表：qwen3VL8b，qwen3VL4b，qwen3VL2b
- 
-2025/10/31
 - 添加nunchaku-qwen-image-edit-2509 lora功能加载
-- 添加一致性场景lora模型，pytorch_lora_weights.safetensors
-- qwen-image文生图模型lora，也可以应用到编辑模型当中
-  
-2025/10/29
-  
+- 添加一致性场景lora模型，pytorch_lora_weights.safetensors 
 - 添加nunchaku qwen lora 功能支持，增加随机种子，生成批次
-- 修复ControlNet启用框bug，完善qwen-image ControlNet实现多个变体预处理器，排除不支持的预处理器防止误触
-- 修复qwen3VL图像识别返回文本首字符缺失的问题bug
-  
-2025/10/24
-
-- webui frogr 整合包更新之4.4版本，添加qwen3VL图像识别模型
-
-2025/10/18
- 
+- 添加qwen3VL图像识别模型
 - 添加qwen-image文生图 ControlNet模块，同时实现了深度，姿势，线稿，软边缘
-  
-2025/10/12
-  
 - 更新多模态SD插件12版本：增加第八个功能标签页nunchaku qwen-image与 qwen-image-edit 2509
 
 ### 1. 资源汇总
@@ -195,13 +169,6 @@ AI交流群，整合包与模型在群公告
 - 简单易用的界面<img width="1835" height="741" alt="11" src="https://github.com/user-attachments/assets/4ac7c40d-971c-4364-8cc1-73a872fcec79" />
 
 
-### 7. FLUX.1-Kontext图像编辑
-- 示例教程：https://www.bilibili.com/video/BV1BeaGz8EEC?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
-- 上下文感知的图像编辑功能，基于文本的图像修改
-- GGUF量化模型优化使用门槛12g显存可用
-- <img width="1813" height="571" alt="21" src="https://github.com/user-attachments/assets/4df0079b-ff8d-4290-ae16-7e367eb90881" />
-- <img width="1024" height="1024" alt="dual_context_image_1756582213_var1" src="https://github.com/user-attachments/assets/1bf91812-70a9-4662-aed1-ac6839a274ab" />
-
  ### 8. qwen-image图像生成介绍
  
  - qwen模型演示教程https://www.bilibili.com/video/BV1zn4TzKEdW/?spm_id_from=333.1387.homepage.video_card.click&vd_source=343e49b703fb5b4137cd6c1987846f37
@@ -253,59 +220,6 @@ AI交流群，整合包与模型在群公告
   - 编辑模型自带ControlNet只需加载预处理器就可以控制图像，保持人物一致性，变化姿态，转换场景构图，编辑文字是个强大的多功能模型
   - 编辑模型可以同时使用自身的微调lora模型和qwen-image lora模型，可保持人物不变的情况下载改变风格
 
-### 支持的预处理器类别
 
-#### 1. 深度类 (Depth)
-用于从图像中提取深度信息的预处理器：
-- depth_midas
-- depth_leres
-- depth_leres++
-- depth_anything
-- depth_anything_v2
-- depth_hand_refiner
-- depth_marigold
-- depth_zoe
 
-#### 2. 姿态类 (Pose)
-用于检测和提取人体姿态关键点的预处理器：
-- openpose_full
-- openpose
-- openpose_face
-- openpose_faceonly
-- openpose_hand
-- dw_openpose_full
-- animal_openpose
-- densepose (pruple bg & purple torso)
-- densepose_parula (black bg & blue torso)
-
-#### 3. 线稿类 (Lineart)
-用于提取或生成线条画的预处理器：
-- lineart_standard (from white bg & black line)
-- lineart_realistic
-- lineart_coarse
-- lineart_anime
-- lineart_anime_denoise
-- invert (from white bg & black line)
-- 
- #### 4. 软边缘类 (softedge)
-- softedge_pidinet
-- softedge_pidinet_safe
-- softedge_pidinstruct
-- softedge_hed
-- softedge_hedsafe
-
-### 不支持的预处理器类别
-
-除了上述三类（深度、姿态、线稿）及其变体外的其他预处理器均不支持，包括但不限于：
-- 颜色类预处理器
-- 语义分割类预处理器
-- 法线贴图类预处理器
-- 边缘检测类预处理器（除线稿类外）
-- 风格迁移类预处理器
-- 其他特殊用途预处理器
-- 带有特定后处理效果的变体
- 重启 WebUI
-
-## 使用须知
-
-使用此插件者请合法使用AI，不得发表不正当言论，作假新闻，二次销售，之后的一切行为与插件开发者无关。
+使用此插件者请合法使用AI

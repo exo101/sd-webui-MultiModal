@@ -33,9 +33,9 @@
 - Segment Anything: 显存10GB
 
 个人主页：[https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click ](https://space.bilibili.com/403361177?spm_id_from=333.40164.0.0) 
-查看多模态webui forge使用教程合集视频，整合包与插件模型下载链接可在视频简介下方查看由百度网盘与夸克网盘
-
-### 前置要求
+AI交流群，整合包与模型在群公告
+##<img width="1284" height="2283" alt="qrcode_1769336555813" src="https://github.com/user-attachments/assets/7fe8030b-6613-42f1-b25f-76192b864ecb" />
+# 前置要求
 
   - 旧整合包已不适用日益更新的AI应用与50系显卡，我为此更新了新整合包环境，补充落后的webui forge生态
   - 下载sd-webui-MultiModal插件文件到/extensions目录

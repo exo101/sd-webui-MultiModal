@@ -80,31 +80,16 @@ AI交流群，整合包与模型在群公告
 - 添加Z-Image-Turbo fp8模型支持 lora支持，图生图支持
 - 添加qwen，wan系列api调用模型功能（qwenmix，qwenEdit，wan2.6，wan2.5文生视频，图生视频，首尾帧等）
 - 为qwen，flux，Z-Image，等一众模型界面添加多角度提示词可视化选择器插件
+
 - 添加Qwen-Image-Edit-2511-ControlNet支持
-
-### 更新内容
 - 添加Z-Image-Turbo nuchaku量化模型支持（transformer主模型量化），显存降低 速度提升
-- 添加Qwen-Image-Edit-2511-SDNQ-uint4量化模型支持
-- 添加Qwen-Image-Layered图层分离
 - 添加nunchuku flux ControlNet 支持 （补全缺失模块）
-- 下载sd-webui-forge-aki-v5.0 整合包
-### 更新内容
-- 添加Z-Image-Turbo 
-- 添加Z-Image-Turbo gguf量化模型
-- 完善各类模型采样方法
-  
-### 更新内容
-- 整合包增加ui交互指南，降低使用难度，科普参数，各类模型的加载方式
-- 插件内多数模型ui模块增加了快捷打开目录，多图显示批次
-
-- 添加nunchaku-qwen-image-edit-2509 ControlNet功能实现，深度，线稿，姿势，局部编辑
-- 图像识别功能增加模型列表：qwen3VL8b，qwen3VL4b，qwen3VL2b
-- 添加nunchaku-qwen-image-edit-2509 lora功能加载
-- 添加一致性场景lora模型，pytorch_lora_weights.safetensors 
-- 添加nunchaku qwen lora 功能支持，增加随机种子，生成批次
-- 添加qwen3VL图像识别模型
-- 添加qwen-image文生图 ControlNet模块，同时实现了深度，姿势，线稿，软边缘
-- 更新多模态SD插件12版本：增加第八个功能标签页nunchaku qwen-image与 qwen-image-edit 2509
+- 整合包增加ui交互指南，降低使用难度，科普参数
+- 添加图像识别模型qwen3VL8b，qwen3VL4b，qwen3VL2b
+- 添加Qwen-Image-Edit-2511-SDNQ-uint4量化模型支持
+- 添加nunchaku-qwen-image，lora  ControlNet模块，同时实现了深度，姿势，线稿，软边缘
+- 添加nunchaku-qwen-image-edit-2509 lora，ControlNet功能实现，深度，线稿，姿势，局部编辑
+- 添加nunchaku qwen-image与 qwen-image-edit 2509
 
 ### 1. 资源汇总
 

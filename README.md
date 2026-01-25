@@ -76,11 +76,13 @@ AI交流群，整合包与模型在群公告
 - 增加 FLUX.2-klein-4b模型，此模型具备文生图，图像编辑，局部编辑，扩图，等多模态能力
 - 为每个模型类界面添加了多视角可视化选择器，任务队列功能
 - 使用最新模型需到python目录上方输入cmd执行命令 python -m pip install git+https://github.com/huggingface/diffusers
-
+- 
+### 更新内容
 - 添加Z-Image-Turbo fp8模型支持 lora支持，图生图支持
 - 添加qwen，wan系列api调用模型功能（qwenmix，qwenEdit，wan2.6，wan2.5文生视频，图生视频，首尾帧等）
 - 为qwen，flux，Z-Image，等一众模型界面添加多角度提示词可视化选择器插件
-
+- 
+### 更新内容
 - 添加Qwen-Image-Edit-2511-ControlNet支持
 - 添加Z-Image-Turbo nuchaku量化模型支持（transformer主模型量化），显存降低 速度提升
 - 添加nunchuku flux ControlNet 支持 （补全缺失模块）

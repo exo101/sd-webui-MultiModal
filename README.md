@@ -33,8 +33,8 @@
 - Segment Anything: 显存10GB
 
 个人主页：[https://space.bilibili.com/403361177?spm_id_from=333.788.upinfo.detail.click ](https://space.bilibili.com/403361177?spm_id_from=333.40164.0.0) 
-AI交流群，整合包与模型在群公告
-<img width="1284" height="2283" alt="qrcode_1769336728185" src="https://github.com/user-attachments/assets/52a43322-f56f-4b7e-9728-6276b939e419" />
+AI交流群qq：1054090769 整合包与模型在群公告
+
 
 # 前置要求
 

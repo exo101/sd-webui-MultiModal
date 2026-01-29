@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>3D Camera View - Kontext</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+        #container-kontext { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .controls-kontext { position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 5px; color: white; }
+        select { margin: 5px; padding: 5px; }
+    </style>
+</head>
+<body>
+    <div id="container-kontext"></div>
+    
+    <div class="controls-kontext">
+        <div>
+            <label>方位角:</label>
+            <select id="azimuth-select-kontext">
+                <option value="0">正面</option>
+                <option value="45">前右四分之三</option>
+                <option value="90">右侧</option>
+                <option value="135">后右四分之三</option>
+                <option value="180">背面</option>
+                <option value="225">后左四分之三</option>
+                <option value="270">左侧</option>
+                <option value="315">前左四分之三</option>
+            </select>
+        </div>
+        <div>
+            <label>高程角:</label>
+            <select id="elevation-select-kontext">
+                <option value="-30">低角度</option>
+                <option value="0">平视</option>
+                <option value="30">仰拍</option>
+                <option value="60">高角度</option>
+            </select>
+        </div>
+        <div>
+            <label>距离:</label>
+            <select id="distance-select-kontext">
+                <option value="8">特写</option>
+                <option value="4">中景</option>
+                <option value="1">远景</option>
+            </select>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // 初始化Three.js场景 - Kontext版本
+        let scene, camera, renderer;
+        let cameraIndicator, azimuthHandle, elevationHandle, distanceHandle;
+        let azimuth = 0, elevation = 0, distance = 4;  // 确保初始值与默认选择一致
+        
+        // 鼠标控制相关变量
+        let isDragging = false;
+        let selectedHandle = null;
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+        let plane = new THREE.Plane();
+        let planeNormal = new THREE.Vector3();
+        let intersection = new THREE.Vector3();
+        let worldPosition = new THREE.Vector3();
+        let offset = new THREE.Vector3();
+        
+        // 将数值转换为对应的角度描述
+        function getValueToDescription() {
+            // 确保角度值被正确映射到有效范围
+            // 使用Math.round()确保浮点数精度问题不会影响映射
+            const roundedAzimuth = Math.round(azimuth);
+            const roundedElevation = Math.round(elevation);
+            const roundedDistance = Math.round(distance);
+
+            console.log('Raw angles:', {azimuth, elevation, distance}); // 添加错误检查
+            console.log('Rounded angles:', {roundedAzimuth, roundedElevation, roundedDistance}); // 添加错误检查
+
+            const azimuthMap = {
+                0: "front view",
+                45: "front-right quarter view", 
+                90: "right side view",
+                135: "back-right quarter view",
+                180: "back view",
+                225: "back-left quarter view",
+                270: "left side view",
+                315: "front-left quarter view"
+            };
+            
+            const elevationMap = {
+                "-30": "low-angle shot",
+                0: "eye-level shot",
+                30: "elevated shot",
+                60: "high-angle shot"
+            };
+            
+            const distanceMap = {
+                8: "close-up",
+                4: "medium shot",
+                1: "wide shot"
+            };
+            
+            // 检查映射是否存在
+            const azimuthResult = azimuthMap[roundedAzimuth];
+            const elevationResult = elevationMap[roundedElevation];
+            const distanceResult = distanceMap[roundedDistance];
+            
+            console.log('Mapping results:', {
+                azimuth: azimuthResult,
+                elevation: elevationResult,
+                distance: distanceResult
+            }); // 添加错误检查
+            
+            const result = {
+                azimuth: azimuthResult || "",
+                elevation: elevationResult || "",
+                distance: distanceResult || ""
+            };
+            
+            console.log('Final mapped result:', result); // 添加错误检查
+            
+            return result;
+        }
+        
+        function init() {
+            // 创建场景
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a0f);
+            
+            // 创建相机
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(4, 3.5, 4);
+            camera.lookAt(0, 0.3, 0);
+            
+            // 创建渲染器
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            document.getElementById('container-kontext').appendChild(renderer.domElement);
+            
+            // 添加光照
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+            
+            const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            mainLight.position.set(5, 10, 5);
+            scene.add(mainLight);
+            
+            const fillLight = new THREE.DirectionalLight(0xE93D82, 0.3);
+            fillLight.position.set(-5, 5, -5);
+            scene.add(fillLight);
+            
+            // 添加网格
+            const gridHelper = new THREE.GridHelper(5, 20, 0x1a1a2e, 0x12121a);
+            gridHelper.position.y = -0.01;
+            scene.add(gridHelper);
+            
+            // 创建中心主体对象
+            const CENTER = new THREE.Vector3(0, 0.5, 0);
+            const cardThickness = 0.02;
+            const cardGeo = new THREE.BoxGeometry(1.2, 1.2, cardThickness);
+            
+            const frontMat = new THREE.MeshBasicMaterial({ color: 0x3a3a4a });
+            const backMat = new THREE.MeshBasicMaterial({ color: 0x1a1a2a });
+            const edgeMat = new THREE.MeshBasicMaterial({ color: 0x1a1a2a });
+            
+            const cardMaterials = [edgeMat, edgeMat, edgeMat, edgeMat, frontMat, backMat];
+            const imagePlane = new THREE.Mesh(cardGeo, cardMaterials);
+            imagePlane.position.copy(CENTER);
+            scene.add(imagePlane);
+            
+            // 主体边框
+            const frameGeo = new THREE.EdgesGeometry(cardGeo);
+            const frameMat = new THREE.LineBasicMaterial({ color: 0xE93D82 });
+            const imageFrame = new THREE.LineSegments(frameGeo, frameMat);
+            imageFrame.position.copy(CENTER);
+            scene.add(imageFrame);
+            
+            // 方位角环 (红色)
+            const AZIMUTH_RADIUS = 1.8;
+            const azRingGeo = new THREE.TorusGeometry(AZIMUTH_RADIUS, 0.04, 16, 100);
+            const azRingMat = new THREE.MeshBasicMaterial({
+                color: 0xE93D82,
+                transparent: true,
+                opacity: 0.7
+            });
+            const azimuthRing = new THREE.Mesh(azRingGeo, azRingMat);
+            azimuthRing.rotation.x = Math.PI / 2;
+            azimuthRing.position.y = 0.02;
+            scene.add(azimuthRing);
+            
+            // 方位角手柄 (红色)
+            const azHandleGeo = new THREE.SphereGeometry(0.16, 32, 32);
+            const azHandleMat = new THREE.MeshStandardMaterial({
+                color: 0xE93D82,
+                emissive: 0xE93D82,
+                emissiveIntensity: 0.6,
+                metalness: 0.3,
+                roughness: 0.4
+            });
+            azimuthHandle = new THREE.Mesh(azHandleGeo, azHandleMat);
+            scene.add(azimuthHandle);
+            
+            // 高程角弧线 (绿色)
+            const ELEVATION_RADIUS = 1.4;
+            const ELEV_ARC_X = -0.8;
+            const arcPoints = [];
+            for (let i = 0; i <= 32; i++) {
+                const angle = (-30 + (90 * i / 32)) * Math.PI / 180;
+                arcPoints.push(new THREE.Vector3(
+                    ELEV_ARC_X,
+                    ELEVATION_RADIUS * Math.sin(angle) + CENTER.y,
+                    ELEVATION_RADIUS * Math.cos(angle)
+                ));
+            }
+            const arcCurve = new THREE.CatmullRomCurve3(arcPoints);
+            const elArcGeo = new THREE.TubeGeometry(arcCurve, 32, 0.04, 8, false);
+            const elArcMat = new THREE.MeshBasicMaterial({
+                color: 0x00FFD0,
+                transparent: true,
+                opacity: 0.8
+            });
+            const elevationArc = new THREE.Mesh(elArcGeo, elArcMat);
+            scene.add(elevationArc);
+            
+            // 高程角手柄 (绿色)
+            const elHandleGeo = new THREE.SphereGeometry(0.16, 32, 32);
+            const elHandleMat = new THREE.MeshStandardMaterial({
+                color: 0x00FFD0,
+                emissive: 0x00FFD0,
+                emissiveIntensity: 0.6,
+                metalness: 0.3,
+                roughness: 0.4
+            });
+            elevationHandle = new THREE.Mesh(elHandleGeo, elHandleMat);
+            scene.add(elevationHandle);
+            
+            // 距离手柄 (黄色)
+            const distHandleGeo = new THREE.SphereGeometry(0.15, 32, 32);
+            const distHandleMat = new THREE.MeshStandardMaterial({
+                color: 0xFFB800,
+                emissive: 0xFFB800,
+                emissiveIntensity: 0.7,
+                metalness: 0.5,
+                roughness: 0.3
+            });
+            distanceHandle = new THREE.Mesh(distHandleGeo, distHandleMat);
+            scene.add(distanceHandle);
+            
+            // 相机指示器
+            const camGeo = new THREE.ConeGeometry(0.15, 0.4, 4);
+            const camMat = new THREE.MeshStandardMaterial({
+                color: 0x3498db,
+                emissive: 0x3498db,
+                emissiveIntensity: 0.5,
+                metalness: 0.8,
+                roughness: 0.2
+            });
+            cameraIndicator = new THREE.Mesh(camGeo, camMat);
+            scene.add(cameraIndicator);
+            
+            // 绑定事件
+            document.getElementById('azimuth-select-kontext').addEventListener('change', function() {
+                azimuth = parseFloat(this.value);
+                updateVisuals();
+                console.log('Azimuth changed to:', azimuth);
+            });
+            
+            document.getElementById('elevation-select-kontext').addEventListener('change', function() {
+                elevation = parseFloat(this.value);
+                updateVisuals();
+                console.log('Elevation changed to:', elevation);
+            });
+            
+            document.getElementById('distance-select-kontext').addEventListener('change', function() {
+                distance = parseFloat(this.value);
+                updateVisuals();
+                console.log('Distance changed to:', distance);
+            });
+            
+            // 监听来自父窗口的消息
+            window.addEventListener('message', function(event) {
+                console.log('Kontext Message received:', event.data); // 添加错误检查
+                if (event.data.type === 'GET_CURRENT_ANGLE_KONTEXT') {
+                    console.log('Received GET_CURRENT_ANGLE_KONTEXT message');
+                    // 确保在返回之前角度值是最新的
+                    // 在返回前再次确保下拉菜单值与内部状态同步
+                    updateDropdowns();
+                    
+                    const desc = getValueToDescription();
+                    console.log('Current angles:', {azimuth, elevation, distance});
+                    console.log('Converted description:', desc);
+                    
+                    // 检查描述是否有效
+                    if (!desc.azimuth && !desc.elevation && !desc.distance) {
+                        console.error('Invalid angle description returned:', desc);
+                    }
+                    
+                    // 返回当前角度值 - 发送到parent（iframe的宿主页面）
+                    try {
+                        parent.postMessage({
+                            type: 'ANGLE_SELECTED_KONTEXT',
+                            azimuth: desc.azimuth,
+                            elevation: desc.elevation,
+                            distance: desc.distance
+                        }, '*');
+                        console.log('Message sent to parent:', {
+                            azimuth: desc.azimuth,
+                            elevation: desc.elevation,
+                            distance: desc.distance
+                        });
+                    } catch (error) {
+                        console.error('Error sending message to parent:', error);
+                    }
+                }
+            });
+            
+            // 发送页面就绪信号
+            console.log('Sending CAMERA_3D_READY_KONTEXT signal');
+            parent.postMessage({ type: 'CAMERA_3D_READY_KONTEXT' }, '*');
+            
+            // 鼠标事件
+            renderer.domElement.addEventListener('mousedown', onMouseDown);
+            renderer.domElement.addEventListener('mousemove', onMouseMove);
+            renderer.domElement.addEventListener('mouseup', onMouseUp);
+            
+            // 窗口大小调整
+            window.addEventListener('resize', onWindowResize, false);
+            
+            // 开始动画循环
+            animate();
+            
+            // 在初始化完成后确保下拉菜单值正确
+            setTimeout(function() {
+                document.getElementById('azimuth-select-kontext').value = "0";
+                document.getElementById('elevation-select-kontext').value = "0";
+                document.getElementById('distance-select-kontext').value = "4";
+                
+                console.log('Initial values set:', {
+                    azimuth: document.getElementById('azimuth-select-kontext').value,
+                    elevation: document.getElementById('elevation-select-kontext').value,
+                    distance: document.getElementById('distance-select-kontext').value
+                });
+                
+                // 确保全局变量也更新
+                console.log('Global variables after init:', {azimuth, elevation, distance});
+                
+                // 更新可视化
+                updateVisuals();
+            }, 100);
+            
+            // 初始更新
+            updateVisuals();
+        }
+        
+        function updateVisuals() {
+            // 更新相机指示器位置
+            const camX = distance * 0.3 * Math.sin(azimuth * Math.PI / 180) * Math.cos(elevation * Math.PI / 180);
+            const camY = distance * 0.3 * Math.sin(elevation * Math.PI / 180) + 0.5;
+            const camZ = distance * 0.3 * Math.cos(azimuth * Math.PI / 180) * Math.cos(elevation * Math.PI / 180);
+            
+            cameraIndicator.position.set(camX, camY, camZ);
+            cameraIndicator.lookAt(0, 0.5, 0);
+            cameraIndicator.rotateX(Math.PI / 2);
+            
+            // 更新方位角手柄
+            const azX = 1.8 * Math.sin(azimuth * Math.PI / 180);
+            const azZ = 1.8 * Math.cos(azimuth * Math.PI / 180);
+            azimuthHandle.position.set(azX, 0.02, azZ);
+            
+            // 更新高程角手柄
+            const elY = 1.4 * Math.sin(elevation * Math.PI / 180) + 0.5;
+            const elZ = 1.4 * Math.cos(elevation * Math.PI / 180);
+            elevationHandle.position.set(-0.8, elY, elZ);
+            
+            // 更新距离手柄
+            const distVec = new THREE.Vector3(camX, camY, camZ);
+            distVec.normalize();
+            const distX = distVec.x * distance * 0.3;
+            const distY = distVec.y * distance * 0.3;
+            const distZ = distVec.z * distance * 0.3;
+            distanceHandle.position.set(distX, distY, distZ);
+        }
+        
+        function updateDropdowns() {
+            // 更新方位角下拉框
+            const azimuthSelect = document.getElementById('azimuth-select-kontext');
+            if (azimuthSelect && !isNaN(azimuth)) {
+                // 找到最接近的角度值选项
+                const validAngles = [0, 45, 90, 135, 180, 225, 270, 315];
+                let closestAngle = validAngles[0];
+                let minDiff = Math.abs(azimuth - validAngles[0]);
+                
+                for (let i = 1; i < validAngles.length; i++) {
+                    let diff = Math.abs(azimuth - validAngles[i]);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closestAngle = validAngles[i];
+                    }
+                }
+                
+                // 使用找到的最接近值更新下拉框
+                azimuthSelect.value = closestAngle.toString();
+            }
+            
+            // 更新高程角下拉框
+            const elevationSelect = document.getElementById('elevation-select-kontext');
+            if (elevationSelect && !isNaN(elevation)) {
+                const validElevations = [-30, 0, 30, 60];
+                let closestElevation = validElevations[0];
+                let minDiff = Math.abs(elevation - validElevations[0]);
+                
+                for (let i = 1; i < validElevations.length; i++) {
+                    let diff = Math.abs(elevation - validElevations[i]);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closestElevation = validElevations[i];
+                    }
+                }
+                
+                elevationSelect.value = closestElevation.toString();
+            }
+            
+            // 更新距离下拉框
+            const distanceSelect = document.getElementById('distance-select-kontext');
+            if (distanceSelect && !isNaN(distance)) {
+                const validDistances = [8, 4, 1]; // close-up, medium shot, wide shot
+                let closestDistance = validDistances[0];
+                let minDiff = Math.abs(distance - validDistances[0]);
+                
+                for (let i = 1; i < validDistances.length; i++) {
+                    let diff = Math.abs(distance - validDistances[i]);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closestDistance = validDistances[i];
+                    }
+                }
+                
+                distanceSelect.value = closestDistance.toString();
+            }
+            
+            console.log('Kontext Updated dropdowns:', {azimuth, elevation, distance});
+            console.log('Kontext Dropdown values set to:', {
+                azimuth: document.getElementById('azimuth-select-kontext').value,
+                elevation: document.getElementById('elevation-select-kontext').value,
+                distance: document.getElementById('distance-select-kontext').value
+            });
+        }
+        
+        function onMouseDown(event) {
+            // 计算鼠标位置
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            // 更新射线
+            raycaster.setFromCamera(mouse, camera);
+            
+            // 检测是否点击了某个手柄
+            const intersects = raycaster.intersectObjects([
+                azimuthHandle, 
+                elevationHandle, 
+                distanceHandle
+            ]);
+            
+            if (intersects.length > 0) {
+                isDragging = true;
+                selectedHandle = intersects[0].object;
+                
+                // 计算偏移量
+                raycaster.ray.intersectPlane(plane, intersection);
+                offset.copy(intersection).sub(selectedHandle.position);
+            }
+        }
+        
+        function onMouseMove(event) {
+            if (isDragging && selectedHandle) {
+                // 计算鼠标位置
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                
+                // 更新射线
+                raycaster.setFromCamera(mouse, camera);
+                
+                // 计算新的位置
+                raycaster.ray.intersectPlane(plane, intersection);
+                selectedHandle.position.copy(intersection.add(offset));
+                
+                // 根据拖动的手柄类型更新参数
+                if (selectedHandle === azimuthHandle) {
+                    // 计算方位角（基于xz平面）
+                    const dx = selectedHandle.position.x;
+                    const dz = selectedHandle.position.z;
+                    let rawAzimuth = (Math.atan2(dx, dz) * 180 / Math.PI + 360) % 360;
+                    
+                    // 将方位角映射到最接近的有效值
+                    const validAngles = [0, 45, 90, 135, 180, 225, 270, 315];
+                    let closestAngle = validAngles[0];
+                    let minDiff = Math.abs(rawAzimuth - validAngles[0]);
+                    
+                    for (let i = 1; i < validAngles.length; i++) {
+                        let diff = Math.abs(rawAzimuth - validAngles[i]);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            closestAngle = validAngles[i];
+                        }
+                    }
+                    
+                    // 确保方位角值被正确更新
+                    azimuth = closestAngle;
+                    console.log('Updated azimuth:', azimuth);
+                } else if (selectedHandle === elevationHandle) {
+                    // 计算高程角（基于yz平面）
+                    const dy = selectedHandle.position.y - 0.5; // 相对中心的高度差
+                    const dz = selectedHandle.position.z - 0.5; // 简化的计算
+                    // 使用atan2计算角度
+                    let rawElevation = Math.atan2(dy, dz) * 180 / Math.PI;
+                    
+                    // 将高程角映射到最接近的有效值
+                    const validElevations = [-30, 0, 30, 60];
+                    let closestElevation = validElevations[0];
+                    let minDiff = Math.abs(rawElevation - validElevations[0]);
+                    
+                    for (let i = 1; i < validElevations.length; i++) {
+                        let diff = Math.abs(rawElevation - validElevations[i]);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            closestElevation = validElevations[i];
+                        }
+                    }
+                    
+                    // 确保高程角值被正确更新
+                    elevation = closestElevation;
+                    console.log('Updated elevation:', elevation);
+                } else if (selectedHandle === distanceHandle) {
+                    // 计算距离（基于到中心点的距离）
+                    const distVec = new THREE.Vector3();
+                    distVec.subVectors(selectedHandle.position, new THREE.Vector3(0, 0.5, 0)).length();
+                    
+                    // 根据距离确定镜头类型，映射到最接近的有效值
+                    let rawDistance;
+                    if (distVec < 1.0) {
+                        rawDistance = 8; // 特写
+                    } else if (distVec < 1.8) {
+                        rawDistance = 4; // 中景
+                    } else {
+                        rawDistance = 1; // 远景
+                    }
+                    
+                    // 确保距离值被正确更新
+                    distance = rawDistance;
+                    console.log('Updated distance:', distance);
+                }
+                
+                // 确保更新下拉菜单
+                updateDropdowns();
+                
+                // 更新下拉菜单值到DOM
+                const azimuthSelect = document.getElementById('azimuth-select-kontext');
+                const elevationSelect = document.getElementById('elevation-select-kontext');
+                const distanceSelect = document.getElementById('distance-select-kontext');
+                
+                azimuthSelect.value = azimuth;
+                elevationSelect.value = elevation;
+                distanceSelect.value = distance;
+                
+                // 触发change事件以确保同步
+                azimuthSelect.dispatchEvent(new Event('change'));
+                elevationSelect.dispatchEvent(new Event('change'));
+                distanceSelect.dispatchEvent(new Event('change'));
+                
+                // 更新其他组件
+                updateVisuals();
+            }
+        }
+        
+        function onMouseUp() {
+            if (isDragging) {
+                isDragging = false;
+                selectedHandle = null;
+                
+                // 确保在拖动结束后更新下拉菜单
+                updateDropdowns();
+                
+                // 确保在拖动结束后更新所有可视化效果
+                updateVisuals();
+                
+                // 确保角度值被正确保存
+                console.log('Mouse up - Final angles:', {azimuth, elevation, distance});
+                
+                // 验证角度值是否在有效范围内
+                const validAzimuth = [0, 45, 90, 135, 180, 225, 270, 315];
+                const validElevation = [-30, 0, 30, 60];
+                const validDistance = [8, 4, 1];
+                
+                console.log('Azimuth valid:', validAzimuth.includes(Math.round(azimuth)));
+                console.log('Elevation valid:', validElevation.includes(Math.round(elevation)));
+                console.log('Distance valid:', validDistance.includes(Math.round(distance)));
+                
+                // 确保下拉菜单值与当前角度值同步，并触发change事件
+                const azimuthSelect = document.getElementById('azimuth-select-kontext');
+                const elevationSelect = document.getElementById('elevation-select-kontext');
+                const distanceSelect = document.getElementById('distance-select-kontext');
+                
+                azimuthSelect.value = azimuth;
+                elevationSelect.value = elevation;
+                distanceSelect.value = distance;
+                
+                // 触发change事件以确保同步
+                azimuthSelect.dispatchEvent(new Event('change'));
+                elevationSelect.dispatchEvent(new Event('change'));
+                distanceSelect.dispatchEvent(new Event('change'));
+                
+                // 确保同步更新
+                updateVisuals();
+                
+                // 输出最终角度值用于调试
+                const desc = getValueToDescription();
+                console.log('On mouse up, current description:', desc);
+                
+                // 立即更新下拉菜单，确保下次获取值时是最新的
+                updateDropdowns();
+            }
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        
+        // 添加消息监听，用于与父页面通信
+        window.addEventListener('message', function(event) {
+            console.log('Kontext Message received:', event.data); // 添加错误检查
+            if (event.data.type === 'GET_CURRENT_ANGLE_KONTEXT') {
+                console.log('Received GET_CURRENT_ANGLE_KONTEXT message');
+                // 确保在返回之前角度值是最新的
+                // 在返回前再次确保下拉菜单值与内部状态同步
+                updateDropdowns();
+                
+                const desc = getValueToDescription();
+                console.log('Current angles:', {azimuth, elevation, distance});
+                console.log('Converted description:', desc);
+                
+                // 检查描述是否有效
+                if (!desc.azimuth && !desc.elevation && !desc.distance) {
+                    console.error('Invalid angle description returned:', desc);
+                }
+                
+                // 返回当前角度值 - 发送到parent（iframe的宿主页面）
+                try {
+                    parent.postMessage({
+                        type: 'ANGLE_SELECTED_KONTEXT',
+                        azimuth: desc.azimuth,
+                        elevation: desc.elevation,
+                        distance: desc.distance
+                    }, '*');
+                    console.log('Message sent to parent:', {
+                        azimuth: desc.azimuth,
+                        elevation: desc.elevation,
+                        distance: desc.distance
+                    });
+                } catch (error) {
+                    console.error('Error sending message to parent:', error);
+                }
+            }
+        });
+        
+        // 初始化
+        init();
+        
+        // 发送准备就绪消息给父页面
+        console.log('Sending CAMERA_3D_READY_KONTEXT signal');
+        parent.postMessage({ type: 'CAMERA_3D_READY_KONTEXT' }, '*');
+    </script>
+</body>
+</html>

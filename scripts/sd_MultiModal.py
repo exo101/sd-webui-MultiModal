@@ -102,6 +102,13 @@ def import_modules():
         except ImportError: 
             create_qwen_api_ui = None
 
+        # 添加Z-Image正式版模块导入
+        try: 
+            from z_image_deployer import create_z_image_deploy_ui, Z_IMAGE_MODULE_AVAILABLE as Z_IMAGE_DEPLOY_MODULE_AVAILABLE
+        except ImportError: 
+            create_z_image_deploy_ui = None
+            Z_IMAGE_DEPLOY_MODULE_AVAILABLE = False
+
         # 注释掉已移动的功能模块导入
         # try: 
         #     from qwen_video import create_qwen_video_gen_ui, QWEN_VIDEO_GEN_AVAILABLE
@@ -146,6 +153,16 @@ def import_modules():
 
         namespace.create_z_image_ui = z_image_create_func
         namespace.Z_IMAGE_MODULE_AVAILABLE = Z_IMAGE_MODULE_AVAILABLE
+        
+        # 添加Z-Image正式版模块到命名空间
+        try: 
+            from z_image_deployer import create_z_image_deploy_ui, Z_IMAGE_MODULE_AVAILABLE as Z_IMAGE_DEPLOY_MODULE_AVAILABLE
+        except ImportError: 
+            create_z_image_deploy_ui = None
+            Z_IMAGE_DEPLOY_MODULE_AVAILABLE = False
+
+        namespace.create_z_image_deploy_ui = create_z_image_deploy_ui
+        namespace.Z_IMAGE_DEPLOY_MODULE_AVAILABLE = Z_IMAGE_DEPLOY_MODULE_AVAILABLE
         
         # 添加Qwen API模块到命名空间
         try: 
@@ -207,6 +224,10 @@ QWEN_IMAGE_EDIT_MODULE_AVAILABLE = imported_modules.QWEN_IMAGE_EDIT_MODULE_AVAIL
 # 添加 Z-Image 模块变量赋值
 create_z_image_ui = imported_modules.create_z_image_ui
 Z_IMAGE_MODULE_AVAILABLE = imported_modules.Z_IMAGE_MODULE_AVAILABLE
+
+# 添加Z-Image正式版模块变量赋值
+create_z_image_deploy_ui = imported_modules.create_z_image_deploy_ui
+Z_IMAGE_DEPLOY_MODULE_AVAILABLE = imported_modules.Z_IMAGE_DEPLOY_MODULE_AVAILABLE
 
 # 添加FLUX KREA模块变量赋值
 create_flux_krea_ui = imported_modules.create_flux_krea_ui
@@ -833,7 +854,7 @@ def MultiModal_tab():
             
             # 添加 Z-Image-Turbo 标签页（如果可用）
             if 'Z_IMAGE_MODULE_AVAILABLE' in globals() and Z_IMAGE_MODULE_AVAILABLE:
-                with gr.TabItem("6.Z-Image-Turbo图像生成"):
+                with gr.TabItem("6.Z-Image-Turbo图像生成（测试版）"):
                     try:
                         with gr.Tabs():
                             with gr.TabItem("文生图"):
@@ -850,6 +871,30 @@ def MultiModal_tab():
             elif 'Z_IMAGE_MODULE_AVAILABLE' in globals() and not Z_IMAGE_MODULE_AVAILABLE:
                 with gr.TabItem("6.Z-Image-Turbo图像生成"):
                     gr.Markdown("Z-Image-Turbo模块当前不可用，可能是因为缺少模型文件或依赖项。")
+            
+            # 添加 Z-Image 正式版标签页（作为第7个标签页）
+            if 'Z_IMAGE_DEPLOY_MODULE_AVAILABLE' in globals() and Z_IMAGE_DEPLOY_MODULE_AVAILABLE:
+                with gr.TabItem("7.Z-Image（正式版）"):
+                    try:
+                        with gr.Tabs():
+                            with gr.TabItem("文生图"):
+                                # 创建 Z-Image 正式版 文生图 UI 组件
+                                z_image_deploy_components = create_z_image_deploy_ui()
+                                
+                                # 组件已经自动显示，无需额外处理
+                                if not z_image_deploy_components:
+                                    gr.Markdown("Z-Image（正式版）文生图模块加载失败")
+                                    
+                            with gr.TabItem("图生图"):
+                                # 图生图功能在正式版UI中已经通过TabItem集成
+                                gr.Markdown("图生图功能已在左侧标签中提供")
+                    except Exception as e:
+                        gr.Markdown(f"Z-Image（正式版）模块初始化错误: {e}")
+                        import traceback
+                        traceback.print_exc()
+            elif 'Z_IMAGE_DEPLOY_MODULE_AVAILABLE' in globals() and not Z_IMAGE_DEPLOY_MODULE_AVAILABLE:
+                with gr.TabItem("7.Z-Image（正式版）"):
+                    gr.Markdown("Z-Image（正式版）模块当前不可用，可能是因为缺少模型文件或依赖项。")
             
             # 注释掉已移动的标签页：wan系列视频生成API调用 (10 -> 7)
     return [(ui, "多模态图像处理15", "MultiModal_vision_tab")]

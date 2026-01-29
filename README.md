@@ -16,7 +16,7 @@
 - ✂️ **智能抠图**: 基于 rembg 实现一键背景移除
 - 🖌️ **图像分割**: 集成 Segment Anything Model (SAM) 进行精确图像分割
 - 🧹 **图像清理**: 提供图像清理和修复功能
-- 🌟 **FLUX.2 图像编辑**: 集成 FLUX.1-Kontext 进行上下文感知的图像编辑
+- 🌟 **FLUX.2 图像编辑**: 集成 FLUX.2-klein 进行上下文感知的图像编辑
 - 🌟 **Qwen-Image复杂文本渲染和qwen-image-edit-2509精确图像编辑
 
 ## 各项目配置显存要求
@@ -74,13 +74,16 @@ AI交流群qq：1054090769 整合包与模型在群公告
 | `Adobe Photoshop 2024`|`Plug-ins`|`Auto.Photoshop.SD.plugin_v1.4.1`| ps插件目录  |
 
 ### 更新内容
-- FLUX.2-klein-4b模型 增加，nunchaku-Z-Image-Turbo， 增加lora支持
+- 增加Z-Image正式版支持
+- FLUX.2-klein-4b模型 增加，nunchaku-Z-Image-Turbo，lora支持
+- 
+### 更新内容
 - 为了避免插件功能过多导致内存增加，多模态插件分裂成了两个插件，sd-webui-MultiModal只负责图像处理，ai绘画模型
 - sd-webui-multimodal-media负责，处理视频，音乐，语音，多媒体，模型位置不变
 - 增加 FLUX.2-klein-4b模型，此模型具备文生图，图像编辑，局部编辑，扩图，等多模态能力
 - 为每个模型类界面添加了多视角可视化选择器，任务队列功能
 - 使用最新模型需到python目录上方输入cmd执行命令 python -m pip install git+https://github.com/huggingface/diffusers
-- 
+  
 ### 更新内容
 - 添加Z-Image-Turbo fp8模型支持 lora支持，图生图支持
 - 添加qwen，wan系列api调用模型功能（qwenmix，qwenEdit，wan2.6，wan2.5文生视频，图生视频，首尾帧等）
@@ -146,7 +149,6 @@ AI交流群qq：1054090769 整合包与模型在群公告
 - 支持透明背景和自定义背景色，批量处理功能
 <img width="1828" height="817" alt="43534534" src="https://github.com/user-attachments/assets/913abe19-d8b1-4229-b18d-44f7d3930508" />
 
-
 #### 图像分割
 
 - 示例教程：https://www.bilibili.com/video/BV143YtzsE1j?spm_id_from=333.788.videopod.sections&vd_source=343e49b703fb5b4137cd6c1987846f37
@@ -159,8 +161,16 @@ AI交流群qq：1054090769 整合包与模型在群公告
 - 图像去噪和修复功能，支持多种清理模式
 - 简单易用的界面<img width="1835" height="741" alt="11" src="https://github.com/user-attachments/assets/4ac7c40d-971c-4364-8cc1-73a872fcec79" />
 
+FLUX.2-klein模型集成文生图，图像编辑，局部编辑，扩图多位一体的编辑模型
 
- ### 8. qwen-image图像生成介绍
+教程链接
+https://www.bilibili.com/video/BV1gEzCBqEpA/?spm_id_from=333.1387.homepage.video_card.click&vd_source=343e49b703fb5b4137cd6c1987846f37
+
+<img width="1787" height="886" alt="image" src="https://github.com/user-attachments/assets/3b999a97-ac93-41f3-80f5-b12304280ae5" />
+<img width="1784" height="831" alt="image" src="https://github.com/user-attachments/assets/22a5efa9-2bfb-47b7-b4b9-d7cb7a993514" />
+<img width="1749" height="831" alt="image" src="https://github.com/user-attachments/assets/29208ee2-77f6-43a3-b045-07c81eef1e56" />
+
+ ### . qwen-image图像生成介绍
  
  - qwen模型演示教程https://www.bilibili.com/video/BV1zn4TzKEdW/?spm_id_from=333.1387.homepage.video_card.click&vd_source=343e49b703fb5b4137cd6c1987846f37
  - qwen-image基本文字生成，中文理解，参数大的特点

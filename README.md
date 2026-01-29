@@ -20,7 +20,7 @@
 - 🌟 **Qwen-Image复杂文本渲染和qwen-image-edit-2509精确图像编辑
 
 ## 各项目配置显存要求
-- FLUX.2-klein-4B 显存 13GB
+- FLUX.2-klein-4B 显存 10GB
 - Qwen-Image-Edit-2511-SDNQ-uint4-svd-r32： 显存 14GB
 - nuchuku加速 Qwen-Image-Edit-2501: 显存10GB /内存64g
 - nuchuku加速 Qwen-Image: 显存10GB /内存64g
@@ -74,6 +74,7 @@ AI交流群qq：1054090769 整合包与模型在群公告
 | `Adobe Photoshop 2024`|`Plug-ins`|`Auto.Photoshop.SD.plugin_v1.4.1`| ps插件目录  |
 
 ### 更新内容
+- FLUX.2-klein-4b模型 增加，nunchaku-Z-Image-Turbo， 增加lora支持
 - 为了避免插件功能过多导致内存增加，多模态插件分裂成了两个插件，sd-webui-MultiModal只负责图像处理，ai绘画模型
 - sd-webui-multimodal-media负责，处理视频，音乐，语音，多媒体，模型位置不变
 - 增加 FLUX.2-klein-4b模型，此模型具备文生图，图像编辑，局部编辑，扩图，等多模态能力

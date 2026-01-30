@@ -1,7 +1,7 @@
 import os
 import sys
 import gradio as gr
-from modules import shared, paths
+from modules import shared, paths, images
 import subprocess
 import torch
 from pathlib import Path
@@ -112,7 +112,7 @@ def open_folder(folder_path):
         return f"打开文件夹失败: {str(e)}"
 
 
-def generate_image_with_zimage(prompt, negative_prompt, width, height, steps, cfg_scale, seed, sampler, batch_size, lora_enable, lora_model_1, lora_weight_1, lora_model_2, lora_weight_2, selected_model=None, enable_hr=False, hr_scale=2.0, hr_upscaler=None, hr_second_pass_steps=20, hr_resize_x=0, hr_resize_y=0, denoising_strength=0.7):
+def generate_image_with_zimage(prompt, negative_prompt, width, height, steps, cfg_scale, seed, sampler, batch_size, lora_enable, lora_model_1, lora_weight_1, lora_model_2, lora_weight_2, enable_hr=False, hr_scale=2.0, hr_upscaler=None, hr_second_pass_steps=0, denoising_strength=0.7, selected_model=None):
     """
     使用Z-Image正式版模型生成图像
     """
@@ -131,21 +131,6 @@ def generate_image_with_zimage(prompt, negative_prompt, width, height, steps, cf
         
         print(f"[INFO] 开始加载本地Z-Image模型...")
         
-        # 计算第一阶段的尺寸
-        first_pass_width, first_pass_height = width, height
-        if enable_hr:
-            if hr_resize_x == 0 and hr_resize_y == 0:
-                first_pass_width = int(width / hr_scale)
-                first_pass_height = int(height / hr_scale)
-            else:
-                first_pass_width = hr_resize_x
-                first_pass_height = hr_resize_y
-                
-            # 确保尺寸是8的倍数
-            first_pass_width = (first_pass_width // 8) * 8
-            first_pass_height = (first_pass_height // 8) * 8
-            print(f"[INFO] 启用高清修复，第一阶段尺寸: {first_pass_width}x{first_pass_height}")
-
         # 创建模型实例
         pipe = ZImagePipeline.from_pretrained(
             str(zimage_dir),
@@ -243,7 +228,7 @@ def generate_image_with_zimage(prompt, negative_prompt, width, height, steps, cf
                 print(f"[INFO] 本次生成未应用任何LoRA模型")
         
         print(f"[INFO] 开始生成图像...")
-        print(f"[INFO] 参数: 提示词='{prompt[:50]}...', 尺寸={first_pass_width}x{first_pass_height}, 步数={steps}, CFG Scale={cfg_scale}, 批次={batch_size}")
+        print(f"[INFO] 参数: 提示词='{prompt[:50]}...', 尺寸={width}x{height}, 步数={steps}, CFG Scale={cfg_scale}, 批次={batch_size}")
         
         # 设置随机种子
         if int(seed) == -1:
@@ -252,82 +237,88 @@ def generate_image_with_zimage(prompt, negative_prompt, width, height, steps, cf
         
         generator = torch.Generator("cuda").manual_seed(int(seed))
         
-        # 生成第一阶段图像
-        print("[INFO] 正在调用Z-ImagePipeline进行第一阶段图像生成...")
-        output = pipe(
-            prompt=prompt,
-            negative_prompt=negative_prompt,
-            height=first_pass_height,
-            width=first_pass_width,
-            cfg_normalization=False,
-            num_inference_steps=steps,
-            guidance_scale=cfg_scale,
-            generator=generator,
-            num_images_per_prompt=batch_size
-        )
-        
-        # 确保输出包含图像
-        if not hasattr(output, 'images') or not output.images:
-            return "错误：模型返回结果无效，未生成图像", None
-            
-        images = output.images
-        print(f"[INFO] 第一阶段图像生成完成，共生成 {len(images)} 张图像")
-        
-        # 如果启用了高清修复
+        # 高清修复处理
         if enable_hr:
-            print(f"[INFO] 开始第二阶段高清修复，目标尺寸: {width}x{height}")
+            print(f"[INFO] 启用高清修复，缩放比例: {hr_scale}, 重绘强度: {denoising_strength}")
             
-            # 使用WebUI的内置放大方法
-            from modules import images as webui_images
-            from modules import shared
-            import math
+            # 计算高清修复后的目标尺寸
+            target_width = int(width * hr_scale)
+            target_height = int(height * hr_scale)
             
-            # 对每张图片进行高清修复
-            for i, img in enumerate(images):
-                # 使用WebUI内置的放大器
-                if hr_upscaler and hr_upscaler != "None" and hr_upscaler in [x.name for x in shared.sd_upscalers]:
-                    upscaler = next(iter([x for x in shared.sd_upscalers if x.name == hr_upscaler]), shared.sd_upscalers[0])
-                else:
-                    upscaler = shared.sd_upscalers[0]  # 默认使用第一个放大器
-                    
-                print(f"[INFO] 使用放大器: {upscaler.name}")
+            # 确保尺寸是8的倍数
+            target_width = max(64, target_width - target_width % 8)
+            target_height = max(64, target_height - target_height % 8)
+            
+            print(f"[INFO] 目标尺寸: {target_width}x{target_height}")
+            
+            # 第一阶段：生成用户指定尺寸的图像
+            print(f"[INFO] 第一阶段：生成基础图像 {width}x{height}")
+            output = pipe(
+                prompt=prompt,
+                negative_prompt=negative_prompt,
+                height=height,
+                width=width,
+                cfg_normalization=False,
+                num_inference_steps=steps,
+                guidance_scale=cfg_scale,
+                generator=generator,
+                num_images_per_prompt=batch_size
+            )
+            
+            # 获取基础图像
+            images_list = output.images
+            
+            # 第二阶段：使用选定的放大器进行上采样
+            print(f"[INFO] 第二阶段：将图像放大到 {target_width}x{target_height}")
+            
+            # 将基础图像调整到目标尺寸
+            upscaled_images = []
+            for img in images_list:
+                upscaled_img = images.resize_image(0, img, target_width, target_height, upscaler_name=hr_upscaler)
+                upscaled_images.append(upscaled_img)
+            
+            # 生成最终高清图像
+            final_images = []
+            for idx, upscaled_img in enumerate(upscaled_images):
+                print(f"[INFO] 处理第 {idx+1}/{len(upscaled_images)} 张图像的高清修复")
+                upscaled_img = upscaled_img.convert("RGB")
+                upscaled_tensor = torch.tensor(np.array(upscaled_img)).permute(2, 0, 1).unsqueeze(0).to("cuda", dtype=torch.float32) / 255.0
                 
-                # 根据设置的参数进行放大
-                if hr_resize_x == 0 and hr_resize_y == 0:
-                    # 按比例放大
-                    new_width = int(first_pass_width * hr_scale)
-                    new_height = int(first_pass_height * hr_scale)
-                else:
-                    # 按指定尺寸放大
-                    new_width = hr_resize_x
-                    new_height = hr_resize_y
+                # 由于Z-Image可能不直接支持img2img，我们使用基础的diffusion pipeline进行第二阶段处理
+                # 为了兼容Z-Image模型，我们暂时只进行上采样，不进行第二阶段扩散
+                final_images.append(upscaled_img)
                 
-                # 确保尺寸是8的倍数
-                new_width = (new_width // 8) * 8
-                new_height = (new_height // 8) * 8
+        else:
+            # 标准生成流程
+            print("[INFO] 正在调用Z-ImagePipeline进行图像生成...")
+            output = pipe(
+                prompt=prompt,
+                negative_prompt=negative_prompt,
+                height=height,
+                width=width,
+                cfg_normalization=False,
+                num_inference_steps=steps,
+                guidance_scale=cfg_scale,
+                generator=generator,
+                num_images_per_prompt=batch_size
+            )
+            
+            # 确保输出包含图像
+            if not hasattr(output, 'images') or not output.images:
+                return "错误：模型返回结果无效，未生成图像", None
                 
-                # 使用WebUI的resize_image函数进行放大
-                img = webui_images.resize_image(0, img, new_width, new_height, upscaler.name)
-                print(f"[INFO] 图像已放大至: {new_width}x{new_height}")
-                
-                # 如果设置了第二阶段步数，理论上应该再次生成，但Z-Image不直接支持img2img
-                # 所以目前只做放大处理，重绘幅度在此场景下意义不大
-                # 但如果要模拟重绘幅度效果，我们可以调整生成参数
-                if hr_second_pass_steps > 0:
-                    print(f"[INFO] 执行第二阶段生成，步数: {hr_second_pass_steps}，重绘幅度: {denoising_strength}")
-                
-                images[i] = img
+            final_images = output.images
 
-        print(f"[INFO] 图像生成完成，共生成 {len(images)} 张图像")
+        print(f"[INFO] 图像生成完成，共生成 {len(final_images)} 张图像")
         
         # 保存图像
         output_dir = Path(paths.data_path) / "outputs" / "z-image"
         output_dir.mkdir(parents=True, exist_ok=True)
         
         saved_paths = []
-        for i, image in enumerate(images):
+        for i, image in enumerate(final_images):
             timestamp = int(time.time())
-            filename = f"zimage_{timestamp}_s{seed}_hr{'1' if enable_hr else '0'}_{i}.png"
+            filename = f"zimage_{'hr' if enable_hr else 'std'}_{timestamp}_s{seed}_{i}.png"
             filepath = output_dir / filename
             image.save(filepath)
             saved_paths.append(str(filepath))
@@ -347,7 +338,7 @@ def generate_image_with_zimage(prompt, negative_prompt, width, height, steps, cf
         except Exception as e:
             print(f"[WARNING] 无法卸载模型: {e}")
             
-        return f"图像生成成功! 批次: {batch_size}, Seed: {seed}, HR: {'ON' if enable_hr else 'OFF'}", saved_paths
+        return f"图像生成成功! {'启用高清修复' if enable_hr else '标准生成'}, 批次: {batch_size}, Seed: {seed}", saved_paths
         
     except Exception as e:
         error_msg = str(e)
@@ -428,6 +419,16 @@ def create_z_image_deploy_ui():
                             
                             # 注意：Z-Image模型使用内置调度器，当前采样器选择暂不生效，为预留接口
                             
+                        # 添加高清修复选项
+                        with gr.Accordion("高清修复 (Hires. fix)", open=False):
+                            enable_hr = gr.Checkbox(label="启用高清修复", value=False)
+                            with gr.Row():
+                                hr_scale = gr.Slider(minimum=1.0, maximum=4.0, step=0.05, value=2.0, label="放大倍数", elem_id="txt2img_hr_scale")
+                                hr_upscaler = gr.Dropdown(label="放大算法", choices=[*shared.latent_upscale_modes, *[x.name for x in shared.sd_upscalers]], value=shared.latent_upscale_default_mode, elem_id="txt2img_hr_upscaler")
+                            with gr.Row():
+                                hr_second_pass_steps = gr.Slider(minimum=0, maximum=150, step=1, value=0, label="高清阶段步数", elem_id="txt2img_hires_steps")
+                                denoising_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, value=0.7, label="重绘强度", elem_id="txt2img_denoising_strength")
+                        
                         # 添加LoRA支持选项
                         lora_enable = gr.Checkbox(label="启用 LoRA", value=False)
                         with gr.Group(visible=False) as lora_options_group:
@@ -461,6 +462,7 @@ def create_z_image_deploy_ui():
                                     return [gr.update(choices=lora_choices), gr.update(choices=lora_choices)]
                                 except Exception as e:
                                     print(f"刷新LoRA列表失败: {e}")
+                                    print(f"刷新LoRA列表失败: {e}")
                                     return [gr.update(), gr.update()]
 
                             refresh_lora_btn.click(
@@ -475,20 +477,6 @@ def create_z_image_deploy_ui():
                             inputs=[lora_enable],
                             outputs=[lora_options_group]
                         )
-                        
-                        # 高清修复选项
-                        with gr.Accordion("高清修复 (Hires. fix)", open=False):
-                            enable_hr = gr.Checkbox(label="启用高清修复", value=False)
-                            hr_scale = gr.Slider(minimum=1.0, maximum=4.0, step=0.1, value=2.0, label="高清放大倍数", visible=True)
-                            hr_resize_x = gr.Slider(minimum=0, maximum=2048, step=8, value=0, label="高清宽", visible=True)
-                            hr_resize_y = gr.Slider(minimum=0, maximum=2048, step=8, value=0, label="高清高", visible=True)
-                            hr_upscaler = gr.Dropdown(
-                                label="高清放大算法",
-                                choices=[x.name for x in shared.sd_upscalers],
-                                value=shared.sd_upscalers[0].name
-                            )
-                            hr_second_pass_steps = gr.Slider(minimum=0, maximum=150, step=1, value=20, label="高清阶段步数")
-                            denoising_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, value=0.7, label="高清重绘幅度")
 
                     with gr.Column():  # 右半边 - 输出和按钮
                         with gr.Row():
@@ -521,7 +509,7 @@ def create_z_image_deploy_ui():
                             inputs=[
                                 prompt, negative_prompt, width, height, steps, cfg_scale, seed, sampler, batch_size,
                                 lora_enable, lora_model_1, lora_weight_1, lora_model_2, lora_weight_2,
-                                enable_hr, hr_scale, hr_upscaler, hr_second_pass_steps, hr_resize_x, hr_resize_y, denoising_strength
+                                enable_hr, hr_scale, hr_upscaler, hr_second_pass_steps, denoising_strength
                             ],
                             outputs=[output_status, output_gallery]
                         )
@@ -530,15 +518,15 @@ def create_z_image_deploy_ui():
                         add_to_queue_btn.click(
                             fn=lambda prompt, negative_prompt, width, height, steps, cfg_scale, seed, sampler, batch_size, \
                                lora_enable, lora_model_1, lora_weight_1, lora_model_2, lora_weight_2, \
-                               enable_hr, hr_scale, hr_upscaler, hr_second_pass_steps, hr_resize_x, hr_resize_y, denoising_strength: \
+                               enable_hr, hr_scale, hr_upscaler, hr_second_pass_steps, denoising_strength: \
                                add_to_queue('zimage_txt2img', 
                                    prompt, negative_prompt, width, height, steps, cfg_scale, seed, sampler, batch_size,
                                    lora_enable, lora_model_1, lora_weight_1, lora_model_2, lora_weight_2,
-                                   enable_hr, hr_scale, hr_upscaler, hr_second_pass_steps, hr_resize_x, hr_resize_y, denoising_strength),
+                                   enable_hr, hr_scale, hr_upscaler, hr_second_pass_steps, denoising_strength),
                             inputs=[
                                 prompt, negative_prompt, width, height, steps, cfg_scale, seed, sampler, batch_size,
                                 lora_enable, lora_model_1, lora_weight_1, lora_model_2, lora_weight_2,
-                                enable_hr, hr_scale, hr_upscaler, hr_second_pass_steps, hr_resize_x, hr_resize_y, denoising_strength
+                                enable_hr, hr_scale, hr_upscaler, hr_second_pass_steps, denoising_strength
                             ],
                             outputs=[queue_operation_status]
                         )

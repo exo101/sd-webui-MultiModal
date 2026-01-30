@@ -181,7 +181,7 @@ def create_flux_klein_ui():
             
             # 刷新模型列表按钮事件
             refresh_model_btn.click(
-                fn=lambda: [["无"] + get_bf16_models(), ["无"] + get_fp8_models()],  # 返回两个列表，都包含"无"选项
+                fn=lambda: (["无"] + get_bf16_models(), ["无"] + get_fp8_models()),  # 返回元组而不是列表，修复Content-Length错误
                 inputs=[],
                 outputs=[bf16_model_choice, fp8_model_choice]  # 更新两个下拉框
             )
@@ -410,7 +410,7 @@ def create_flux_klein_ui():
             
             # 刷新模型列表按钮事件 - 更新本地的BF16和FP8模型选择
             multi_refresh_model_btn.click(
-                fn=lambda: [["无"] + get_bf16_models(), ["无"] + get_fp8_models()],  # 返回两个列表，都包含"无"选项
+                fn=lambda: (["无"] + get_bf16_models(), ["无"] + get_fp8_models()),  # 返回元组而不是列表，修复Content-Length错误
                 inputs=[],
                 outputs=[multi_bf16_model_choice, multi_fp8_model_choice]  # 更新本地的两个下拉框
             )
@@ -619,7 +619,7 @@ def create_flux_klein_ui():
             
             # 刷新模型列表按钮事件 - 更新本地的BF16和FP8模型选择
             inpaint_refresh_model_btn.click(
-                fn=lambda: [["无"] + get_bf16_models(), ["无"] + get_fp8_models()],  # 返回两个列表，都包含"无"选项
+                fn=lambda: (["无"] + get_bf16_models(), ["无"] + get_fp8_models()),  # 返回元组而不是列表，修复Content-Length错误
                 inputs=[],
                 outputs=[inpaint_bf16_model_choice, inpaint_fp8_model_choice]  # 更新本地的两个下拉框
             )
@@ -892,7 +892,7 @@ def create_flux_klein_ui():
                     
                     # 刷新模型列表按钮事件
                     extend_refresh_model_btn.click(
-                        fn=lambda: [["无"] + get_bf16_models(), ["无"] + get_fp8_models()],  # 返回两个列表，都包含"无"选项
+                        fn=lambda: (["无"] + get_bf16_models(), ["无"] + get_fp8_models()),  # 返回元组而不是列表，修复Content-Length错误
                         inputs=[],
                         outputs=[extend_bf16_model_choice, extend_fp8_model_choice]  # 更新本地的两个下拉框
                     )
@@ -916,8 +916,8 @@ def create_flux_klein_ui():
         "multi_steps": multi_steps,
         "multi_guidance_scale": multi_guidance_scale,
         "multi_seed": multi_seed,
-        "multi_bf16_model_choice": bf16_model_choice,  # 使用全局BF16模型选择
-        "multi_fp8_model_choice": fp8_model_choice,    # 添加全局FP8模型选择
+        "multi_bf16_model_choice": multi_bf16_model_choice,  # 使用全局BF16模型选择
+        "multi_fp8_model_choice": multi_fp8_model_choice,    # 添加全局FP8模型选择
         "multi_btn": multi_btn,
         "multi_result_gallery": multi_result_gallery,
         "multi_result_status": multi_result_status,
@@ -926,8 +926,8 @@ def create_flux_klein_ui():
         "inpaint_steps": inpaint_steps,
         "inpaint_guidance_scale": inpaint_guidance_scale,
         "inpaint_seed": inpaint_seed,
-        "inpaint_bf16_model_choice": bf16_model_choice,  # 使用全局BF16模型选择
-        "inpaint_fp8_model_choice": fp8_model_choice,    # 添加全局FP8模型选择
+        "inpaint_bf16_model_choice": inpaint_bf16_model_choice,  # 使用全局BF16模型选择
+        "inpaint_fp8_model_choice": inpaint_fp8_model_choice,    # 添加全局FP8模型选择
         "inpaint_btn": inpaint_btn,
         "inpaint_result_gallery": inpaint_result_gallery,
         "inpaint_result_status": inpaint_result_status
@@ -1001,3 +1001,22 @@ def open_folder(folder_path):
 def update_lora_interactive(enable_lora):
     """更新LoRA组件的交互状态"""
     return gr.update(interactive=bool(enable_lora))
+
+
+# 添加一个特殊函数来处理图像上传，减少Content-Length错误的可能性
+def handle_image_upload(image):
+    """
+    专门处理图像上传的函数，避免Content-Length错误
+    """
+    if image is None:
+        return None
+    # 确保图像数据完整
+    try:
+        # 尝试处理图像以验证它是否完整
+        if hasattr(image, 'convert'):
+            # 如果是PIL图像，转换为RGB
+            image = image.convert('RGB')
+        return image
+    except Exception as e:
+        print(f"图像处理错误: {e}")
+        return None

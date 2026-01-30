@@ -692,7 +692,9 @@ def generate_image(prompt, negative_prompt, width, height, steps, cfg_scale, see
                     # 加载找到的LoRA
                     for lora_path, lora_weight in lora_paths:
                         print(f"[INFO] 应用LoRA (标准diffusers方式): {lora_path}，权重: {lora_weight}")
-                        pipe.load_lora_weights(lora_path, local_files_only=True)
+                        # 获取LoRA文件名（不含扩展名），作为weight_name
+                        lora_name = Path(lora_path).stem
+                        pipe.load_lora_weights(lora_path, local_files_only=True, weight_name=lora_name)
                         pipe.fuse_lora(lora_scale=lora_weight)
                         lora_applied = True
                         

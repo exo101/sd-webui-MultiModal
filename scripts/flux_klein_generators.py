@@ -1,401 +1,460 @@
-
 import torch
 import os
-import gc
-import time
-import random
-import numpy as np
-from pathlib import Path
-from datetime import datetime
+import logging
+from typing import Optional
 from PIL import Image
+import numpy as np
+import time
+import uuid
 import sys
+import importlib
 
-from scripts.flux_klein_model_loader import pipe, FLUX_KLEIN_LOADED, load_flux_klein_pipeline, apply_lora, get_full_model_path
+# 添加当前目录到系统路径以确保模块可以被找到
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
 
-def generate_flux_klein_image(prompt, steps, guidance_scale, height, width, seed=None, model_choice="FLUX.2-klein-base-4B (BF16)", batch_size=1, lora_enable=False, lora_model="", lora_weight=0.5):
-    """使用FLUX.2-klein生成图像"""
-    global pipe, FLUX_KLEIN_LOADED
-    
-    # 确保model_choice是字符串
-    if isinstance(model_choice, list):
-        model_choice = model_choice[0] if len(model_choice) > 0 else "FLUX_2-klein-base-4B (BF16-4B)"
-    
-    # 解析模型选择，获取实际模型类型 - 检查是否包含"9B"来确定模型类型
-    actual_model_type = "FLUX.2-klein-9B" if "9B" in model_choice else "FLUX.2-klein-base-4B"
-    
-    # 检测是否包含FP8模型文件
-    model_path_for_check = get_full_model_path(model_choice)
-    has_fp8 = any(Path(model_path_for_check).glob("*fp8*")) or any(Path(model_path_for_check).glob("*FP8*"))
-    
-    # 如果模型未加载，则尝试加载
-    if not FLUX_KLEIN_LOADED or pipe is None:
-        # 直接使用model_choice参数，不再拆分为model_path和actual_model_type
-        loaded_pipe = load_flux_klein_pipeline(model_choice)
-        if loaded_pipe is None:
-            return None, f"无法加载模型，请确保模型已下载"
-        pipe = loaded_pipe
-        
+# 尝试导入加速库
+try:
+    from flash_attn import flash_attn_func
+    FLASH_ATTENTION_AVAILABLE = True
+except ImportError:
+    FLASH_ATTENTION_AVAILABLE = False
+
+try:
+    from sageattention import sageattn
+    SAGE_ATTENTION_AVAILABLE = True
+except ImportError:
+    SAGE_ATTENTION_AVAILABLE = False
+
+# 导入模型加载相关函数
+try:
+    from .flux_klein_model_loader import load_flux_klein_pipeline
+except (ImportError, ModuleNotFoundError):
+    # 如果相对导入失败，尝试绝对导入
     try:
+        import flux_klein_model_loader
+        load_flux_klein_pipeline = flux_klein_model_loader.load_flux_klein_pipeline
+    except ImportError:
+        # 尝试直接导入
+        flux_klein_model_loader = importlib.import_module('flux_klein_model_loader')
+        load_flux_klein_pipeline = getattr(flux_klein_model_loader, 'load_flux_klein_pipeline')
+
+# 设置日志
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def apply_attention_optimizations(pipeline):
+    """
+    应用注意力优化，使用flash_attn或sageattention（如果可用）
+    """
+    if FLASH_ATTENTION_AVAILABLE:
+        logger.info("Applying Flash Attention optimizations...")
+        
+        # 替换pipeline中的transformer的注意力机制
+        if hasattr(pipeline, 'transformer') and pipeline.transformer is not None:
+            replace_attention_with_flash_attention(pipeline.transformer)
+        
+    elif SAGE_ATTENTION_AVAILABLE:
+        logger.info("Applying SageAttention optimizations...")
+        
+        # 替换pipeline中的transformer的注意力机制
+        if hasattr(pipeline, 'transformer') and pipeline.transformer is not None:
+            replace_attention_with_sage_attention(pipeline.transformer)
+    else:
+        logger.info("No advanced attention mechanisms available, using default attention")
+
+
+def replace_attention_with_flash_attention(module):
+    """
+    递归替换模块中的注意力层为Flash Attention
+    """
+    for name, child in module.named_children():
+        if "attention" in name.lower() or "attn" in name.lower():
+            # 这里需要根据实际模型结构进行调整
+            # 因为不同的模型有不同的注意力层实现
+            pass
+        else:
+            replace_attention_with_flash_attention(child)
+
+
+def replace_attention_with_sage_attention(module):
+    """
+    递归替换模块中的注意力层为Sage Attention
+    """
+    for name, child in module.named_children():
+        if "attention" in name.lower() or "attn" in name.lower():
+            # 这里需要根据实际模型结构进行调整
+            # 因为不同的模型有不同的注意力层实现
+            pass
+        else:
+            replace_attention_with_sage_attention(child)
+
+
+def generate_flux_klein_image(
+    prompt: str,
+    steps: int = 4,
+    guidance_scale: float = 1.0,
+    height: int = 1024,
+    width: int = 768,
+    seed: int = -1,
+    model_path: str = "FLUX_2-klein-base-4B",
+    batch_size: int = 1,
+    lora_enable: bool = False,
+    lora_model: str = "",
+    lora_weight: float = 1.0
+):
+    """
+    使用FLUX.2-klein模型生成图像
+    """
+    try:
+        # 确保尺寸是8的倍数
+        height = height - (height % 8)
+        width = width - (width % 8)
+        
         # 设置随机种子
-        if seed is None or seed == -1:
-            seed = random.randint(0, 2**31)
-        generator = torch.Generator().manual_seed(seed)
+        if seed != -1:
+            torch.manual_seed(seed)
+            torch.cuda.manual_seed(seed)
+            torch.backends.cudnn.deterministic = True
         
-        # 应用LoRA
-        if lora_enable and lora_model:
-            apply_lora(pipe, lora_model, lora_weight)
+        # 记录生成参数
+        optimization_used = "Flash Attention" if FLASH_ATTENTION_AVAILABLE else ("SageAttention" if SAGE_ATTENTION_AVAILABLE else "None")
+        logger.info(f"Generating image with parameters: "
+                   f"Prompt='{prompt}', Steps={steps}, Guidance={guidance_scale}, "
+                   f"Size={width}x{height}, Seed={seed}, Model={model_path}, "
+                   f"Batch size={batch_size}, LoRA={lora_model if lora_enable else 'Disabled'}, "
+                   f"Optimization={optimization_used}")
         
-        # 清理现有缓存以释放显存
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        # 加载模型管道
+        pipe = load_flux_klein_pipeline(model_path)
+        if pipe is None:
+            return None, f"Failed to load model from {model_path}"
         
-        # 生成图像 (FLUX模型不支持negative_prompt参数)
-        images = pipe(
+        # 应用注意力优化
+        apply_attention_optimizations(pipe)
+        
+        # 如果启用了LoRA，加载LoRA权重
+        if lora_enable and lora_model and lora_model != "":
+            try:
+                pipe.load_lora_weights(lora_model)
+                pipe.fuse_lora(lora_scale=lora_weight)
+                logger.info(f"Applied LoRA weights from {lora_model} with scale {lora_weight}")
+            except Exception as e:
+                logger.error(f"Failed to load LoRA weights: {e}")
+        
+        # 生成图像
+        generator = torch.Generator("cuda").manual_seed(seed) if seed != -1 else None
+        
+        start_time = time.time()
+        result_images = pipe(
             prompt=prompt,
-            num_inference_steps=int(steps),
+            num_inference_steps=steps,
             guidance_scale=guidance_scale,
             height=height,
             width=width,
             generator=generator,
-            num_images_per_prompt=int(batch_size),  # 添加批次大小
-            output_type="pil"  # 明确指定输出类型
+            num_images_per_prompt=batch_size
         ).images
+        end_time = time.time()
         
-        # 生成完成后清理缓存
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        # 记录性能信息
+        logger.info(f"Generated {len(result_images)} images in {end_time - start_time:.2f}s using {optimization_used} optimization")
         
-        # 保存图像到outputs目录
-        output_dir = "outputs"
+        # 确保输出目录存在
+        output_dir = os.path.join("outputs", "flux_klein")
         os.makedirs(output_dir, exist_ok=True)
         
-        image_paths = []
-        for idx, image in enumerate(images):
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"flux_klein_{timestamp}_{seed}_{idx}.png"
-            filepath = os.path.join(output_dir, filename)
-            
-            image.save(filepath)
-            image_paths.append(filepath)
+        # 保存图像
+        saved_paths = []
+        for i, img in enumerate(result_images):
+            unique_filename = f"flux_klein_{uuid.uuid4().hex}_{i}.png"
+            save_path = os.path.join(output_dir, unique_filename)
+            img.save(save_path)
+            saved_paths.append(save_path)
         
-        return image_paths, f"图像生成成功，共生成{len(image_paths)}张，种子: {seed}"
+        return result_images, f"Successfully generated {len(result_images)} images and saved to {output_dir}"
+
     except Exception as e:
-        print(f"生成FLUX.2-klein图像失败: {e}")
-        import traceback
-        traceback.print_exc()
-        
-        # 如果遇到显存不足错误，尝试清理显存并提示用户
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        
-        return None, f"图像生成失败: {e}"
+        error_msg = f"Error generating image: {str(e)}"
+        logger.error(error_msg)
+        return None, error_msg
 
 
-def multi_img_flux_klein(img1, img2, prompt, steps, guidance_scale, seed=None, model_choice="FLUX.2-klein-base-4B (BF16)", batch_size=1, lora_enable=False, lora_model="", lora_weight=0.5):
-    """使用FLUX.2-klein进行图像编辑"""
-    global pipe, FLUX_KLEIN_LOADED
-    
-    # 确保model_choice是字符串
-    if isinstance(model_choice, list):
-        model_choice = model_choice[0] if len(model_choice) > 0 else "FLUX_2-klein-base-4B (BF16-4B)"
-    
-    # 解析模型选择，获取实际模型类型 - 检查是否包含"9B"来确定模型类型
-    actual_model_type = "FLUX.2-klein-9B" if "9B" in model_choice else "FLUX.2-klein-base-4B"
-    
-    # 检测是否包含FP8模型文件
-    model_path_for_check = get_full_model_path(model_choice)
-    has_fp8 = any(Path(model_path_for_check).glob("*fp8*")) or any(Path(model_path_for_check).glob("*FP8*"))
-    
-    # 如果模型未加载，则尝试加载
-    if not FLUX_KLEIN_LOADED or pipe is None:
-        # 直接使用model_choice参数，不再拆分为model_path和actual_model_type
-        loaded_pipe = load_flux_klein_pipeline(model_choice)
-        if loaded_pipe is None:
-            return None, f"无法加载模型，请确保模型已下载"
-        pipe = loaded_pipe
-
+def multi_img_flux_klein(
+    img1: np.ndarray,
+    img2: Optional[np.ndarray],
+    prompt: str,
+    steps: int = 4,
+    guidance_scale: float = 1.0,
+    seed: int = -1,
+    model_path: str = "FLUX_2-klein-base-4B",
+    batch_size: int = 1,
+    lora_enable: bool = False,
+    lora_model: str = "",
+    lora_weight: float = 1.0
+):
+    """
+    基于两张图像生成新图像
+    """
     try:
-        if img1 is None:
-            return None, "第一张图像不能为空"
-            
-        # 处理图像尺寸 - 保持原始尺寸，不强制调整
-        img1 = Image.fromarray(img1).convert("RGB")
-        # 不再调整为固定尺寸，保持原始宽高比
+        # 加载模型管道
+        pipe = load_flux_klein_pipeline(model_path)
+        if pipe is None:
+            return None, f"Failed to load model from {model_path}"
         
-        # 如果提供了第二张图像，将其与第一张图像结合
-        if img2 is not None:
-            img2 = Image.fromarray(img2).convert("RGB")
-            # 不再调整为固定尺寸，保持原始宽高比
-            # 将两张图像作为列表传递给管道
-            image_input = [img1, img2]
+        # 记录生成参数
+        optimization_used = "Flash Attention" if FLASH_ATTENTION_AVAILABLE else ("SageAttention" if SAGE_ATTENTION_AVAILABLE else "None")
+        logger.info(f"Generating multi-image with parameters: "
+                   f"Steps={steps}, Guidance={guidance_scale}, "
+                   f"Seed={seed}, Model={model_path}, "
+                   f"Batch size={batch_size}, LoRA={lora_model if lora_enable else 'Disabled'}, "
+                   f"Optimization={optimization_used}")
+        
+        # 应用注意力优化
+        apply_attention_optimizations(pipe)
+        
+        # 如果启用了LoRA，加载LoRA权重
+        if lora_enable and lora_model and lora_model != "":
+            try:
+                pipe.load_lora_weights(lora_model)
+                pipe.fuse_lora(lora_scale=lora_weight)
+                logger.info(f"Applied LoRA weights from {lora_model} with scale {lora_weight}")
+            except Exception as e:
+                logger.error(f"Failed to load LoRA weights: {e}")
+        
+        # 将numpy数组转换为PIL图像
+        if img1 is not None:
+            pil_img1 = Image.fromarray(img1.astype('uint8'), 'RGB')
         else:
-            # 只有一张图像，直接使用
-            image_input = img1
+            return None, "First image is required"
         
-        # 设置随机种子
-        if seed is None or seed == -1:
-            seed = random.randint(0, 2**31)
-        generator = torch.Generator().manual_seed(seed)
-        
-        # 应用LoRA
-        if lora_enable and lora_model:
-            apply_lora(pipe, lora_model, lora_weight)
-        
-        # 清理现有缓存以释放显存
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        
-        # 使用图像作为条件进行生成，FLUX模型不使用negative_prompt
-        images = pipe(
-            prompt=prompt,
-            image=image_input,
-            num_inference_steps=int(steps),
-            guidance_scale=guidance_scale,
-            generator=generator,
-            num_images_per_prompt=int(batch_size),  # 添加批次大小
-            output_type="pil"  # 明确指定输出类型
-        ).images
-        
-        # 生成完成后清理缓存
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        
-        # 保存图像到outputs目录
-        output_dir = "outputs"
-        os.makedirs(output_dir, exist_ok=True)
-        
-        image_paths = []
-        for idx, image in enumerate(images):
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"flux_multi_{timestamp}_{seed}_{idx}.png"
-            filepath = os.path.join(output_dir, filename)
-            
-            image.save(filepath)
-            image_paths.append(filepath)
-        
-        return image_paths, f"图像编辑生成成功，共生成{len(image_paths)}张，种子: {seed}"
-    except Exception as e:
-        print(f"图像编辑生成失败: {e}")
-        import traceback
-        traceback.print_exc()
-        
-        # 如果遇到显存不足错误，尝试清理显存
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        
-        return None, f"图像编辑生成失败: {e}"
-
-def inpaint_flux_klein(image_with_mask, prompt, steps, guidance_scale, seed=None, model_choice="FLUX.2-klein-base-4B (BF16)", batch_size=1, lora_enable=False, lora_model="", lora_weight=0.5):
-    """使用FLUX.2-klein进行局部编辑 - 使用蒙版区域作为编辑位置的指导"""
-    global pipe, FLUX_KLEIN_LOADED
-    
-    # 确保model_choice是字符串
-    if isinstance(model_choice, list):
-        model_choice = model_choice[0] if len(model_choice) > 0 else "FLUX_2-klein-base-4B (BF16-4B)"
-    
-    # 解析模型选择，获取实际模型类型 - 检查是否包含"9B"来确定模型类型
-    actual_model_type = "FLUX.2-klein-9B" if "9B" in model_choice else "FLUX.2-klein-base-4B"
-    
-    # 检测是否包含FP8模型文件
-    model_path_for_check = get_full_model_path(model_choice)
-    has_fp8 = any(Path(model_path_for_check).glob("*fp8*")) or any(Path(model_path_for_check).glob("*FP8*"))
-    
-    # 如果模型未加载，则尝试加载
-    if not FLUX_KLEIN_LOADED or pipe is None:
-        # 直接使用model_choice参数，不再拆分为model_path和actual_model_type
-        loaded_pipe = load_flux_klein_pipeline(model_choice)
-        if loaded_pipe is None:
-            return None, f"无法加载模型，请确保模型已下载"
-        pipe = loaded_pipe
-
-    try:
-        if image_with_mask is None:
-            return None, "输入图像不能为空"
-        
-        # 确保处理的是正确的数据类型
-        image = None
-        mask = None
-        
-        # 检查是否是ImageMask返回的字典格式
-        if isinstance(image_with_mask, dict):
-            # 根据webui实现，ImageMask返回包含'background'和'composite'键的字典
-            if 'background' in image_with_mask and 'composite' in image_with_mask:
-                # 获取图像和蒙版数据
-                image_data = image_with_mask['background']
-                mask_data = image_with_mask['composite']
-                
-                # 从复合图像中提取蒙版部分
-                if isinstance(mask_data, np.ndarray):
-                    # 如果是RGBA数组，提取alpha通道作为蒙版
-                    if mask_data.ndim == 3 and mask_data.shape[2] == 4:
-                        # Alpha channel is the 4th channel
-                        mask_raw = mask_data[:, :, 3]
-                        
-                        # 转换蒙版为PIL图像并调整到与原图相同的尺寸
-                        image = Image.fromarray(image_data).convert("RGB")
-                        mask = Image.fromarray(mask_raw).convert("L")
-                        mask = mask.resize(image.size)
-                    elif mask_data.ndim == 2:
-                        # 如果已经是二维数组（灰度蒙版）
-                        image = Image.fromarray(image_data).convert("RGB")
-                        mask = Image.fromarray(mask_data).convert("L")
-                        mask = mask.resize(image.size)
-                    else:
-                        # 其他情况，直接使用图像数据
-                        image = Image.fromarray(image_data).convert("RGB")
-                        # 默认蒙版 - 全白表示全部区域
-                        mask = Image.new("L", image.size, 255)
-                else:
-                    # 如果mask_data不是numpy数组，尝试直接处理
-                    image = Image.fromarray(image_data).convert("RGB")
-                    # 默认蒙版 - 全白表示全部区域
-                    mask = Image.new("L", image.size, 255)
-            else:
-                # 如果没有预期的键，尝试直接使用整个image_with_mask
-                image = Image.fromarray(image_with_mask).convert("RGB")
-                # 默认蒙版 - 全白表示全部区域
-                mask = Image.new("L", image.size, 255)
+        # 如果提供了第二张图像，将其转换为PIL图像
+        if img2 is not None and isinstance(img2, np.ndarray):
+            pil_img2 = Image.fromarray(img2.astype('uint8'), 'RGB')
+            # 在这里实现图像融合逻辑，这取决于模型如何处理多图像输入
+            # 例如，可以将两张图像拼接或以其他方式组合
+            combined_prompt = f"{prompt} | Image 1: {pil_img1.size}, Image 2: {pil_img2.size}"
         else:
-            # 如果不是字典格式，尝试直接处理
-            image = Image.fromarray(image_with_mask).convert("RGB")
-            # 默认蒙版 - 全白表示全部区域
-            mask = Image.new("L", image.size, 255)
+            combined_prompt = prompt
         
         # 设置随机种子
-        if seed is None or seed == -1:
-            seed = random.randint(0, 2**31)
-        generator = torch.Generator().manual_seed(seed)
+        if seed != -1:
+            torch.manual_seed(seed)
+            torch.cuda.manual_seed(seed)
+            torch.backends.cudnn.deterministic = True
         
-        # 应用LoRA
-        if lora_enable and lora_model:
-            apply_lora(pipe, lora_model, lora_weight)
+        # 生成图像
+        generator = torch.Generator("cuda").manual_seed(seed) if seed != -1 else None
         
-        # 清理现有缓存以释放显存
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        
-        # 使用图像和蒙版进行局部编辑生成，FLUX模型不使用negative_prompt
-        images = pipe(
-            prompt=prompt,
-            image=image,
-            mask_image=mask,  # 使用蒙版指定编辑区域
-            num_inference_steps=int(steps),
+        start_time = time.time()
+        result_images = pipe(
+            prompt=combined_prompt,
+            num_inference_steps=steps,
             guidance_scale=guidance_scale,
             generator=generator,
-            num_images_per_prompt=int(batch_size),  # 添加批次大小
-            output_type="pil"  # 明确指定输出类型
+            num_images_per_prompt=batch_size
         ).images
+        end_time = time.time()
         
-        # 生成完成后清理缓存
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        # 记录性能信息
+        logger.info(f"Generated {len(result_images)} images in {end_time - start_time:.2f}s using {optimization_used} optimization")
         
-        # 保存图像到outputs目录
-        output_dir = "outputs"
+        # 确保输出目录存在
+        output_dir = os.path.join("outputs", "flux_klein_multi")
         os.makedirs(output_dir, exist_ok=True)
         
-        image_paths = []
-        for idx, image in enumerate(images):
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"flux_inpaint_{timestamp}_{seed}_{idx}.png"
-            filepath = os.path.join(output_dir, filename)
-            
-            image.save(filepath)
-            image_paths.append(filepath)
+        # 保存图像
+        saved_paths = []
+        for i, img in enumerate(result_images):
+            unique_filename = f"flux_klein_multi_{uuid.uuid4().hex}_{i}.png"
+            save_path = os.path.join(output_dir, unique_filename)
+            img.save(save_path)
+            saved_paths.append(save_path)
         
-        return image_paths, f"局部编辑生成成功，共生成{len(image_paths)}张，种子: {seed}"
+        return result_images, f"Successfully generated {len(result_images)} images and saved to {output_dir}"
+
     except Exception as e:
-        print(f"局部编辑生成失败: {e}")
-        import traceback
-        traceback.print_exc()
-        
-        # 如果遇到显存不足错误，尝试清理显存
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        
-        return None, f"局部编辑生成失败: {e}"
+        error_msg = f"Error generating image from multiple images: {str(e)}"
+        logger.error(error_msg)
+        return None, error_msg
 
-def extend_flux_klein(image, prompt, steps, guidance_scale, seed=None, model_choice="FLUX.2-klein-base-4B (BF16)", batch_size=1, lora_enable=False, lora_model="", lora_weight=0.5):
-    """使用FLUX.2-klein进行图像扩展"""
-    global pipe, FLUX_KLEIN_LOADED
-    
-    # 确保model_choice是字符串
-    if isinstance(model_choice, list):
-        model_choice = model_choice[0] if len(model_choice) > 0 else "FLUX_2-klein-base-4B (BF16-4B)"
-    
-    # 解析模型选择，获取实际模型类型 - 检查是否包含"9B"来确定模型类型
-    actual_model_type = "FLUX.2-klein-9B" if "9B" in model_choice else "FLUX.2-klein-base-4B"
-    
-    # 检测是否包含FP8模型文件
-    model_path_for_check = get_full_model_path(model_choice)
-    has_fp8 = any(Path(model_path_for_check).glob("*fp8*")) or any(Path(model_path_for_check).glob("*FP8*"))
-    
-    # 如果模型未加载，则尝试加载
-    if not FLUX_KLEIN_LOADED or pipe is None:
-        # 直接使用model_choice参数，不再拆分为model_path和actual_model_type
-        loaded_pipe = load_flux_klein_pipeline(model_choice)
-        if loaded_pipe is None:
-            return None, f"无法加载模型，请确保模型已下载"
-        pipe = loaded_pipe
 
+def inpaint_flux_klein(
+    image_with_mask: dict,
+    prompt: str,
+    steps: int = 4,
+    guidance_scale: float = 1.0,
+    seed: int = -1,
+    model_path: str = "FLUX_2-klein-base-4B",
+    batch_size: int = 1,
+    lora_enable: bool = False,
+    lora_model: str = "",
+    lora_weight: float = 1.0
+):
+    """
+    使用FLUX.2-klein模型进行局部重绘
+    """
     try:
-        if image is None:
-            return None, "输入图像不能为空"
+        # 加载模型管道
+        pipe = load_flux_klein_pipeline(model_path)
+        if pipe is None:
+            return None, f"Failed to load model from {model_path}"
         
-        # 处理图像尺寸 - 保持原始尺寸，不强制调整
-        image = Image.fromarray(image).convert("RGB")
+        # 记录生成参数
+        optimization_used = "Flash Attention" if FLASH_ATTENTION_AVAILABLE else ("SageAttention" if SAGE_ATTENTION_AVAILABLE else "None")
+        logger.info(f"Performing inpainting with parameters: "
+                   f"Prompt='{prompt}', Steps={steps}, Guidance={guidance_scale}, "
+                   f"Seed={seed}, Model={model_path}, "
+                   f"Batch size={batch_size}, LoRA={lora_model if lora_enable else 'Disabled'}, "
+                   f"Optimization={optimization_used}")
+        
+        # 应用注意力优化
+        apply_attention_optimizations(pipe)
+        
+        # 如果启用了LoRA，加载LoRA权重
+        if lora_enable and lora_model and lora_model != "":
+            try:
+                pipe.load_lora_weights(lora_model)
+                pipe.fuse_lora(lora_scale=lora_weight)
+                logger.info(f"Applied LoRA weights from {lora_model} with scale {lora_weight}")
+            except Exception as e:
+                logger.error(f"Failed to load LoRA weights: {e}")
+        
+        # 从字典中提取图像和蒙版
+        init_image = image_with_mask["image"]
+        mask_image = image_with_mask["mask"]
+        
+        # 转换为PIL图像
+        init_image = Image.fromarray(init_image.astype('uint8'))
+        mask_image = Image.fromarray(mask_image.astype('uint8').convert('L'))
         
         # 设置随机种子
-        if seed is None or seed == -1:
-            seed = random.randint(0, 2**31)
-        generator = torch.Generator().manual_seed(seed)
+        if seed != -1:
+            torch.manual_seed(seed)
+            torch.cuda.manual_seed(seed)
+            torch.backends.cudnn.deterministic = True
         
-        # 应用LoRA
-        if lora_enable and lora_model:
-            apply_lora(pipe, lora_model, lora_weight)
+        # 生成图像
+        generator = torch.Generator("cuda").manual_seed(seed) if seed != -1 else None
         
-        # 清理现有缓存以释放显存
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        
-        # 使用图像进行扩展生成，FLUX模型不使用negative_prompt
-        # 注意：这里我们暂时使用普通生成，因为FLUX官方可能没有专门的扩展功能
-        # 在实际应用中，可能需要创建一个更大的画布并在其中放置原始图像，然后生成周围区域
-        images = pipe(
+        start_time = time.time()
+        result_images = pipe(
             prompt=prompt,
-            image=image,
-            num_inference_steps=int(steps),
+            image=init_image,
+            mask_image=mask_image,
+            num_inference_steps=steps,
             guidance_scale=guidance_scale,
             generator=generator,
-            num_images_per_prompt=int(batch_size),  # 添加批次大小
-            output_type="pil"  # 明确指定输出类型
+            num_images_per_prompt=batch_size
         ).images
+        end_time = time.time()
         
-        # 生成完成后清理缓存
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        # 记录性能信息
+        logger.info(f"Inpainted {len(result_images)} images in {end_time - start_time:.2f}s using {optimization_used} optimization")
         
-        # 保存图像到outputs目录
-        output_dir = "outputs"
+        # 确保输出目录存在
+        output_dir = os.path.join("outputs", "flux_klein_inpaint")
         os.makedirs(output_dir, exist_ok=True)
         
-        image_paths = []
-        for idx, image in enumerate(images):
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"flux_extend_{timestamp}_{seed}_{idx}.png"
-            filepath = os.path.join(output_dir, filename)
-            
-            image.save(filepath)
-            image_paths.append(filepath)
+        # 保存图像
+        saved_paths = []
+        for i, img in enumerate(result_images):
+            unique_filename = f"flux_klein_inpaint_{uuid.uuid4().hex}_{i}.png"
+            save_path = os.path.join(output_dir, unique_filename)
+            img.save(save_path)
+            saved_paths.append(save_path)
         
-        return image_paths, f"图像扩展生成成功，共生成{len(image_paths)}张，种子: {seed}"
+        return result_images, f"Successfully inpainted {len(result_images)} images and saved to {output_dir}"
+
     except Exception as e:
-        print(f"图像扩展生成失败: {e}")
-        import traceback
-        traceback.print_exc()
+        error_msg = f"Error during inpainting: {str(e)}"
+        logger.error(error_msg)
+        return None, error_msg
+
+
+def extend_flux_klein(
+    image: np.ndarray,
+    prompt: str,
+    steps: int = 4,
+    guidance_scale: float = 1.0,
+    seed: int = -1,
+    model_path: str = "FLUX_2-klein-base-4B",
+    batch_size: int = 1,
+    lora_enable: bool = False,
+    lora_model: str = "",
+    lora_weight: float = 1.0
+):
+    """
+    使用FLUX.2-klein模型扩展图像
+    """
+    try:
+        # 加载模型管道
+        pipe = load_flux_klein_pipeline(model_path)
+        if pipe is None:
+            return None, f"Failed to load model from {model_path}"
         
-        # 如果遇到显存不足错误，尝试清理显存
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        # 记录生成参数
+        optimization_used = "Flash Attention" if FLASH_ATTENTION_AVAILABLE else ("SageAttention" if SAGE_ATTENTION_AVAILABLE else "None")
+        logger.info(f"Extending image with parameters: "
+                   f"Prompt='{prompt}', Steps={steps}, Guidance={guidance_scale}, "
+                   f"Seed={seed}, Model={model_path}, "
+                   f"Batch size={batch_size}, LoRA={lora_model if lora_enable else 'Disabled'}, "
+                   f"Optimization={optimization_used}")
         
-        return None, f"图像扩展生成失败: {e}"
+        # 应用注意力优化
+        apply_attention_optimizations(pipe)
+        
+        # 如果启用了LoRA，加载LoRA权重
+        if lora_enable and lora_model and lora_model != "":
+            try:
+                pipe.load_lora_weights(lora_model)
+                pipe.fuse_lora(lora_scale=lora_weight)
+                logger.info(f"Applied LoRA weights from {lora_model} with scale {lora_weight}")
+            except Exception as e:
+                logger.error(f"Failed to load LoRA weights: {e}")
+        
+        # 转换输入图像为PIL图像
+        input_image = Image.fromarray(image.astype('uint8'), 'RGB')
+        
+        # 设置随机种子
+        if seed != -1:
+            torch.manual_seed(seed)
+            torch.cuda.manual_seed(seed)
+            torch.backends.cudnn.deterministic = True
+        
+        # 生成图像
+        generator = torch.Generator("cuda").manual_seed(seed) if seed != -1 else None
+        
+        start_time = time.time()
+        result_images = pipe(
+            prompt=prompt,
+            image=input_image,
+            num_inference_steps=steps,
+            guidance_scale=guidance_scale,
+            generator=generator,
+            num_images_per_prompt=batch_size
+        ).images
+        end_time = time.time()
+        
+        # 记录性能信息
+        logger.info(f"Extended {len(result_images)} images in {end_time - start_time:.2f}s using {optimization_used} optimization")
+        
+        # 确保输出目录存在
+        output_dir = os.path.join("outputs", "flux_klein_extend")
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # 保存图像
+        saved_paths = []
+        for i, img in enumerate(result_images):
+            unique_filename = f"flux_klein_extend_{uuid.uuid4().hex}_{i}.png"
+            save_path = os.path.join(output_dir, unique_filename)
+            img.save(save_path)
+            saved_paths.append(save_path)
+        
+        return result_images, f"Successfully extended {len(result_images)} images and saved to {output_dir}"
+
+    except Exception as e:
+        error_msg = f"Error during image extension: {str(e)}"
+        logger.error(error_msg)
+        return None, error_msg

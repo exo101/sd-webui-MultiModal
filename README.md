@@ -74,9 +74,14 @@ AI交流群qq：1054090769 整合包与模型在群公告
 | `Adobe Photoshop 2024`|`Plug-ins`|`Auto.Photoshop.SD.plugin_v1.4.1`| ps插件目录  |
 
 ### 更新内容
-- 增加Z-Image正式版支持
-- FLUX.2-klein-4b模型 增加，nunchaku-Z-Image-Turbo，lora支持
-- 
+
+- 增加Flash Attention加速轮子提速Z-Image，qwen，flux，FLUX.2-klein，XL,等模型生成时间
+- 增加SageAttention加速轮子提速Z-Image，qwen，flux，FLUX.2-klein，XL,等模型生成时间
+- 增加nunchaku-qwen-2511模型
+- 增加nunchaku-qwen-2512模型
+- 增加Z-Image base支持
+- 增加FLUX.2-klein-4b模型fp8模型，nunchaku-Z-Image-Turbo，lora支持
+ 
 ### 更新内容
 - 为了避免插件功能过多导致内存增加，多模态插件分裂成了两个插件，sd-webui-MultiModal只负责图像处理，ai绘画模型
 - sd-webui-multimodal-media负责，处理视频，音乐，语音，多媒体，模型位置不变

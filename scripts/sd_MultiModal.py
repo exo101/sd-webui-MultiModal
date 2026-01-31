@@ -850,7 +850,7 @@ def MultiModal_tab():
             
             # 添加 Z-Image 正式版标签页（作为第7个标签页）
             if 'Z_IMAGE_DEPLOY_MODULE_AVAILABLE' in globals() and Z_IMAGE_DEPLOY_MODULE_AVAILABLE:
-                with gr.TabItem("7.Z-Image（正式版）"):
+                with gr.TabItem("7.Z-Image（base）"):
                     try:
                         with gr.Tabs():
                             with gr.TabItem("文生图"):
@@ -908,5 +908,6 @@ modules_status = {
     'qwen_api': QWEN_API_AVAILABLE,
     'flux_krea': FLUX_KREA_AVAILABLE,
     'z_image': Z_IMAGE_MODULE_AVAILABLE,
+
 
 }

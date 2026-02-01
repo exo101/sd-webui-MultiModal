@@ -509,7 +509,12 @@ def create_tab():
                 strength = gr.Slider(
                     minimum=0.0, maximum=1.0, step=0.01, value=0.5, label="重绘强度"
                 )
-
+            
+            # 添加推荐参数提示
+            gr.Markdown("""
+            **参数推荐：推理步数28以上，CFG引导数4**
+            """)
+            
             with gr.Row():
                 seed = gr.Number(
                     label="随机种子 (-1为随机)", value=-1, precision=0

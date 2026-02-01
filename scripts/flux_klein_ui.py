@@ -81,6 +81,11 @@ def create_flux_klein_ui():
                         batch_count = gr.Slider(label="批次数量", minimum=1, maximum=8, value=1, step=1)
                         batch_size = gr.Slider(label="每批数量", minimum=1, maximum=8, value=1, step=1)
                     
+                    # 添加推荐参数提示
+                    gr.Markdown("""
+                    **参数推荐：推理步数15以上，引导数4**
+                    """)
+                    
                     # 模型选择下拉列表 - 分别显示BF16和FP8模型
                     with gr.Row():
                         with gr.Column(scale=1):

@@ -1197,6 +1197,13 @@ def create_qwen_image_edit_ui():
                             with gr.Group():
                                 sdnq_enable = gr.Checkbox(label="启用SDNQ量化", value=False)
                         
+                        # 添加推荐参数提示信息
+                        gr.Markdown("""
+                        **参数推荐：**
+                        - Nunchaku模型：CFG引导数建议设置为 **1**，步数建议设置为 **10**
+                        - SDNQ模型：CFG引导数建议设置为 **4**，步数建议设置为 **15**
+                        """)
+                        
                         # LoRA模型选项
                         with gr.Accordion("LoRA 模型选项", open=False):
                             edit_lora_1 = gr.Dropdown(

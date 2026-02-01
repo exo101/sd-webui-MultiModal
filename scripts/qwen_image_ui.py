@@ -975,7 +975,7 @@ def create_qwen_image_ui():
                         gr.Markdown(
                             """
                             <div style="font-size: 0.85em; color: #ffffff; margin-top: -10px; margin-bottom: 10px;">
-                            <strong>参数说明</strong>: cfg引导数Lightning模型为1，普通模型为4，推理步数Lightning模型为10，普通模型为20，LoRA权重为1.5
+                            <strong>参数说明</strong>: cfg引导数nunchaku模型为1，sdnq模型为4，步数nunchaku模型为10，sdnq模型为15
                             </div>
                             """
                         )

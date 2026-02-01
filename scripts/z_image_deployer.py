@@ -552,6 +552,11 @@ def create_z_image_deploy_ui():
                             steps = gr.Slider(minimum=1, maximum=100, step=1, value=50, label="推理步数")
                             cfg_scale = gr.Slider(minimum=1.0, maximum=20.0, step=0.5, value=4.0, label="CFG Scale")
                         
+                        # 添加推荐参数提示
+                        gr.Markdown("""
+                        **参数推荐：推理步数28以上，CFG引导数4**
+                        """)
+                        
                         with gr.Row():
                             seed = gr.Number(label="随机种子 (-1为随机)", value=-1, precision=0)
                             batch_size = gr.Slider(minimum=1, maximum=8, step=1, value=1, label="生成批次")

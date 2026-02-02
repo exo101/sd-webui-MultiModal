@@ -974,8 +974,8 @@ def create_qwen_image_ui():
                         # 添加CFG参数说明
                         gr.Markdown(
                             """
-                            <div style="font-size: 0.85em; color: #ffffff; margin-top: -10px; margin-bottom: 10px;">
-                            <strong>参数说明</strong>: cfg引导数nunchaku模型为1，sdnq模型为4，步数nunchaku模型为10，sdnq模型为15
+                            <div style="font-size: 1.0em; color: #ffffff; margin-top: -10px; margin-bottom: 10px;">
+                            <strong>参数说明</strong>: sdnq模型cfg引导数4，步数为15，nunchaku模型步数10，cfg引导数1
                             </div>
                             """
                         )

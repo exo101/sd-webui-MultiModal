@@ -850,7 +850,7 @@ def MultiModal_tab():
             
             # 添加 Z-Image 正式版标签页（作为第7个标签页）
             if 'Z_IMAGE_DEPLOY_MODULE_AVAILABLE' in globals() and Z_IMAGE_DEPLOY_MODULE_AVAILABLE:
-                with gr.TabItem("7.Z-Image（正式版）"):
+                with gr.TabItem("7.Z-Image（base）"):
                     try:
                         with gr.Tabs():
                             with gr.TabItem("文生图"):
@@ -893,7 +893,7 @@ def on_app_started(*args, **kwargs):
     print("- Qwen图像生成与编辑")
     print("- Qwen系列api调用")
     print()
-    print("使用须知：使用此插件者请合法使用AI，不得发表不正当言论，作假新闻，二次销售，二次改装等违法行为。")
+    print("使用须知：使用此插件者请合法使用AI。")
     print("=" * 60)
 
 script_callbacks.on_app_started(on_app_started)

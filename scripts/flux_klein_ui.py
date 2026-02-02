@@ -86,6 +86,20 @@ def create_flux_klein_ui():
                     **参数推荐：推理步数15以上，引导数4**
                     """)
                     
+                    # 局部重绘参数
+                    with gr.Row():
+                        # 双图像结合参数
+                        multi_steps = gr.Slider(label="步数", minimum=1, maximum=50, value=15, step=1)
+                        multi_guidance_scale = gr.Slider(label="CFG Scale", minimum=1.0, maximum=10.0, value=1.0, step=0.1)
+                    
+                    with gr.Row():
+                        # 随机种子
+                        multi_seed = gr.Number(label="种子 (Seed)", value=-1, precision=0)
+                    
+                    with gr.Row():
+                        # 生成批次
+                        multi_batch_size = gr.Slider(label="生成批次", minimum=1, maximum=8, value=1, step=1)
+                    
                     # 模型选择下拉列表 - 分别显示BF16和FP8模型
                     with gr.Row():
                         with gr.Column(scale=1):
@@ -703,7 +717,7 @@ def create_flux_klein_ui():
 
 
         # 图像扩展界面
-        with gr.TabItem("FLUX.2-klein图像扩展"):
+        with gr.TabItem("图像扩展"):
             with gr.Row():
                 with gr.Column():  # 左侧面板 - 参数设置
                     # 图像扩展输入
@@ -717,12 +731,16 @@ def create_flux_klein_ui():
                     extend_prompt = gr.Textbox(label="提示词", lines=3, value="高质量扩展图像边缘，与原图无缝衔接，保持原有风格和细节")
                     
                     # 扩展参数设置
-                    with gr.Group():
-                        gr.Markdown("### 扩展参数")
-                        
-                        with gr.Row():
-                            extend_left = gr.Slider(label="向左扩展像素", minimum=0, maximum=512, value=64, step=8)
-                            extend_right = gr.Slider(label="向右扩展像素", minimum=0, maximum=512, value=64, step=8)
+                    gr.Markdown("### 扩展参数")
+                    
+                    # 添加推荐参数提示
+                    gr.Markdown("""
+                    **参数推荐：推理步数15以上，引导数4**
+                    """)
+                    
+                    with gr.Row():
+                        extend_left = gr.Slider(label="向左扩展像素", minimum=0, maximum=512, value=64, step=8)
+                        extend_right = gr.Slider(label="向右扩展像素", minimum=0, maximum=512, value=64, step=8)
                         
                         with gr.Row():
                             extend_top = gr.Slider(label="向上扩展像素", minimum=0, maximum=512, value=64, step=8)

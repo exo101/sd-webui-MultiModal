@@ -2,8 +2,8 @@ import gradio as gr
 import torch
 import os
 import gc
-import time
-import random
+import time  # 添加缺失的时间模块导入
+import random  # 添加缺失的随机模块导入
 import numpy as np
 from pathlib import Path
 from datetime import datetime
@@ -42,17 +42,23 @@ from scripts.flux_klein_model_loader import get_bf16_models, get_fp8_models, lis
 # 定义最大图像尺寸参数
 MAX_IMAGE_SIZE = 1024  # 最大边长
 
+# 检查模块是否可用
+FLUX_KLEIN_AVAILABLE = True
+MODULE_IMPORT_ERROR = ""
+
+try:
+    # 检查是否可以导入必要的模块和函数
+    from scripts.flux_klein_generators import generate_flux_klein_image
+    from scripts.flux_klein_model_loader import load_flux_klein_pipeline
+except ImportError as e:
+    FLUX_KLEIN_AVAILABLE = False
+    MODULE_IMPORT_ERROR = str(e)
+except Exception as e:
+    FLUX_KLEIN_AVAILABLE = False
+    MODULE_IMPORT_ERROR = str(e)
 
 def create_flux_klein_ui():
     """创建FLUX.2-klein的UI界面"""
-    if not FLUX_KLEIN_AVAILABLE:
-        with gr.Column():
-            gr.Markdown("FLUX.2-klein模块当前不可用，可能是因为缺少依赖项。")
-            gr.Markdown("- 需要安装 `diffusers` 库")
-            gr.Markdown("- 需要安装 `modelscope` 库")
-            gr.Markdown("- 需要安装 `transformers` 库")
-        return
-
     with gr.Tabs():
         with gr.TabItem("文生图"):
             # 文生图界面组件
@@ -63,42 +69,75 @@ def create_flux_klein_ui():
                     # 移除负向提示词输入框，因为FLUX模型不支持
                     
                     with gr.Row():
-                        # 生成参数
-                        steps = gr.Slider(label="步数", minimum=1, maximum=50, value=4, step=1)
-                        guidance_scale = gr.Slider(label="CFG Scale", minimum=1.0, maximum=10.0, value=1.0, step=0.1)
+                        # 生成参数 - 确保这些组件是可交互的
+                        steps = gr.Slider(
+                            label="步数", 
+                            minimum=1, 
+                            maximum=50, 
+                            value=4, 
+                            step=1,
+                            interactive=True  # 明确设置为可交互
+                        )
+                        guidance_scale = gr.Slider(
+                            label="CFG Scale", 
+                            minimum=1.0, 
+                            maximum=10.0, 
+                            value=1.0, 
+                            step=0.1,
+                            interactive=True  # 明确设置为可交互
+                        )
                     
                     with gr.Row():
-                        # 尺寸参数
-                        height = gr.Slider(label="高度", minimum=256, maximum=1536, value=1024, step=64)
-                        width = gr.Slider(label="宽度", minimum=256, maximum=1536, value=768, step=64)
+                        # 尺寸参数 - 确保这些组件是可交互的
+                        height = gr.Slider(
+                            label="高度", 
+                            minimum=256, 
+                            maximum=1536, 
+                            value=1024, 
+                            step=64,
+                            interactive=True  # 明确设置为可交互
+                        )
+                        width = gr.Slider(
+                            label="宽度", 
+                            minimum=256, 
+                            maximum=1536, 
+                            value=768, 
+                            step=64,
+                            interactive=True  # 明确设置为可交互
+                        )
                     
                     with gr.Row():
-                        # 随机种子
-                        seed = gr.Number(label="种子 (Seed)", value=-1, precision=0)
+                        # 随机种子 - 确保这个组件是可交互的
+                        seed = gr.Number(
+                            label="种子 (Seed)", 
+                            value=-1, 
+                            precision=0,
+                            interactive=True  # 明确设置为可交互
+                        )
                     
                     with gr.Row():
-                        # 生成批次
-                        batch_count = gr.Slider(label="批次数量", minimum=1, maximum=8, value=1, step=1)
-                        batch_size = gr.Slider(label="每批数量", minimum=1, maximum=8, value=1, step=1)
+                        # 生成批次 - 确保这些组件是可交互的
+                        batch_count = gr.Slider(
+                            label="批次数量", 
+                            minimum=1, 
+                            maximum=8, 
+                            value=1, 
+                            step=1,
+                            interactive=True  # 明确设置为可交互
+                        )
+                        batch_size = gr.Slider(
+                            label="每批数量", 
+                            minimum=1, 
+                            maximum=8, 
+                            value=1, 
+                            step=1,
+                            interactive=True  # 明确设置为可交互
+                        )
                     
                     # 添加推荐参数提示
                     gr.Markdown("""
                     **参数推荐：推理步数15以上，引导数4**
                     """)
-                    
-                    # 局部重绘参数
-                    with gr.Row():
-                        # 双图像结合参数
-                        multi_steps = gr.Slider(label="步数", minimum=1, maximum=50, value=15, step=1)
-                        multi_guidance_scale = gr.Slider(label="CFG Scale", minimum=1.0, maximum=10.0, value=1.0, step=0.1)
-                    
-                    with gr.Row():
-                        # 随机种子
-                        multi_seed = gr.Number(label="种子 (Seed)", value=-1, precision=0)
-                    
-                    with gr.Row():
-                        # 生成批次
-                        multi_batch_size = gr.Slider(label="生成批次", minimum=1, maximum=8, value=1, step=1)
                     
                     # 模型选择下拉列表 - 分别显示BF16和FP8模型
                     with gr.Row():
@@ -177,101 +216,116 @@ def create_flux_klein_ui():
                         gen_btn = gr.Button("生成结果", variant="primary")
                         open_outputs_btn = gr.Button("打开输出目录", variant="secondary")
             
-            # 事件绑定 - 文生图部分
-            def update_lora_interactive_fn(enable_lora):
-                return update_lora_interactive(enable_lora)
-            
-            lora_enable.change(
-                fn=update_lora_interactive_fn,
-                inputs=[lora_enable],
-                outputs=[lora_model]
-            )
-            
-            # 绑定刷新按钮事件
-            refresh_lora_button.click(
-                fn=refresh_lora_models,
-                inputs=[],
-                outputs=[lora_model]
-            )
-            
-            gen_btn.click(
-                fn=lambda prompt, steps, guidance_scale, height, width, seed, bf16_choice, fp8_choice, batch_size, lora_enable, lora_model, lora_weight: 
-                    generate_flux_klein_image(
-                        prompt, steps, guidance_scale, height, width, seed, 
-                        get_selected_model(bf16_choice, fp8_choice),  # 使用合并的模型选择
+            # 模块可用性检查和事件绑定
+            if not FLUX_KLEIN_AVAILABLE:
+                # 如果模块不可用，显示错误信息并禁用相关功能
+                error_message = f"⚠️ FLUX.2-klein模块当前不可用\n错误详情: {MODULE_IMPORT_ERROR}\n\n请确保已安装以下依赖项：\n- diffusers 库\n- modelscope 库\n- transformers 库"
+                result_status.value = error_message
+                
+                # 禁用生成按钮
+                gen_btn.variant = "secondary"
+                gen_btn.interactive = False
+                
+                # 显示警告信息
+                with gr.Row():
+                    gr.Markdown(f"**⚠️ 警告**: {error_message}")
+            else:
+                # 正常的功能绑定
+                # 事件绑定 - 文生图部分
+                def update_lora_interactive_fn(enable_lora):
+                    return update_lora_interactive(enable_lora)
+                
+                lora_enable.change(
+                    fn=update_lora_interactive_fn,
+                    inputs=[lora_enable],
+                    outputs=[lora_model]
+                )
+                
+                # 绑定刷新按钮事件
+                refresh_lora_button.click(
+                    fn=refresh_lora_models,
+                    inputs=[],
+                    outputs=[lora_model]
+                )
+                
+                gen_btn.click(
+                    fn=lambda prompt, steps, guidance_scale, height, width, seed, bf16_choice, fp8_choice, batch_size, lora_enable, lora_model, lora_weight: 
+                        generate_flux_klein_image(
+                            prompt, steps, guidance_scale, height, width, seed, 
+                            get_selected_model(bf16_choice, fp8_choice),  # 使用合并的模型选择
+                            batch_size, lora_enable, lora_model, lora_weight
+                        ),
+                    inputs=[
+                        prompt, steps, guidance_scale, 
+                        height, width, seed, bf16_model_choice, fp8_model_choice,  # 传入两个模型选择
                         batch_size, lora_enable, lora_model, lora_weight
+                    ],
+                    outputs=[result_gallery, result_status]
+                )
+                
+                # 刷新模型列表按钮事件
+                refresh_model_btn.click(
+                    fn=lambda: (["无"] + get_bf16_models(), ["无"] + get_fp8_models()),  # 返回元组而不是列表，修复Content-Length错误
+                    inputs=[],
+                    outputs=[bf16_model_choice, fp8_model_choice]  # 更新两个下拉框
+                )
+                
+                # 打开输出目录事件
+                open_outputs_btn.click(
+                    fn=lambda: open_folder("outputs"),
+                    inputs=[],
+                    outputs=[]
+                )
+                
+                # 任务队列相关事件
+                add_to_queue_btn.click(
+                    fn=lambda prompt, width, height, steps, guidance_scale, seed, bf16_choice, fp8_choice, batch_size, lora_enable, lora_model, lora_weight: (
+                        add_to_queue('txt2img', prompt, width, height, steps, guidance_scale, seed, get_selected_model(bf16_choice, fp8_choice), batch_size, lora_enable, lora_model, lora_weight)
                     ),
-                inputs=[
-                    prompt, steps, guidance_scale, 
-                    height, width, seed, bf16_model_choice, fp8_model_choice,  # 传入两个模型选择
-                    batch_size, lora_enable, lora_model, lora_weight
-                ],
-                outputs=[result_gallery, result_status]
-            )
-            
-            # 刷新模型列表按钮事件
-            refresh_model_btn.click(
-                fn=lambda: (["无"] + get_bf16_models(), ["无"] + get_fp8_models()),  # 返回元组而不是列表，修复Content-Length错误
-                inputs=[],
-                outputs=[bf16_model_choice, fp8_model_choice]  # 更新两个下拉框
-            )
-            
-            # 打开输出目录事件
-            open_outputs_btn.click(
-                fn=lambda: open_folder("outputs"),
-                inputs=[],
-                outputs=[]
-            )
-            
-            # 任务队列相关事件
-            add_to_queue_btn.click(
-                fn=lambda prompt, width, height, steps, guidance_scale, seed, bf16_choice, fp8_choice, batch_size, lora_enable, lora_model, lora_weight: (
-                    add_to_queue('txt2img', prompt, width, height, steps, guidance_scale, seed, get_selected_model(bf16_choice, fp8_choice), batch_size, lora_enable, lora_model, lora_weight)
-                ),
-                inputs=[
-                    prompt, width, height, 
-                    steps, guidance_scale, seed,
-                    bf16_model_choice, fp8_model_choice,  # 使用BF16和FP8两个模型选择
-                    batch_size, lora_enable, lora_model, lora_weight
-                ],
-                outputs=[queue_result]
-            ).then(
-                fn=get_queue_status,
-                inputs=[],
-                outputs=[queue_status]
-            ).then(
-                fn=get_detailed_queue_status,
-                inputs=[],
-                outputs=[detailed_queue_status]
-            )
-            
-            process_queue_btn.click(
-                fn=process_queue,
-                inputs=[],
-                outputs=[result_gallery, result_status]
-            ).then(
-                fn=get_queue_status,
-                inputs=[],
-                outputs=[queue_status]
-            ).then(
-                fn=get_detailed_queue_status,
-                inputs=[],
-                outputs=[detailed_queue_status]
-            )
+                    inputs=[
+                        prompt, width, height, 
+                        steps, guidance_scale, seed,
+                        bf16_model_choice, fp8_model_choice,  # 使用BF16和FP8两个模型选择
+                        batch_size, lora_enable, lora_model, lora_weight
+                    ],
+                    outputs=[queue_result]
+                ).then(
+                    fn=get_queue_status,
+                    inputs=[],
+                    outputs=[queue_status]
+                ).then(
+                    fn=get_detailed_queue_status,
+                    inputs=[],
+                    outputs=[detailed_queue_status]
+                )
+                
+                process_queue_btn.click(
+                    fn=process_queue,
+                    inputs=[],
+                    outputs=[result_gallery, result_status]
+                ).then(
+                    fn=get_queue_status,
+                    inputs=[],
+                    outputs=[queue_status]
+                ).then(
+                    fn=get_detailed_queue_status,
+                    inputs=[],
+                    outputs=[detailed_queue_status]
+                )
 
-            clear_queue_btn.click(
-                fn=clear_queue,
-                inputs=[],
-                outputs=[queue_result]
-            ).then(
-                fn=get_queue_status,
-                inputs=[],
-                outputs=[queue_status]
-            ).then(
-                fn=get_detailed_queue_status,
-                inputs=[],
-                outputs=[detailed_queue_status]
-            )
+                clear_queue_btn.click(
+                    fn=clear_queue,
+                    inputs=[],
+                    outputs=[queue_result]
+                ).then(
+                    fn=get_queue_status,
+                    inputs=[],
+                    outputs=[queue_status]
+                ).then(
+                    fn=get_detailed_queue_status,
+                    inputs=[],
+                    outputs=[detailed_queue_status]
+                )
 
         with gr.TabItem("图像编辑"):
             # 双图像结合界面组件
@@ -305,17 +359,43 @@ def create_flux_klein_ui():
                         create_flux_klein_angle_visualization_component(multi_prompt)
                     
                     with gr.Row():
-                        # 双图像结合参数
-                        multi_steps = gr.Slider(label="步数", minimum=1, maximum=50, value=15, step=1)
-                        multi_guidance_scale = gr.Slider(label="CFG Scale", minimum=1.0, maximum=10.0, value=1.0, step=0.1)
+                        # 双图像结合参数 - 确保这些组件是可交互的
+                        multi_steps = gr.Slider(
+                            label="步数", 
+                            minimum=1, 
+                            maximum=50, 
+                            value=15, 
+                            step=1,
+                            interactive=True  # 明确设置为可交互
+                        )
+                        multi_guidance_scale = gr.Slider(
+                            label="CFG Scale", 
+                            minimum=1.0, 
+                            maximum=10.0, 
+                            value=1.0, 
+                            step=0.1,
+                            interactive=True  # 明确设置为可交互
+                        )
                     
                     with gr.Row():
-                        # 随机种子
-                        multi_seed = gr.Number(label="种子 (Seed)", value=-1, precision=0)
+                        # 随机种子 - 确保这个组件是可交互的
+                        multi_seed = gr.Number(
+                            label="种子 (Seed)", 
+                            value=-1, 
+                            precision=0,
+                            interactive=True  # 明确设置为可交互
+                        )
                     
                     with gr.Row():
-                        # 生成批次
-                        multi_batch_size = gr.Slider(label="生成批次", minimum=1, maximum=8, value=1, step=1)
+                        # 生成批次 - 确保这个组件是可交互的
+                        multi_batch_size = gr.Slider(
+                            label="生成批次", 
+                            minimum=1, 
+                            maximum=8, 
+                            value=1, 
+                            step=1,
+                            interactive=True  # 明确设置为可交互
+                        )
                     
                     # 模型选择下拉列表 - 分别显示BF16和FP8模型
                     with gr.Row():
@@ -422,87 +502,94 @@ def create_flux_klein_ui():
                         multi_btn = gr.Button("生成结果", variant="primary")
                         multi_open_outputs_btn = gr.Button("打开输出目录", variant="secondary")
 
-            # 事件绑定 - 双图结合部分
-            multi_btn.click(
-                fn=lambda img1, img2, prompt, steps, guidance_scale, seed, bf16_choice, fp8_choice, batch_size, lora_enable, lora_model, lora_weight:
-                    multi_img_flux_klein(
-                        Image.open(img1) if img1 else None,  # 从文件路径加载图像
-                        Image.open(img2) if img2 else None,  # 从文件路径加载图像
-                        prompt, steps, guidance_scale, seed,
-                        get_selected_model(bf16_choice, fp8_choice),  # 使用合并的模型选择
-                        batch_size, lora_enable, lora_model, lora_weight
-                    ),
-                inputs=[multi_img1, multi_img2, multi_prompt, multi_steps, multi_guidance_scale, multi_seed, multi_bf16_model_choice, multi_fp8_model_choice, multi_batch_size, multi_lora_enable, multi_lora_model, multi_lora_weight],
-                outputs=[multi_result_gallery, multi_result_status]
-            )
-            
-            # 刷新模型列表按钮事件 - 更新本地的BF16和FP8模型选择
-            multi_refresh_model_btn.click(
-                fn=lambda: (["无"] + get_bf16_models(), ["无"] + get_fp8_models()),  # 返回元组而不是列表，修复Content-Length错误
-                inputs=[],
-                outputs=[multi_bf16_model_choice, multi_fp8_model_choice]  # 更新本地的两个下拉框
-            )
-
-            # 统一处理所有事件绑定
-            def setup_events():
-                # 添加到队列的事件绑定
-                add_to_queue_btn.click(
-                    fn=lambda img1, img2, prompt, steps, guidance_scale, seed, bf16_choice, fp8_choice, batch_size, lora_enable, lora_model, lora_weight: (
-                        add_to_queue('multi', Image.open(img1) if img1 else None, Image.open(img2) if img2 else None, prompt, steps, guidance_scale, seed, get_selected_model(bf16_choice, fp8_choice), batch_size, lora_enable, lora_model, lora_weight)
-                    ),
+            # 图像编辑Tab的事件绑定
+            if not FLUX_KLEIN_AVAILABLE:
+                # 如果模块不可用，禁用相关功能
+                multi_btn.variant = "secondary"
+                multi_btn.interactive = False
+                multi_result_status.value = f"⚠️ FLUX.2-klein模块不可用: {MODULE_IMPORT_ERROR}"
+            else:
+                # 事件绑定 - 双图结合部分
+                multi_btn.click(
+                    fn=lambda img1, img2, prompt, steps, guidance_scale, seed, bf16_choice, fp8_choice, batch_size, lora_enable, lora_model, lora_weight:
+                        multi_img_flux_klein(
+                            Image.open(img1) if img1 else None,  # 从文件路径加载图像
+                            Image.open(img2) if img2 else None,  # 从文件路径加载图像
+                            prompt, steps, guidance_scale, seed,
+                            get_selected_model(bf16_choice, fp8_choice),  # 使用合并的模型选择
+                            batch_size, lora_enable, lora_model, lora_weight
+                        ),
                     inputs=[multi_img1, multi_img2, multi_prompt, multi_steps, multi_guidance_scale, multi_seed, multi_bf16_model_choice, multi_fp8_model_choice, multi_batch_size, multi_lora_enable, multi_lora_model, multi_lora_weight],
-                    outputs=[queue_operation_status]
-                ).then(
-                    fn=get_queue_status,
-                    inputs=[],
-                    outputs=[queue_status_text]
-                ).then(
-                    fn=get_detailed_queue_status,
-                    inputs=[],
-                    outputs=[detailed_queue_status]
-                )
-                
-                # 处理队列任务事件
-                process_queue_btn.click(
-                    fn=process_queue,
-                    inputs=[],
                     outputs=[multi_result_gallery, multi_result_status]
-                ).then(
-                    fn=get_queue_status,
-                    inputs=[],
-                    outputs=[queue_status_text]
-                ).then(
-                    fn=get_detailed_queue_status,
-                    inputs=[],
-                    outputs=[detailed_queue_status]
                 )
                 
-                # 清空队列按钮事件
-                clear_queue_btn.click(
-                    fn=clear_queue,
+                # 刷新模型列表按钮事件 - 更新本地的BF16和FP8模型选择
+                multi_refresh_model_btn.click(
+                    fn=lambda: (["无"] + get_bf16_models(), ["无"] + get_fp8_models()),  # 返回元组而不是列表，修复Content-Length错误
                     inputs=[],
-                    outputs=[queue_operation_status]
-                ).then(
-                    fn=get_queue_status,
-                    inputs=[],
-                    outputs=[queue_status_text]
-                ).then(
-                    fn=get_detailed_queue_status,
-                    inputs=[],
-                    outputs=[detailed_queue_status]
+                    outputs=[multi_bf16_model_choice, multi_fp8_model_choice]  # 更新本地的两个下拉框
                 )
-            
-            # 执行事件绑定设置
-            setup_events()
-            
-            # 打开输出目录事件
-            multi_open_outputs_btn.click(
-                fn=lambda: open_folder("outputs"),
-                inputs=[],
-                outputs=[]
-            )
-            
 
+                # 统一处理所有事件绑定
+                def setup_events():
+                    # 添加到队列的事件绑定
+                    add_to_queue_btn.click(
+                        fn=lambda img1, img2, prompt, steps, guidance_scale, seed, bf16_choice, fp8_choice, batch_size, lora_enable, lora_model, lora_weight: (
+                            add_to_queue('multi', Image.open(img1) if img1 else None, Image.open(img2) if img2 else None, prompt, steps, guidance_scale, seed, get_selected_model(bf16_choice, fp8_choice), batch_size, lora_enable, lora_model, lora_weight)
+                        ),
+                        inputs=[multi_img1, multi_img2, multi_prompt, multi_steps, multi_guidance_scale, multi_seed, multi_bf16_model_choice, multi_fp8_model_choice, multi_batch_size, multi_lora_enable, multi_lora_model, multi_lora_weight],
+                        outputs=[queue_operation_status]
+                    ).then(
+                        fn=get_queue_status,
+                        inputs=[],
+                        outputs=[queue_status_text]
+                    ).then(
+                        fn=get_detailed_queue_status,
+                        inputs=[],
+                        outputs=[detailed_queue_status]
+                    )
+                    
+                    # 处理队列任务事件
+                    process_queue_btn.click(
+                        fn=process_queue,
+                        inputs=[],
+                        outputs=[multi_result_gallery, multi_result_status]
+                    ).then(
+                        fn=get_queue_status,
+                        inputs=[],
+                        outputs=[queue_status_text]
+                    ).then(
+                        fn=get_detailed_queue_status,
+                        inputs=[],
+                        outputs=[detailed_queue_status]
+                    )
+                    
+                    # 清空队列按钮事件
+                    clear_queue_btn.click(
+                        fn=clear_queue,
+                        inputs=[],
+                        outputs=[queue_operation_status]
+                    ).then(
+                        fn=get_queue_status,
+                        inputs=[],
+                        outputs=[queue_status_text]
+                    ).then(
+                        fn=get_detailed_queue_status,
+                        inputs=[],
+                        outputs=[detailed_queue_status]
+                    )
+                
+                # 执行事件绑定设置
+                setup_events()
+                
+                # 打开输出目录事件
+                multi_open_outputs_btn.click(
+                    fn=lambda: open_folder("outputs"),
+                    inputs=[],
+                    outputs=[]
+                )
+
+        # 局部重绘Tab
         with gr.TabItem("局部重绘"):
             # 局部重绘界面组件
             with gr.Row():
@@ -521,9 +608,23 @@ def create_flux_klein_ui():
                     # 移除负向提示词输入框，因为FLUX模型不支持
                     
                     with gr.Row():
-                        # 局部重绘参数
-                        inpaint_steps = gr.Slider(label="步数", minimum=1, maximum=50, value=4, step=1)
-                        inpaint_guidance_scale = gr.Slider(label="CFG Scale", minimum=1.0, maximum=10.0, value=1.0, step=0.1)
+                        # 局部重绘参数 - 确保这些组件是可交互的
+                        inpaint_steps = gr.Slider(
+                            label="步数", 
+                            minimum=1, 
+                            maximum=50, 
+                            value=4, 
+                            step=1,
+                            interactive=True  # 明确设置为可交互
+                        )
+                        inpaint_guidance_scale = gr.Slider(
+                            label="CFG Scale", 
+                            minimum=1.0, 
+                            maximum=10.0, 
+                            value=1.0, 
+                            step=0.1,
+                            interactive=True  # 明确设置为可交互
+                        )
                     
                     with gr.Row():
                         # 随机种子
@@ -634,89 +735,95 @@ def create_flux_klein_ui():
                         inpaint_btn = gr.Button("局部重绘", variant="primary")
                         inpaint_open_outputs_btn = gr.Button("打开输出目录", variant="secondary")
             
-            # 事件绑定 - 局部重绘部分
-            inpaint_btn.click(
-                fn=lambda image_with_mask, prompt, steps, guidance_scale, seed, bf16_choice, fp8_choice, batch_size, lora_enable, lora_model, lora_weight:
-                    inpaint_flux_klein(
-                        image_with_mask,  # 直接传递图像和蒙版，不需要压缩
-                        prompt, steps, guidance_scale, seed,
-                        get_selected_model(bf16_choice, fp8_choice),  # 使用合并的模型选择
-                        batch_size, lora_enable, lora_model, lora_weight
-                    ),
-                inputs=[inpaint_image, inpaint_prompt, inpaint_steps, inpaint_guidance_scale, inpaint_seed, inpaint_bf16_model_choice, inpaint_fp8_model_choice, inpaint_batch_size, inpaint_lora_enable, inpaint_lora_model, inpaint_lora_weight],
-                outputs=[inpaint_result_gallery, inpaint_result_status]
-            )
-            
-            # 刷新模型列表按钮事件 - 更新本地的BF16和FP8模型选择
-            inpaint_refresh_model_btn.click(
-                fn=lambda: (["无"] + get_bf16_models(), ["无"] + get_fp8_models()),  # 返回元组而不是列表，修复Content-Length错误
-                inputs=[],
-                outputs=[inpaint_bf16_model_choice, inpaint_fp8_model_choice]  # 更新本地的两个下拉框
-            )
-
-            # 统一处理所有事件绑定
-            def setup_inpaint_events():
-                # 添加到队列的事件绑定
-                inpaint_add_to_queue_btn.click(
-                    fn=lambda image_with_mask, prompt, steps, guidance_scale, seed, bf16_choice, fp8_choice, batch_size, lora_enable, lora_model, lora_weight: (
-                        add_to_queue('inpaint', 
-                                     image_with_mask,  # 直接传递图像和蒙版，不需要压缩
-                                     prompt, steps, guidance_scale, seed, get_selected_model(bf16_choice, fp8_choice), batch_size, lora_enable, lora_model, lora_weight)
-                    ),
+            # 局部重绘Tab的事件绑定
+            if not FLUX_KLEIN_AVAILABLE:
+                # 如果模块不可用，禁用相关功能
+                inpaint_btn.variant = "secondary"
+                inpaint_btn.interactive = False
+                inpaint_result_status.value = f"⚠️ FLUX.2-klein模块不可用: {MODULE_IMPORT_ERROR}"
+            else:
+                # 事件绑定 - 局部重绘部分
+                inpaint_btn.click(
+                    fn=lambda image_with_mask, prompt, steps, guidance_scale, seed, bf16_choice, fp8_choice, batch_size, lora_enable, lora_model, lora_weight:
+                        inpaint_flux_klein(
+                            image_with_mask,  # 直接传递图像和蒙版，不需要压缩
+                            prompt, steps, guidance_scale, seed,
+                            get_selected_model(bf16_choice, fp8_choice),  # 使用合并的模型选择
+                            batch_size, lora_enable, lora_model, lora_weight
+                        ),
                     inputs=[inpaint_image, inpaint_prompt, inpaint_steps, inpaint_guidance_scale, inpaint_seed, inpaint_bf16_model_choice, inpaint_fp8_model_choice, inpaint_batch_size, inpaint_lora_enable, inpaint_lora_model, inpaint_lora_weight],
-                    outputs=[inpaint_queue_operation_status]
-                ).then(
-                    fn=get_queue_status,
-                    inputs=[],
-                    outputs=[queue_status_text]
-                ).then(
-                    fn=get_detailed_queue_status,
-                    inputs=[],
-                    outputs=[inpaint_detailed_queue_status]
-                )
-                
-                # 处理队列任务事件
-                inpaint_process_queue_btn.click(
-                    fn=process_queue,
-                    inputs=[],
                     outputs=[inpaint_result_gallery, inpaint_result_status]
-                ).then(
-                    fn=get_queue_status,
-                    inputs=[],
-                    outputs=[queue_status_text]
-                ).then(
-                    fn=get_detailed_queue_status,
-                    inputs=[],
-                    outputs=[inpaint_detailed_queue_status]
                 )
                 
-                # 清空队列按钮事件
-                inpaint_clear_queue_btn.click(
-                    fn=clear_queue,
+                # 刷新模型列表按钮事件 - 更新本地的BF16和FP8模型选择
+                inpaint_refresh_model_btn.click(
+                    fn=lambda: (["无"] + get_bf16_models(), ["无"] + get_fp8_models()),  # 返回元组而不是列表，修复Content-Length错误
                     inputs=[],
-                    outputs=[inpaint_queue_operation_status]
-                ).then(
-                    fn=get_queue_status,
-                    inputs=[],
-                    outputs=[queue_status_text]
-                ).then(
-                    fn=get_detailed_queue_status,
-                    inputs=[],
-                    outputs=[inpaint_detailed_queue_status]
+                    outputs=[inpaint_bf16_model_choice, inpaint_fp8_model_choice]  # 更新本地的两个下拉框
                 )
-            
-            # 执行事件绑定设置
-            setup_inpaint_events()
-            
-            # 打开输出目录按钮事件
-            inpaint_open_outputs_btn.click(
-                fn=lambda: open_folder("outputs"),
-                inputs=[],
-                outputs=[]
-            )
 
+                # 统一处理所有事件绑定
+                def setup_inpaint_events():
+                    # 添加到队列的事件绑定
+                    inpaint_add_to_queue_btn.click(
+                        fn=lambda image_with_mask, prompt, steps, guidance_scale, seed, bf16_choice, fp8_choice, batch_size, lora_enable, lora_model, lora_weight: (
+                            add_to_queue('inpaint', 
+                                        image_with_mask,  # 直接传递图像和蒙版，不需要压缩
+                                        prompt, steps, guidance_scale, seed, get_selected_model(bf16_choice, fp8_choice), batch_size, lora_enable, lora_model, lora_weight)
+                        ),
+                        inputs=[inpaint_image, inpaint_prompt, inpaint_steps, inpaint_guidance_scale, inpaint_seed, inpaint_bf16_model_choice, inpaint_fp8_model_choice, inpaint_batch_size, inpaint_lora_enable, inpaint_lora_model, inpaint_lora_weight],
+                        outputs=[inpaint_queue_operation_status]
+                    ).then(
+                        fn=get_queue_status,
+                        inputs=[],
+                        outputs=[queue_status_text]
+                    ).then(
+                        fn=get_detailed_queue_status,
+                        inputs=[],
+                        outputs=[inpaint_detailed_queue_status]
+                    )
+                    
+                    # 处理队列任务事件
+                    inpaint_process_queue_btn.click(
+                        fn=process_queue,
+                        inputs=[],
+                        outputs=[inpaint_result_gallery, inpaint_result_status]
+                    ).then(
+                        fn=get_queue_status,
+                        inputs=[],
+                        outputs=[queue_status_text]
+                    ).then(
+                        fn=get_detailed_queue_status,
+                        inputs=[],
+                        outputs=[inpaint_detailed_queue_status]
+                    )
+                    
+                    # 清空队列按钮事件
+                    inpaint_clear_queue_btn.click(
+                        fn=clear_queue,
+                        inputs=[],
+                        outputs=[inpaint_queue_operation_status]
+                    ).then(
+                        fn=get_queue_status,
+                        inputs=[],
+                        outputs=[queue_status_text]
+                    ).then(
+                        fn=get_detailed_queue_status,
+                        inputs=[],
+                        outputs=[inpaint_detailed_queue_status]
+                    )
+                
+                # 执行事件绑定设置
+                setup_inpaint_events()
+                
+                # 打开输出目录按钮事件
+                inpaint_open_outputs_btn.click(
+                    fn=lambda: open_folder("outputs"),
+                    inputs=[],
+                    outputs=[]
+                )
 
-        # 图像扩展界面
+        # 图像扩展Tab
         with gr.TabItem("图像扩展"):
             with gr.Row():
                 with gr.Column():  # 左侧面板 - 参数设置
@@ -739,25 +846,78 @@ def create_flux_klein_ui():
                     """)
                     
                     with gr.Row():
-                        extend_left = gr.Slider(label="向左扩展像素", minimum=0, maximum=512, value=64, step=8)
-                        extend_right = gr.Slider(label="向右扩展像素", minimum=0, maximum=512, value=64, step=8)
+                        extend_left = gr.Slider(
+                            label="向左扩展像素", 
+                            minimum=0, 
+                            maximum=512, 
+                            value=64, 
+                            step=8,
+                            interactive=True  # 明确设置为可交互
+                        )
+                        extend_right = gr.Slider(
+                            label="向右扩展像素", 
+                            minimum=0, 
+                            maximum=512, 
+                            value=64, 
+                            step=8,
+                            interactive=True  # 明确设置为可交互
+                        )
                         
-                        with gr.Row():
-                            extend_top = gr.Slider(label="向上扩展像素", minimum=0, maximum=512, value=64, step=8)
-                            extend_bottom = gr.Slider(label="向下扩展像素", minimum=0, maximum=512, value=64, step=8)
+                    with gr.Row():
+                        extend_top = gr.Slider(
+                            label="向上扩展像素", 
+                            minimum=0, 
+                            maximum=512, 
+                            value=64, 
+                            step=8,
+                            interactive=True  # 明确设置为可交互
+                        )
+                        extend_bottom = gr.Slider(
+                            label="向下扩展像素", 
+                            minimum=0, 
+                            maximum=512, 
+                            value=64, 
+                            step=8,
+                            interactive=True  # 明确设置为可交互
+                        )
                     
                     with gr.Row():
-                        extend_steps = gr.Slider(label="步数", minimum=1, maximum=50, value=4, step=1)
-                        extend_guidance_scale = gr.Slider(label="CFG Scale", minimum=1.0, maximum=10.0, value=1.0, step=0.1)
+                        extend_steps = gr.Slider(
+                            label="步数", 
+                            minimum=1, 
+                            maximum=50, 
+                            value=4, 
+                            step=1,
+                            interactive=True  # 明确设置为可交互
+                        )
+                        extend_guidance_scale = gr.Slider(
+                            label="CFG Scale", 
+                            minimum=1.0, 
+                            maximum=10.0, 
+                            value=1.0, 
+                            step=0.1,
+                            interactive=True  # 明确设置为可交互
+                        )
                     
                     with gr.Row():
-                        # 随机种子
-                        extend_seed = gr.Number(label="种子 (Seed)", value=-1, precision=0)
+                        # 随机种子 - 确保这个组件是可交互的
+                        extend_seed = gr.Number(
+                            label="种子 (Seed)", 
+                            value=-1, 
+                            precision=0,
+                            interactive=True  # 明确设置为可交互
+                        )
                     
                     with gr.Row():
-                        # 生成批次
-                        extend_batch_size = gr.Slider(label="生成批次", minimum=1, maximum=8, value=1, step=1)
-                    
+                        # 生成批次 - 确保这个组件是可交互的
+                        extend_batch_size = gr.Slider(
+                            label="生成批次", 
+                            minimum=1, 
+                            maximum=8, 
+                            value=1, 
+                            step=1,
+                            interactive=True  # 明确设置为可交互
+                        )
                     # 模型选择下拉列表 - 分别显示BF16和FP8模型
                     with gr.Row():
                         with gr.Column(scale=1):
@@ -859,157 +1019,121 @@ def create_flux_klein_ui():
                         extend_gen_btn = gr.Button("生成图像", variant="primary")
                         extend_open_outputs_btn = gr.Button("打开输出目录")
                     
-                    # 任务队列相关事件
-                    extend_add_to_queue_btn.click(
-                        fn=lambda image, prompt, steps, guidance_scale, seed, bf16_choice, fp8_choice, batch_size, lora_enable, lora_model, lora_weight, left, right, top, bottom: (
-                            add_to_queue('extend', Image.open(image) if image else None, prompt, steps, guidance_scale, seed, get_selected_model(bf16_choice, fp8_choice), batch_size, lora_enable, lora_model, lora_weight, left, right, top, bottom)
-                        ),
-                        inputs=[
-                            extend_input, extend_prompt, 
-                            extend_steps, extend_guidance_scale, extend_seed,
-                            extend_bf16_model_choice, extend_fp8_model_choice, extend_batch_size,
-                            extend_lora_enable, extend_lora_model, extend_lora_weight,
-                            extend_left, extend_right, extend_top, extend_bottom
-                        ],
-                        outputs=[extend_queue_result]
-                    ).then(
-                        fn=get_queue_status,
-                        inputs=[],
-                        outputs=[extend_queue_status]
-                    ).then(
-                        fn=get_detailed_queue_status,
-                        inputs=[],
-                        outputs=[extend_detailed_queue_status]
-                    )
-                    
-                    extend_process_queue_btn.click(
-                        fn=process_queue,
-                        inputs=[],
-                        outputs=[extend_result_gallery, extend_result_status]
-                    ).then(
-                        fn=get_queue_status,
-                        inputs=[],
-                        outputs=[extend_queue_status]
-                    ).then(
-                        fn=get_detailed_queue_status,
-                        inputs=[],
-                        outputs=[extend_detailed_queue_status]
-                    )
-                    
-                    # 清空队列按钮事件
-                    extend_clear_queue_btn.click(
-                        fn=clear_queue,
-                        inputs=[],
-                        outputs=[extend_queue_result]
-                    ).then(
-                        fn=get_queue_status,
-                        inputs=[],
-                        outputs=[extend_queue_status]
-                    ).then(
-                        fn=get_detailed_queue_status,
-                        inputs=[],
-                        outputs=[extend_detailed_queue_status]
-                    )
-                    
-                    # 生成图像事件
-                    extend_gen_btn.click(
-                        fn=lambda image, prompt, steps, guidance_scale, seed, bf16_choice, fp8_choice, batch_size, lora_enable, lora_model, lora_weight, left, right, top, bottom:
-                            extend_flux_klein(
-                                Image.open(image) if image else None,  # 从文件路径加载图像
-                                prompt, steps, guidance_scale, seed,
-                                get_selected_model(bf16_choice, fp8_choice),  # 使用合并的模型选择
-                                batch_size, lora_enable, lora_model, lora_weight,
-                                left, right, top, bottom
+                    # 图像扩展Tab的事件绑定
+                    if not FLUX_KLEIN_AVAILABLE:
+                        # 如果模块不可用，禁用相关功能
+                        extend_gen_btn.variant = "secondary"
+                        extend_gen_btn.interactive = False
+                        extend_result_status.value = f"⚠️ FLUX.2-klein模块不可用: {MODULE_IMPORT_ERROR}"
+                    else:
+                        # 任务队列相关事件
+                        extend_add_to_queue_btn.click(
+                            fn=lambda image, prompt, steps, guidance_scale, seed, bf16_choice, fp8_choice, batch_size, lora_enable, lora_model, lora_weight, left, right, top, bottom: (
+                                add_to_queue('extend', Image.open(image) if image else None, prompt, steps, guidance_scale, seed, get_selected_model(bf16_choice, fp8_choice), batch_size, lora_enable, lora_model, lora_weight, left, right, top, bottom)
                             ),
-                        inputs=[
-                            extend_input, extend_prompt,
-                            extend_steps, extend_guidance_scale, extend_seed,
-                            extend_bf16_model_choice, extend_fp8_model_choice, extend_batch_size,
-                            extend_lora_enable, extend_lora_model, extend_lora_weight,
-                            extend_left, extend_right, extend_top, extend_bottom
-                        ],
-                        outputs=[extend_result_gallery, extend_result_status]
-                    )
-                    
-                    # 打开输出目录事件
-                    extend_open_outputs_btn.click(
-                        fn=lambda: open_folder("outputs"),
-                        inputs=[],
-                        outputs=[]
-                    )
-                    
-                    # 刷新模型列表按钮事件
-                    extend_refresh_model_btn.click(
-                        fn=lambda: (["无"] + get_bf16_models(), ["无"] + get_fp8_models()),  # 返回元组而不是列表，修复Content-Length错误
-                        inputs=[],
-                        outputs=[extend_bf16_model_choice, extend_fp8_model_choice]  # 更新本地的两个下拉框
-                    )
+                            inputs=[
+                                extend_input, extend_prompt, 
+                                extend_steps, extend_guidance_scale, extend_seed,
+                                extend_bf16_model_choice, extend_fp8_model_choice, extend_batch_size,
+                                extend_lora_enable, extend_lora_model, extend_lora_weight,
+                                extend_left, extend_right, extend_top, extend_bottom
+                            ],
+                            outputs=[extend_queue_result]
+                        ).then(
+                            fn=get_queue_status,
+                            inputs=[],
+                            outputs=[extend_queue_status]
+                        ).then(
+                            fn=get_detailed_queue_status,
+                            inputs=[],
+                            outputs=[extend_detailed_queue_status]
+                        )
+                        
+                        extend_process_queue_btn.click(
+                            fn=process_queue,
+                            inputs=[],
+                            outputs=[extend_result_gallery, extend_result_status]
+                        ).then(
+                            fn=get_queue_status,
+                            inputs=[],
+                            outputs=[extend_queue_status]
+                        ).then(
+                            fn=get_detailed_queue_status,
+                            inputs=[],
+                            outputs=[extend_detailed_queue_status]
+                        )
+                        
+                        # 清空队列按钮事件
+                        extend_clear_queue_btn.click(
+                            fn=clear_queue,
+                            inputs=[],
+                            outputs=[extend_queue_result]
+                        ).then(
+                            fn=get_queue_status,
+                            inputs=[],
+                            outputs=[extend_queue_status]
+                        ).then(
+                            fn=get_detailed_queue_status,
+                            inputs=[],
+                            outputs=[extend_detailed_queue_status]
+                        )
+                        
+                        # 生成图像事件
+                        extend_gen_btn.click(
+                            fn=lambda image, prompt, steps, guidance_scale, seed, bf16_choice, fp8_choice, batch_size, lora_enable, lora_model, lora_weight, left, right, top, bottom:
+                                extend_flux_klein(
+                                    Image.open(image) if image else None,  # 从文件路径加载图像
+                                    prompt, steps, guidance_scale, seed,
+                                    get_selected_model(bf16_choice, fp8_choice),  # 使用合并的模型选择
+                                    batch_size, lora_enable, lora_model, lora_weight,
+                                    left, right, top, bottom
+                                ),
+                            inputs=[
+                                extend_input, extend_prompt,
+                                extend_steps, extend_guidance_scale, extend_seed,
+                                extend_bf16_model_choice, extend_fp8_model_choice, extend_batch_size,
+                                extend_lora_enable, extend_lora_model, extend_lora_weight,
+                                extend_left, extend_right, extend_top, extend_bottom
+                            ],
+                            outputs=[extend_result_gallery, extend_result_status]
+                        )
+                        
+                        # 打开输出目录事件
+                        extend_open_outputs_btn.click(
+                            fn=lambda: open_folder("outputs"),
+                            inputs=[],
+                            outputs=[]
+                        )
+                        
+                        # 刷新模型列表按钮事件
+                        extend_refresh_model_btn.click(
+                            fn=lambda: (["无"] + get_bf16_models(), ["无"] + get_fp8_models()),  # 返回元组而不是列表，修复Content-Length错误
+                            inputs=[],
+                            outputs=[extend_bf16_model_choice, extend_fp8_model_choice]  # 更新本地的两个下拉框
+                        )
+
+        # 添加依赖检查Tab
+        with gr.TabItem("依赖检查"):
+            with gr.Column():
+                gr.Markdown("## FLUX.2-klein 模块状态检查")
+                status_text = gr.Textbox(
+                    label="模块状态", 
+                    value=f"模块可用: {'是' if FLUX_KLEIN_AVAILABLE else '否'}\n错误信息: {MODULE_IMPORT_ERROR if not FLUX_KLEIN_AVAILABLE else '无'}",
+                    interactive=False,
+                    lines=5
+                )
+                
+                check_deps_btn = gr.Button("重新检查依赖")
+                check_deps_btn.click(
+                    fn=lambda: gr.update(value=f"模块可用: {'是' if FLUX_KLEIN_AVAILABLE else '否'}\n错误信息: {MODULE_IMPORT_ERROR if not FLUX_KLEIN_AVAILABLE else '无'}"),
+                    inputs=[],
+                    outputs=[status_text]
+                )
 
     # 返回组件列表以便在其他地方使用（如果需要）
-    return {
-        "prompt": prompt,
-        "steps": steps,
-        "guidance_scale": guidance_scale,
-        "height": height,
-        "width": width,
-        "seed": seed,
-        "bf16_model_choice": bf16_model_choice,      # 使用新的BF16模型选择
-        "fp8_model_choice": fp8_model_choice,        # 添加FP8模型选择
-        "gen_btn": gen_btn,
-        "result_gallery": result_gallery,
-        "result_status": result_status,
-        "multi_img1": multi_img1,
-        "multi_img2": multi_img2,
-        "multi_prompt": multi_prompt,
-        "multi_steps": multi_steps,
-        "multi_guidance_scale": multi_guidance_scale,
-        "multi_seed": multi_seed,
-        "multi_bf16_model_choice": multi_bf16_model_choice,  # 使用全局BF16模型选择
-        "multi_fp8_model_choice": multi_fp8_model_choice,    # 添加全局FP8模型选择
-        "multi_btn": multi_btn,
-        "multi_result_gallery": multi_result_gallery,
-        "multi_result_status": multi_result_status,
-        "inpaint_image": inpaint_image,
-        "inpaint_prompt": inpaint_prompt,
-        "inpaint_steps": inpaint_steps,
-        "inpaint_guidance_scale": inpaint_guidance_scale,
-        "inpaint_seed": inpaint_seed,
-        "inpaint_bf16_model_choice": inpaint_bf16_model_choice,  # 使用全局BF16模型选择
-        "inpaint_fp8_model_choice": inpaint_fp8_model_choice,    # 添加全局FP8模型选择
-        "inpaint_btn": inpaint_btn,
-        "inpaint_result_gallery": inpaint_result_gallery,
-        "inpaint_result_status": inpaint_result_status
-    }
+    return locals()  # 返回所有局部变量
 
-
-def create_image_gallery(image_paths):
-    """
-    创建一个包含多个图像的Gradio界面组件
-    """
-    html_images = ""
-    for path in image_paths:
-        html_images += f'<img src="{path}" style="width: 200px; height: auto; margin: 5px;">'
-    
-    with gr.Blocks() as image_gallery:
-        # 使用HTML iframe显示图像
-        html_content = f'''
-        <div id="image-container" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
-            {html_images}
-        </div>
-        <script>
-            // 添加点击事件监听器
-            document.getElementById('image-container').addEventListener('click', function(event) {{
-                if (event.target.tagName === 'IMG') {{
-                    // 在新窗口中打开图像
-                    window.open(event.target.src, '_blank');
-                }}
-            }});
-        </script>
-        '''
-        gr.HTML(html_content)
-    
-    return image_gallery
-
+# ... 其余函数保持不变 ...
 
 def get_selected_model(bf16_choice, fp8_choice):
     """
@@ -1029,7 +1153,6 @@ def get_selected_model(bf16_choice, fp8_choice):
         else:
             return "FLUX_2-klein-base-4B"
 
-
 def open_folder(folder_path):
     """打开指定的文件夹"""
     import os
@@ -1045,13 +1168,11 @@ def open_folder(folder_path):
     else:  # Linux
         subprocess.run(["xdg-open", abs_path])
 
-
 def update_lora_interactive(enable_lora):
     """
     更新LoRA模型选择组件的交互状态
     """
     return gr.update(interactive=enable_lora)
-
 
 def refresh_lora_models():
     """
@@ -1081,14 +1202,3 @@ def handle_image_upload(image):
     except Exception as e:
         print(f"图像处理错误: {e}")
         return None
-
-# 检查模块是否可用
-try:
-    # 检查是否可以导入必要的模块和函数
-    from scripts.flux_klein_generators import generate_flux_klein_image
-    from scripts.flux_klein_model_loader import load_flux_klein_pipeline
-    FLUX_KLEIN_AVAILABLE = True
-except ImportError:
-    FLUX_KLEIN_AVAILABLE = False
-except Exception:
-    FLUX_KLEIN_AVAILABLE = False

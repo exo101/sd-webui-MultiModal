@@ -313,65 +313,149 @@ def generate_image_with_zimage(prompt, negative_prompt, width, height, steps, cf
         # 初始化LoRA状态
         lora_applied = False
         
-        # 处理LoRA
+        # 处理LoRA - 强制状态重置后再加载
         if lora_enable and (lora_model_1 or lora_model_2):
             print(f"[INFO] 启用LoRA支持，准备加载模型...")
 
-            # 解融合任何之前可能存在的LoRA权重，确保干净的环境
+            # 强制重置所有LoRA相关状态
             try:
-                pipe.unfuse_lora()
-                pipe.unload_lora_weights()
-                print("[INFO] 已清除之前的LoRA权重")
-            except:
-                pass  # 忽略解融合时的错误，可能是首次运行
-            
-            lora_paths = []
-            # 查找第一个LoRA模型
-            if lora_model_1:
-                lora_path_1 = Path(shared.models_path) / "Lora" / f"{lora_model_1}.safetensors"
-                if not lora_path_1.exists():
-                    for ext in ['.ckpt', '.pt']:
-                        temp_path = Path(shared.models_path) / "Lora" / f"{lora_model_1}{ext}"
-                        if temp_path.exists():
-                            lora_path_1 = temp_path
-                            break
-                if lora_path_1.exists():
-                    lora_paths.append((str(lora_path_1), lora_weight_1))
-                    print(f"[INFO] 找到LoRA模型1: {lora_path_1}")
-                else:
-                    print(f"[WARNING] 未找到LoRA模型1: {lora_model_1}")
-                    
-            # 查找第二个LoRA模型
-            if lora_model_2:
-                lora_path_2 = Path(shared.models_path) / "Lora" / f"{lora_model_2}.safetensors"
-                if not lora_path_2.exists():
-                    for ext in ['.ckpt', '.pt']:
-                        temp_path = Path(shared.models_path) / "Lora" / f"{lora_model_2}{ext}"
-                        if temp_path.exists():
-                            lora_path_2 = temp_path
-                            break
-                if lora_path_2.exists():
-                    lora_paths.append((str(lora_path_2), lora_weight_2))
-                    print(f"[INFO] 找到LoRA模型2: {lora_path_2}")
-                else:
-                    print(f"[WARNING] 未找到LoRA模型2: {lora_model_2}")
-
-            # 应用所有找到的LoRA
-            for lora_path, lora_weight in lora_paths:
-                print(f"[INFO] 正在加载并融合LoRA: {lora_path}，缩放权重: {lora_weight}")
+                print("[INFO] 开始强制LoRA状态重置...")
+                
+                # 1. 重置PEFT配置
+                if hasattr(pipe, 'peft_config'):
+                    pipe.peft_config = {}
+                    print("[INFO] PEFT配置已重置")
+                
+                # 2. 清理激活的适配器
+                if hasattr(pipe, 'active_adapters'):
+                    pipe.active_adapters = []
+                    print("[INFO] 激活适配器已清空")
+                
+                # 3. 卸载所有适配器
+                if hasattr(pipe, 'unload_adapter'):
+                    try:
+                        pipe.unload_adapter()
+                        print("[INFO] 适配器已卸载")
+                    except:
+                        pass  # 忽略卸载错误
+                
+                # 4. 强制分离LoRA权重
+                if hasattr(pipe, 'unfuse_lora'):
+                    try:
+                        pipe.unfuse_lora()
+                        print("[INFO] LoRA权重已分离")
+                    except:
+                        pass  # 忽略分离错误
+                
+                # 5. 卸载LoRA权重
+                if hasattr(pipe, 'unload_lora_weights'):
+                    try:
+                        pipe.unload_lora_weights()
+                        print("[INFO] LoRA权重已卸载")
+                    except:
+                        pass  # 忽略卸载错误
+                
+                # 6. 深度清理状态字典
+                if hasattr(pipe, 'state_dict') and callable(getattr(pipe, 'state_dict')):
+                    try:
+                        # 获取当前状态字典
+                        current_state = pipe.state_dict()
+                        lora_keys = [k for k in current_state.keys() if any(pattern in k.lower() for pattern in ['lora', 'adapter', 'peft'])]
+                        
+                        if lora_keys:
+                            print(f"[INFO] 发现{len(lora_keys)}个LoRA相关键，正在进行深度清理...")
+                            
+                            # 尝试重置相关模块
+                            if hasattr(pipe, 'transformer') and hasattr(pipe.transformer, 'modules'):
+                                for name, module in pipe.transformer.named_modules():
+                                    if hasattr(module, 'set_adapter'):
+                                        try:
+                                            module.set_adapter([])  # 清空适配器
+                                        except:
+                                            pass
+                                    if hasattr(module, 'disable_adapters'):
+                                        try:
+                                            module.disable_adapters()  # 禁用适配器
+                                        except:
+                                            pass
+                            
+                            # 如果有LoRA合并方法，尝试取消合并
+                            if hasattr(pipe, 'unmerge_lora'):
+                                try:
+                                    pipe.unmerge_lora()
+                                    print("[INFO] LoRA合并已取消")
+                                except:
+                                    pass
+                            
+                        else:
+                            print("[INFO] 状态字典中未发现LoRA相关键")
+                            
+                    except Exception as state_error:
+                        print(f"[WARNING] 状态字典检查时出错: {state_error}")
+                
+                # 7. 最终验证清理
                 try:
-                    pipe.load_lora_weights(lora_path, local_files_only=True)
-                    pipe.fuse_lora(lora_scale=lora_weight)
-                    lora_applied = True
-                except Exception as e:
-                    error_msg = f"无法为 {lora_path} 加载LoRA权重: {str(e)}"
-                    print(f"[ERROR] {error_msg}")
-                    return f"LoRA加载失败: {error_msg}", None
+                    final_state = pipe.state_dict()
+                    remaining_lora_keys = [k for k in final_state.keys() if 'lora' in k.lower()]
+                    if remaining_lora_keys:
+                        print(f"[WARNING] 清理后仍存在{len(remaining_lora_keys)}个LoRA键")
+                    else:
+                        print("[INFO] 状态字典清理验证通过")
+                except:
+                    print("[INFO] 状态字典最终验证完成")
+                
+                print("[INFO] LoRA状态重置完成")
+                
+            except Exception as cleanup_error:
+                print(f"[WARNING] LoRA状态重置时出错: {cleanup_error}")
+                print("[INFO] 继续执行LoRA加载...")
+
+            # 加载LoRA模型
+            lora_models = []
+            lora_weights = []
             
-            if lora_applied:
-                print(f"[INFO] LoRA加载和融合完成")
-            else:
-                print(f"[INFO] 本次生成未应用任何LoRA模型")
+            if lora_model_1:
+                lora_models.append(lora_model_1)
+                lora_weights.append(lora_weight_1)
+            if lora_model_2:
+                lora_models.append(lora_model_2)
+                lora_weights.append(lora_weight_2)
+            
+            for i, (model_name, weight) in enumerate(zip(lora_models, lora_weights)):
+                try:
+                    # 构建完整LoRA路径
+                    lora_path = os.path.join(paths.models_path, "Lora", f"{model_name}.safetensors")
+                    if not os.path.exists(lora_path):
+                        for ext in ['.ckpt', '.pt']:
+                            temp_path = os.path.join(paths.models_path, "Lora", f"{model_name}{ext}")
+                            if os.path.exists(temp_path):
+                                lora_path = temp_path
+                                break
+                    if not os.path.exists(lora_path):
+                        print(f"[WARNING] 未找到LoRA模型{i+1}: {model_name}")
+                        continue
+                    print(f"[INFO] 找到LoRA模型{i+1}: {lora_path}")
+                    
+                    # 使用最安全的加载方式
+                    pipe.load_lora_weights(
+                        lora_path,
+                        weight_name=os.path.basename(lora_path),
+                        local_files_only=True
+                    )
+                    
+                    # 融合LoRA权重
+                    pipe.fuse_lora(lora_scale=weight)
+                    print(f"[INFO] 成功加载并融合LoRA: {lora_path}, 缩放权重:{weight}")
+                    
+                except Exception as e:
+                    print(f"[ERROR] 无法为 {lora_path} 加载LoRA: {str(e)}")
+                    # 提供详细的错误信息帮助调试
+                    if "state dict should be empty" in str(e):
+                        print("[DEBUG] 建议检查:")
+                        print("  1. 模型是否已经包含内置LoRA权重")
+                        print("  2. 是否需要重启WebUI清理内存状态")
+                        print("  3. 尝试禁用LoRA功能测试基础模型")
+                    continue
         
         print(f"[INFO] 开始生成图像...")
         print(f"[INFO] 参数: 提示词='{prompt[:50]}...', 尺寸={width}x{height}, 步数={steps}, CFG Scale={cfg_scale}, 批次={batch_size}")
@@ -551,11 +635,6 @@ def create_z_image_deploy_ui():
                         with gr.Row():
                             steps = gr.Slider(minimum=1, maximum=100, step=1, value=50, label="推理步数")
                             cfg_scale = gr.Slider(minimum=1.0, maximum=20.0, step=0.5, value=4.0, label="CFG Scale")
-                        
-                        # 添加推荐参数提示
-                        gr.Markdown("""
-                        **参数推荐：推理步数28以上，CFG引导数4**
-                        """)
                         
                         with gr.Row():
                             seed = gr.Number(label="随机种子 (-1为随机)", value=-1, precision=0)

@@ -1,0 +1,1626 @@
+import os
+import sys
+import json
+import subprocess
+import copy
+import gradio as gr
+import numpy as np
+from PIL import Image
+import requests
+import torch
+from io import BytesIO
+import time
+import re
+import base64
+import hashlib
+import traceback
+from pathlib import Path
+import zipfile
+import safetensors.torch
+import queue  # 添加队列模块
+from modules import shared, sd_models, sd_vae, sd_samplers, processing, ui_components, ui_settings, ui_common, progress, devices, prompt_parser
+from modules.processing import StableDiffusionProcessingTxt2Img, StableDiffusionProcessingImg2Img, process_images
+from modules.ui import plaintext_to_html, wrap_gradio_gpu_call, wrap_queued_call, reload_javascript
+from modules.sd_models import CheckpointInfo, get_closet_checkpoint_match
+from modules.generation_parameters_copypaste import ParamBinding
+from modules.sd_samplers import samplers_for_img2img
+from modules.shared import opts, cmd_opts
+from modules.ui_common import create_refresh_button
+from modules.timer import Timer
+from modules.paths import models_path
+try:
+    from modules_forge.main_thread import main_thread
+except ImportError:
+    # 如果modules_forge不存在，则忽略此导入
+    pass
+try:
+    from modules_forge.forge_sampler import sampling_prepare
+except ImportError:
+    # 如果modules_forge.forge_sampler不存在，则忽略此导入
+    pass
+
+# 导入qwen_image_edit相关模块，使用容错处理
+def safe_import(module_name):
+    try:
+        # 直接从当前目录导入模块
+        import importlib.util
+        import os
+        from pathlib import Path
+        
+        # 获取当前脚本的目录
+        current_dir = Path(__file__).parent
+        
+        # 构建模块文件路径
+        module_path = current_dir / f"{module_name}.py"
+        
+        if module_path.exists():
+            spec = importlib.util.spec_from_file_location(module_name, module_path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            sys.modules[f'.{module_name}'] = module
+            return module
+        else:
+            print(f"Warning: Module {module_name}.py not found, some features may not be available.")
+            return None
+    except Exception as e:
+        print(f"Warning: Could not import {module_name}, error: {e}, some features may not be available.")
+        return None
+
+# 导入各个模块
+qwen_angle_selector = safe_import('qwen_angle_selector')  # 导入qwen专用角度选择器模块
+create_angle_visualization_component = getattr(qwen_angle_selector, 'create_qwen_angle_visualization_component', None) if qwen_angle_selector else None
+ANGLE_SELECTOR_AVAILABLE = create_angle_visualization_component is not None
+
+# 定义LoRA模型路径
+lora_path = os.path.join(models_path, "Lora")
+
+# ==================== 常量定义 ====================
+# 获取当前脚本所在目录
+current_dir = Path(__file__).parent
+scripts_dir = current_dir
+qwen_image_dir = current_dir.parent / "qwen-image"
+
+# 添加qwen-image目录到系统路径
+if str(qwen_image_dir) not in sys.path:
+    sys.path.append(str(qwen_image_dir))
+
+# 导入预处理器模块
+try:
+    from qwen_image_controlnet import preprocess_for_qwen_image_controlnet
+except ImportError as e:
+    print(f"导入qwen_image_controlnet模块失败: {e}")
+    preprocess_for_qwen_image_controlnet = None
+
+# 修改模型路径为指定目录
+models_dir = Path(shared.models_path) / "qwen-image"
+qwenimage_models_dir = models_dir / "qwenimage"
+qwenimage_edit_models_dir = models_dir / "qwen-image-edit"
+qwenimage_lora_dir = Path(shared.models_path) / "Lora"  # 修改为WebUI标准LoRA目录
+qwenimage_controlnet_dir = Path(shared.models_path) / "ControlNet"
+
+# 修改图片输出目录为WebUI的outputs目录，用于保存生成的图像
+qwen_image_outputs_dir = Path(shared.data_path) / "outputs"
+# 确保输出目录存在
+qwen_image_outputs_dir.mkdir(parents=True, exist_ok=True)
+
+# 确定主Python解释器路径
+main_python = sys.executable
+
+# 添加当前脚本目录到系统路径
+if str(scripts_dir) not in sys.path:
+    sys.path.append(str(scripts_dir))
+
+# ==================== ControlNet 预处理器相关 ====================
+# 定义Qwen-Image-ControlNet-Union支持的预处理器选项
+# 根据项目规范，只保留Qwen-Image-ControlNet-Union模型支持的类型
+# 注意：这里列表中的第一个元素是内部标识符，第二个元素是UI显示名称
+def get_controlnet_preprocessors():
+    """动态获取WebUI支持的预处理器列表"""
+    try:
+        # 添加WebUI根目录到系统路径
+        import sys
+        webui_root = Path(__file__).parent.parent.parent.parent
+        extensions_builtin = webui_root / "extensions-builtin"
+        
+        paths_to_add = [
+            str(webui_root),
+            str(extensions_builtin)
+        ]
+        
+        for path in paths_to_add:
+            if path not in sys.path:
+                sys.path.append(path)
+        
+        # 导入WebUI的预处理器管理模块
+        from modules_forge.shared import supported_preprocessors
+        
+        # 定义Qwen-Image-ControlNet-Union支持的预处理器，按类别分组
+        supported_preprocessors_by_category = {
+            "Canny": [
+                "canny"
+            ],
+            "Depth": [
+                "depth_midas",
+                "depth_leres", 
+                "depth_leres++",
+                "depth_anything",
+                "depth_anything_v2",
+                "depth_hand_refiner",
+                "depth_marigold",
+                "depth_zoe"
+            ],
+            "Pose": [
+                "openpose_full",
+                "openpose",
+                "openpose_face",
+                "openpose_faceonly",
+                "openpose_hand",
+                "dw_openpose_full",
+                "animal_openpose",
+                "densepose",
+                "densepose_parula"
+            ],
+            "Lineart": [
+                "lineart_standard",
+                "lineart_realistic",
+                "lineart_coarse",
+                "lineart_anime",
+                "lineart_anime_denoise"
+            ],
+            "Softedge": [
+                "scribble_pidinet",
+                "softedge_pidinet",
+                "softedge_pidinet_safe",
+                "softedge_pidinstruct",
+                "softedge_hed",
+                "softedge_hedsafe"
+            ],
+            "Inpaint": [
+                "inpaint_only"
+            ]
+        }
+        
+        # 构建预处理器选项列表
+        preprocessors = [("none", "None")]  # 确保"None"选项在列表的开头
+        
+        # 按类别添加预处理器
+        for category, processors in supported_preprocessors_by_category.items():
+            for name in processors:
+                preprocessor = supported_preprocessors.get(name)
+                if preprocessor is not None:
+                    # 使用预处理器的标签作为显示名称，如果没有则使用名称本身
+                    display_name = getattr(preprocessor, 'label', name)
+                    # 在显示名称前加上类别前缀
+                    full_display_name = f"[{category}] {display_name}"
+                    preprocessors.append((name, full_display_name))
+                else:
+                    # 如果找不到预处理器，使用默认显示名称
+                    display_name_map = {
+                        "canny": "Canny",
+                        "depth_midas": "Depth Midas",
+                        "depth_leres": "Depth Leres",
+                        "depth_leres++": "Depth Leres++",
+                        "depth_anything": "Depth Anything",
+                        "depth_anything_v2": "Depth Anything V2",
+                        "depth_hand_refiner": "Depth Hand Refiner",
+                        "depth_marigold": "Depth Marigold",
+                        "depth_zoe": "Depth Zoe",
+                        "openpose_full": "Openpose Full",
+                        "openpose": "Openpose",
+                        "openpose_face": "Openpose Face",
+                        "openpose_faceonly": "Openpose Faceonly",
+                        "openpose_hand": "Openpose Hand",
+                        "dw_openpose_full": "DW Openpose Full",
+                        "animal_openpose": "Animal Openpose",
+                        "densepose": "Densepose (purple bg & purple torso)",
+                        "densepose_parula": "Densepose Parula (black bg & blue torso)",
+                        "lineart_standard": "Lineart Standard (from white bg & black line)",
+                        "lineart_realistic": "Lineart Realistic",
+                        "lineart_coarse": "Lineart Coarse",
+                        "lineart_anime": "Lineart Anime",
+                        "lineart_anime_denoise": "Lineart Anime Denoise",
+                        "scribble_pidinet": "Scribble Pidinet",
+                        "softedge_pidinet": "Softedge Pidinet",
+                        "softedge_pidinet_safe": "Softedge Pidinet Safe",
+                        "softedge_pidinstruct": "Softedge Pidinstruct",
+                        "softedge_hed": "Softedge Hed",
+                        "softedge_hedsafe": "Softedge Hedsafe",
+                        "inpaint_only": "Inpaint Only"
+                    }
+                    display_name = display_name_map.get(name, name)
+                    # 在显示名称前加上类别前缀
+                    full_display_name = f"[{category}] {display_name}"
+                    preprocessors.append((name, full_display_name))
+        
+        return preprocessors
+    except Exception as e:
+        print(f"获取预处理器列表时出错: {e}")
+        # 出错时返回默认列表，确保"None"选项在列表的开头
+        return [
+            ("none", "None"),
+            # Canny 类别
+            ("canny", "[Canny] Canny"),
+            # Depth 类别
+            ("depth_midas", "[Depth] Depth Midas"),
+            ("depth_leres", "[Depth] Depth Leres"),
+            ("depth_leres++", "[Depth] Depth Leres++"),
+            ("depth_anything", "[Depth] Depth Anything"),
+            ("depth_anything_v2", "[Depth] Depth Anything V2"),
+            ("depth_hand_refiner", "[Depth] Depth Hand Refiner"),
+            ("depth_marigold", "[Depth] Depth Marigold"),
+            ("depth_zoe", "[Depth] Depth Zoe"),
+            # Pose 类别
+            ("openpose_full", "[Pose] Openpose Full"),
+            ("openpose", "[Pose] Openpose"),
+            ("openpose_face", "[Pose] Openpose Face"),
+            ("openpose_faceonly", "[Pose] Openpose Faceonly"),
+            ("openpose_hand", "[Pose] Openpose Hand"),
+            ("dw_openpose_full", "[Pose] DW Openpose Full"),
+            ("animal_openpose", "[Pose] Animal Openpose"),
+            ("densepose", "[Pose] Densepose (purple bg & purple torso)"),
+            ("densepose_parula", "[Pose] Densepose Parula (black bg & blue torso)"),
+            # Lineart 类别
+            ("lineart_standard", "[Lineart] Lineart Standard (from white bg & black line)"),
+            ("lineart_realistic", "[Lineart] Lineart Realistic"),
+            ("lineart_coarse", "[Lineart] Lineart Coarse"),
+            ("lineart_anime", "[Lineart] Lineart Anime"),
+            ("lineart_anime_denoise", "[Lineart] Lineart Anime Denoise"),
+            # Softedge 类别
+            ("scribble_pidinet", "[Softedge] Scribble Pidinet"),
+            ("softedge_pidinet", "[Softedge] Softedge Pidinet"),
+            ("softedge_pidinet_safe", "[Softedge] Softedge Pidinet Safe"),
+            ("softedge_pidinstruct", "[Softedge] Softedge Pidinstruct"),
+            ("softedge_hed", "[Softedge] Softedge Hed"),
+            ("softedge_hedsafe", "[Softedge] Softedge Hedsafe")
+        ]
+
+# 获取预处理器选项
+CONTROLNET_PREPROCESSORS = get_controlnet_preprocessors()
+
+# 预处理器类型映射（UI显示名称到内部标识符）
+# 注意：现在我们直接使用WebUI的预处理器管理系统，不再需要手动维护映射表
+# 但为了向后兼容，保留此变量，其值通过动态方式获取
+def get_preprocessor_display_to_internal():
+    """动态获取预处理器显示名称到内部标识符的映射"""
+    mapping = {}
+    for internal_name, display_name in CONTROLNET_PREPROCESSORS:
+        # 将完整的显示名称（如 [Inpaint] Inpaint Only）映射到内部标识符
+        mapping[display_name] = internal_name
+        
+        # 提取不带类别的核心名称（如 Inpaint Only），也建立映射以提高容错性
+        if ']' in display_name:
+            core_name = display_name.split(']', 1)[1].strip()
+            mapping[core_name] = internal_name
+            
+    # 确保各种形式的"None"都能映射到"none"
+    mapping["None"] = "none"
+    mapping["none"] = "none"
+    mapping[""] = "none"  # 空字符串也视为"none"
+    
+    return mapping
+
+# 获取预处理器显示名称到内部标识符的映射
+CONTROLNET_PREPROCESSOR_DISPLAY_TO_INTERNAL = get_preprocessor_display_to_internal()
+
+# ==================== 模型列表获取函数 ====================
+# 获取模型文件列表
+def get_model_choices(model_dir):
+    """获取指定目录下的模型文件列表"""
+    try:
+        if not model_dir.exists():
+            print(f"警告: 模型目录不存在 {model_dir}")
+            # 尝试创建目录
+            model_dir.mkdir(parents=True, exist_ok=True)
+            return []
+        
+        # 直接在指定目录查找模型文件，不深入子目录
+        model_files = list(model_dir.glob("*.safetensors"))
+        
+        
+        # 返回 (显示名称, 文件名) 的元组列表
+        result = [(f.name, f.name) for f in model_files]
+        return result
+    except Exception as e:
+        print(f"获取模型列表时出错: {e}")
+        traceback.print_exc()
+        return []
+
+# 获取LoRA模型文件列表
+def get_lora_choices(lora_dir):
+    """获取指定目录下的LoRA模型文件列表"""
+    try:
+        if not lora_dir.exists():
+            print(f"警告: LoRA目录不存在 {lora_dir}")
+            # 尝试创建目录
+            lora_dir.mkdir(parents=True, exist_ok=True)
+            # 返回默认选项"无"
+            return [("无", "")]
+        
+        # 查找LoRA模型文件
+        lora_files = list(lora_dir.glob("*.safetensors"))
+               
+        # 构建选项列表，始终包含"无"选项
+        choices = [("无", "")]  # 添加"无"选项作为默认值
+        choices.extend([(f.name, str(f)) for f in lora_files])
+        
+        return choices
+    except Exception as e:
+        print(f"获取LoRA模型列表时出错: {e}")
+        traceback.print_exc()
+        # 即使出错也返回默认选项"无"
+        return [("无", "")]
+
+# ==================== 模型和组件初始化 ====================
+
+# 定义全局变量
+qwenimage_model_choices = [("无", "无")]  # 初始化为默认值
+qwenimage_edit_model_choices = [("无", "无")]  # 初始化为默认值
+sdnq_model_choices = [("无", "无")]  # 初始化为默认值
+
+try:
+    qwenimage_model_choices = get_model_choices(qwenimage_models_dir)
+    qwenimage_edit_model_choices = get_model_choices(qwenimage_edit_models_dir)
+    # 移除SDNQ模型列表获取，不需要
+    # sdnq_model_choices = get_sdnq_model_choices()  # 获取SDNQ量化模型列表
+except Exception as e:
+    print(f"初始化模型选择列表时出错: {e}")
+    traceback.print_exc()
+
+# 获取Nunchaku加速模型和SDNQ量化模型列表
+try:
+    qwenimage_model_choices = get_model_choices(qwenimage_models_dir)
+    qwenimage_edit_model_choices = get_model_choices(qwenimage_edit_models_dir)
+    # sdnq_model_choices = get_sdnq_model_choices()  # 已移除SDNQ量化模型列表获取
+    qwenimage_lora_choices = get_lora_choices(qwenimage_lora_dir)  # 获取LoRA模型列表
+except Exception as e:
+    print(f"加载模型列表时出错: {e}")
+    traceback.print_exc()
+    qwenimage_model_choices = []
+    qwenimage_edit_model_choices = []
+    sdnq_model_choices = []  # SDNQ模型选项
+    qwenimage_lora_choices = [("无", "")]  # 默认LoRA选项
+
+# ==================== 库导入和可用性检查 ====================
+# 尝试导入必要的库
+QWEN_IMAGE_AVAILABLE = False
+QWEN_IMAGE_EDIT_MODULE_AVAILABLE = False  # 为兼容主插件添加的变量
+try:
+    from diffusers import QwenImagePipeline, QwenImageEditPlusPipeline, FlowMatchEulerDiscreteScheduler
+    from nunchaku.models.transformers.transformer_qwenimage import NunchakuQwenImageTransformer2DModel as LightningTransformer
+    from nunchaku import NunchakuQwenImageTransformer2DModel as EditTransformer
+    from nunchaku.utils import get_gpu_memory, get_precision
+    import math
+    
+    QWEN_IMAGE_AVAILABLE = True
+    QWEN_IMAGE_EDIT_MODULE_AVAILABLE = True  # 设置兼容变量
+except ImportError as e:
+    print(f"Qwen Image 模块导入失败: {e}")
+    traceback.print_exc()
+
+# 尝试导入SageAttention和Flash Attention
+try:
+    from sageattention import sageattn
+    SAGE_ATTENTION_AVAILABLE = True
+except ImportError:
+    SAGE_ATTENTION_AVAILABLE = False
+
+# Flash Attention检测
+FLASH_ATTENTION_AVAILABLE = False
+try:
+    import flash_attn
+    FLASH_ATTENTION_AVAILABLE = True
+except ImportError:
+    pass
+
+
+# 尝试导入angle_selector模块 - 为编辑模式创建专用的组件
+try:
+    import importlib.util
+    import os
+    from pathlib import Path
+    
+    # 获取当前文件所在目录
+    current_dir = Path(__file__).parent
+    angle_selector_path = current_dir / "qwen_image_edit_angle_selector.py"
+
+    if angle_selector_path.exists():
+        spec = importlib.util.spec_from_file_location("qwen_image_edit_angle_selector", str(angle_selector_path))
+        angle_selector_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(angle_selector_module)
+        create_angle_visualization_component = angle_selector_module.create_qwen_image_edit_angle_visualization_component
+        ANGLE_SELECTOR_AVAILABLE = True
+    else:
+        create_angle_visualization_component = None
+        ANGLE_SELECTOR_AVAILABLE = False
+except Exception as e:
+    print(f"[WARNING] Qwen编辑模式多角度提示词可视化选择器模块导入失败: {e}")
+    create_angle_visualization_component = None
+    ANGLE_SELECTOR_AVAILABLE = False
+
+# 尝试导入qwen_image_scripts模块及其功能
+try:
+    import importlib.util
+    from pathlib import Path
+
+    # 获取qwen-image目录路径
+    qwen_image_dir = Path(__file__).parent.parent / "qwen-image"
+    qwen_image_scripts_path = qwen_image_dir / "qwen_image_scripts.py"
+
+    if qwen_image_scripts_path.exists():
+        spec = importlib.util.spec_from_file_location("qwen_image_scripts", str(qwen_image_scripts_path))
+        qwen_image_scripts_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(qwen_image_scripts_module)
+        run_image_editing = getattr(qwen_image_scripts_module, 'run_image_editing', None)
+        QWEN_IMAGE_SCRIPTS_AVAILABLE = run_image_editing is not None
+    else:
+        run_image_editing = None
+        QWEN_IMAGE_SCRIPTS_AVAILABLE = False
+
+    # 定义edit_images函数
+    if run_image_editing:
+        def edit_images(prompt, negative_prompt, image1, image2, image3, steps, cfg_scale, scheduler, lora_model_1, lora_model_2, lora_weight_1, lora_weight_2, seed, control_image=None, controlnet_conditioning_scale=1.0, controlnet_preprocessor="none", controlnet_start=0.0, controlnet_end=1.0, nunchaku_enable=False, nunchaku_model="", sdnq_enable=False):
+            """包装图像编辑函数以适应UI调用"""
+            try:
+                # 构建参数字典
+                args = {
+                    'prompt': prompt,
+                    'negative_prompt': negative_prompt,
+                    'image1': image1,
+                    'image2': image2,
+                    'image3': image3,
+                    'steps': steps,
+                    'cfg_scale': cfg_scale,
+                    'scheduler': scheduler,
+                    'lora_model_1': lora_model_1,
+                    'lora_model_2': lora_model_2,
+                    'lora_weight_1': lora_weight_1,
+                    'lora_weight_2': lora_weight_2,
+                    'seed': seed,
+                    'control_image': control_image,
+                    'controlnet_conditioning_scale': controlnet_conditioning_scale,
+                    'controlnet_preprocessor': controlnet_preprocessor,
+                    'controlnet_start': controlnet_start,
+                    'controlnet_end': controlnet_end,
+                    'nunchaku_enable': nunchaku_enable,
+                    'nunchaku_model': nunchaku_model,
+                    'sdnq_enable': sdnq_enable
+                }
+
+                # 创建临时参数文件
+                import tempfile
+                import json
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                    json.dump(args, f)
+                    args_file = f.name
+
+                # 调用图像编辑功能
+                result = run_image_editing(args_file)
+
+                # 删除临时文件
+                import os
+                os.unlink(args_file)
+
+                return result
+            except Exception as e:
+                print(f"edit_images函数执行错误: {e}")
+                import traceback
+                traceback.print_exc()
+                return None
+    else:
+        def edit_images(*args, **kwargs):
+            print("警告：Qwen Image Scripts 模块不可用，edit_images函数无法执行")
+            return None
+
+except Exception as e:
+    print(f"[WARNING] Qwen Image Scripts 模块导入失败: {e}")
+    import traceback
+    traceback.print_exc()
+    
+    def edit_images(*args, **kwargs):
+        print("警告：Qwen Image Scripts 模块导入失败，edit_images函数无法执行")
+        return None
+
+# ==================== 图像处理辅助函数 ====================
+def parse_script_output(output):
+    """解析脚本输出，提取图像路径和信息文件路径"""
+    try:
+        lines = output.strip().split('\n')
+        result = {
+            "image_paths": []  # 使用列表存储多个图像路径
+        }
+        
+        for line in lines:
+            if line.startswith("SUCCESS:"):
+                # 添加图像路径到列表中
+                image_path = line[8:].strip()
+                result["image_paths"].append(image_path)
+            elif line.startswith("INFO_FILE:"):
+                result["info_file"] = line[10:].strip()
+        
+        return result
+    except Exception as e:
+        print(f"解析脚本输出时出错: {e}")
+        traceback.print_exc()
+        return {}
+
+# 添加函数来保存numpy数组为图像文件
+def save_numpy_image(image_array, image_path):
+    """将numpy数组或PIL图像保存为图像文件"""
+    try:
+        # 如果是PIL图像对象，直接保存
+        if isinstance(image_array, Image.Image):
+            image_array.save(str(image_path), 'PNG')
+            return str(image_path)
+        # 如果是numpy数组，转换为PIL图像后保存
+        elif isinstance(image_array, np.ndarray):
+            # 确保数组数据类型正确
+            if image_array.dtype != np.uint8:
+                # 如果是浮点数且范围在0-1之间，转换为0-255
+                if image_array.dtype in [np.float32, np.float64] and image_array.max() <= 1.0:
+                    image_array = (image_array * 255).astype(np.uint8)
+                else:
+                    # 其他情况直接转换为uint8
+                    image_array = image_array.astype(np.uint8)
+            
+            # 使用PIL处理图像转换
+            if len(image_array.shape) == 2:
+                # 灰度图
+                image = Image.fromarray(image_array, mode='L')
+            elif len(image_array.shape) == 3:
+                if image_array.shape[2] == 1:
+                    # 单通道图转灰度图
+                    image = Image.fromarray(image_array.squeeze(), mode='L')
+                elif image_array.shape[2] == 3:
+                    # RGB图像
+                    image = Image.fromarray(image_array, mode='RGB')
+                elif image_array.shape[2] == 4:
+                    # RGBA图像转RGB
+                    image = Image.fromarray(image_array, mode='RGBA')
+                    image = image.convert('RGB')
+                else:
+                    # 其他情况默认转RGB
+                    image = Image.fromarray(image_array).convert('RGB')
+            else:
+                # 其他情况默认转RGB
+                image = Image.fromarray(image_array).convert('RGB')
+            
+            # 保存图像
+            image.save(str(image_path), 'PNG')
+            return str(image_path)
+        else:
+            print(f"输入不是numpy数组或PIL图像: {type(image_array)}")
+            return None
+    except Exception as e:
+        print(f"保存图像时出错: {e}")
+        traceback.print_exc()
+        return None
+
+# 添加函数来保存处理后的图像
+def save_processed_image(processed_image):
+    """保存处理后的图像到临时文件"""
+    try:
+        if processed_image is None:
+            return None
+            
+        # 创建临时目录
+        temp_dir = qwen_image_dir / "temp"
+        temp_dir.mkdir(exist_ok=True)
+        
+        # 生成唯一文件名
+        timestamp = int(time.time() * 1000)
+        temp_path = temp_dir / f"preprocess_preview_{timestamp}.png"
+        
+        # 保存图像
+        saved_path = save_numpy_image(processed_image, temp_path)
+        if saved_path and os.path.exists(saved_path):
+            return saved_path
+        else:
+            print("无法保存处理后的图像")
+            return None
+    except Exception as e:
+        print(f"保存处理后图像时出错: {e}")
+        traceback.print_exc()
+        return None
+
+def preprocess_control_image(image_input, preprocessor_display_name):
+    """预处理控制图像"""
+    try:
+        # 检查是否有有效图像输入
+        has_image = image_input is not None and not (isinstance(image_input, np.ndarray) and image_input.size == 0)
+        
+        # 如果没有图像或者选择了"none"预处理器，则直接返回None
+        if not has_image or preprocessor_display_name in ["none", "None"]:
+            return None
+            
+        print(f"开始预处理控制图像，预处理器: {preprocessor_display_name}")
+        
+        # 获取当前脚本目录和qwen-image目录
+        current_dir = Path(__file__).parent
+        qwen_image_dir = current_dir.parent / "qwen-image"
+        
+        # 处理不同类型的输入
+        image_path = None
+        if isinstance(image_input, str):  # 文件路径
+            image_path = image_input
+        elif isinstance(image_input, np.ndarray):  # numpy数组
+            # 为numpy数组创建临时文件
+            temp_dir = qwen_image_dir / "temp"
+            temp_dir.mkdir(exist_ok=True)
+            temp_path = temp_dir / f"control_image_temp_{int(time.time() * 1000)}.png"
+            saved_path = save_numpy_image(image_input, temp_path)
+            if saved_path:
+                image_path = saved_path
+        else:
+            print(f"不支持的图像输入类型: {type(image_input)}")
+            return None
+        
+        # 检查图像路径是否有效
+        if not image_path:
+            print("无效的图像路径")
+            return None
+            
+        # 检查文件是否存在（如果是文件路径）
+        if isinstance(image_input, str) and not os.path.exists(image_path):
+            print(f"图像文件不存在: {image_path}")
+            return None
+            
+        # 将UI显示名称转换为内部标识符
+        mapped_preprocessor_type = CONTROLNET_PREPROCESSOR_DISPLAY_TO_INTERNAL.get(preprocessor_display_name, "none")
+        print(f"开始使用预处理器 {preprocessor_display_name} ({mapped_preprocessor_type}) 处理图像: {image_path}")
+        
+        # 构造参数字典
+        args = {
+            "image_path": image_path,  # 这里已经是字符串路径了
+            "preprocessor_type": mapped_preprocessor_type
+        }
+        
+        # 创建临时参数文件
+        args_file = qwen_image_dir / "temp_preprocess_args.json"
+        with open(args_file, 'w', encoding='utf-8') as f:
+            json.dump(args, f, ensure_ascii=False, indent=2)
+        
+        # 使用与文生图相同的方式执行预处理 - 通过Python代码直接调用函数
+        # 这比通过命令行调用脚本更加可靠
+        scripts_dir_str = str(current_dir).replace('\\', '/')
+        args_file_str = str(args_file).replace('\\', '/')
+        
+        # 构造命令 - 使用Python代码直接调用函数的方式
+        cmd = [
+            main_python,
+            "-c",
+            f"import sys; sys.path.append('{scripts_dir_str}'); from qwen_image_scripts import run_preprocess_control_image; run_preprocess_control_image('{args_file_str}')"
+        ]
+        
+        print(f"执行预处理命令: {' '.join(cmd)}")
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(qwen_image_dir), timeout=1200)
+        
+        # 删除临时参数文件
+        if args_file.exists():
+            args_file.unlink()
+        
+        print(f"预处理命令返回码: {result.returncode}")
+        print(f"预处理命令输出: {result.stdout}")
+        print(f"预处理命令错误: {result.stderr}")
+        
+        if result.returncode != 0:
+            print(f"预处理失败: {result.stderr}")
+            return None
+            
+        # 解析输出，查找处理后的图像路径
+        output_lines = result.stdout.strip().split('\n')
+        processed_image_path = None
+        for line in output_lines:
+            if line.startswith("SUCCESS:"):
+                processed_image_path = line[8:].strip()  # 移除 "SUCCESS:" 前缀
+                break
+        
+        if processed_image_path and os.path.exists(processed_image_path):
+            print(f"成功找到预处理图像: {processed_image_path}")
+            # 加载并返回处理后的图像
+            processed_image = Image.open(processed_image_path)
+            return processed_image
+        else:
+            print("预处理未返回有效图像")
+            return None
+            
+    except Exception as e:
+        print(f"预处理控制图像时出错: {e}")
+        traceback.print_exc()
+        return None
+
+# ==================== 核心功能函数 ====================
+def edit_images(prompt, negative_prompt, image1, image2, image3, steps, cfg_scale, 
+                scheduler, lora_model_1="", lora_model_2="", 
+                lora_weight_1=1.0, lora_weight_2=1.0, seed=-1,
+                # 添加 ControlNet 参数
+                control_image=None, controlnet_conditioning_scale=1.0,
+                controlnet_preprocessor="none", controlnet_start=0.0, controlnet_end=1.0,
+                # 添加 Nunchaku 和 SDNQ 模型启用参数
+                nunchaku_enable=False, nunchaku_model="无", 
+                sdnq_enable=False):  # 移除text_encoder量化参数
+    try:
+        print("开始执行图像编辑功能...")
+        if not prompt:
+            return None, "编辑指令不能为空", "编辑失败"
+        
+        # 确保negative_prompt是字符串类型
+        if not isinstance(negative_prompt, str):
+            negative_prompt = str(negative_prompt)
+        
+        # 检查至少有一张图像
+        images = [image1, image2, image3]
+        uploaded_images = []
+        
+        # 如果没有上传图像，则从outputs目录中查找最新的图像
+        has_uploaded_image = any(img is not None for img in images)
+        if not has_uploaded_image:
+            # 查找outputs目录中的最新图像文件
+            outputs_dir = Path(shared.data_path) / "outputs"
+            image_extensions = ['*.png', '*.jpg', '*.jpeg', '*.bmp', '*.gif']
+            latest_images = []
+            image_times = []
+            
+            # 查找最新的几张图像
+            for extension in image_extensions:
+                for image_path in outputs_dir.rglob(extension):
+                    latest_images.append(str(image_path))
+                    image_times.append(image_path.stat().st_mtime)
+            
+            # 按修改时间排序，获取最新的图像
+            if latest_images:
+                sorted_images = sorted(zip(latest_images, image_times), key=lambda x: x[1], reverse=True)
+                for i, (image_path, _) in enumerate(sorted_images[:3]):  # 最多获取3张最新图像
+                    uploaded_images.append(image_path)
+                    print(f"从outputs目录自动选择图像: {image_path}")
+        else:
+            # 处理图像参数，如果它们是numpy数组则保存为临时文件
+            for i, img in enumerate(images):
+                if img is not None:
+                    if isinstance(img, np.ndarray):
+                        # 为numpy数组创建临时文件
+                        temp_dir = qwen_image_dir / "temp"
+                        temp_dir.mkdir(exist_ok=True)
+                        temp_image_path = temp_dir / f"edit_image_{i}_{int(time.time() * 1000)}.png"
+                        save_result = save_numpy_image(img, temp_image_path)
+                        if save_result:
+                            uploaded_images.append(str(temp_image_path))
+                    else:
+                        # 假设是文件路径
+                        uploaded_images.append(img)
+        
+        if len(uploaded_images) == 0:
+            return None, "请至少上传一张图像或确保outputs目录中有图像文件", "编辑失败"
+        
+        # 处理control_image参数，如果它是numpy数组则保存为临时文件
+        processed_control_image = control_image
+        if isinstance(control_image, np.ndarray):
+            # 为numpy数组创建临时文件
+            temp_dir = qwen_image_dir / "temp"
+            temp_dir.mkdir(exist_ok=True)
+            temp_image_path = temp_dir / f"control_image_{int(time.time() * 1000)}.png"
+            save_result = save_numpy_image(control_image, temp_image_path)
+            if save_result:
+                processed_control_image = str(temp_image_path)
+            else:
+                processed_control_image = None
+        elif hasattr(control_image, 'save'):  # 如果是PIL Image对象
+            # 为PIL Image创建临时文件
+            temp_dir = qwen_image_dir / "temp"
+            temp_dir.mkdir(exist_ok=True)
+            temp_image_path = temp_dir / f"control_image_{int(time.time() * 1000)}.png"
+            try:
+                control_image.save(temp_image_path)
+                processed_control_image = str(temp_image_path)
+            except Exception as e:
+                print(f"保存PIL Image对象时出错: {e}")
+                processed_control_image = None
+        
+        # 特殊处理inpaint_only预处理器，需要蒙版图像
+        mask_image = None
+        if controlnet_preprocessor == "inpaint_only" and len(uploaded_images) > 2:
+            # 第三个图像作为蒙版图像
+            mask_image = uploaded_images[2]
+            print(f"为inpaint_only预处理器提供蒙版图像: {mask_image}")
+        
+        # 准备参数
+        args = {
+            "prompt": prompt,
+            "negative_prompt": negative_prompt,
+            "images": uploaded_images,  # 传递所有上传的图像
+            "steps": steps,
+            "cfg_scale": cfg_scale,
+            "scheduler": scheduler,  # 添加采样方法参数
+            "lora_model_1": lora_model_1 if lora_model_1 else None,
+            "lora_model_2": lora_model_2 if lora_model_2 else None,
+            "lora_weight_1": lora_weight_1,
+            "lora_weight_2": lora_weight_2,
+            "seed": seed,
+            "output_dir": str(qwen_image_outputs_dir),
+            # 添加 ControlNet 参数
+            "controlnet_enable": processed_control_image is not None,  # 基于是否提供了控制图像来启用ControlNet
+            "control_image": processed_control_image if processed_control_image is not None else None,
+            "controlnet_conditioning_scale": controlnet_conditioning_scale if processed_control_image is not None else 1.0,
+            "controlnet_preprocessor": controlnet_preprocessor if processed_control_image is not None else "none",
+            "controlnet_start": controlnet_start if processed_control_image is not None else 0.0,
+            "controlnet_end": controlnet_end if processed_control_image is not None else 1.0,
+            # 添加蒙版图像参数
+            "mask_image": mask_image,
+            # 添加Nunchaku和SDNQ模型参数
+            "nunchaku_enable": nunchaku_enable,
+            "model_file": nunchaku_model if nunchaku_enable and nunchaku_model != "无" else None,
+            "sdnq_enable": sdnq_enable,
+        }
+        
+        # 创建临时参数文件
+        qwen_image_dir = Path(__file__).parent.parent / "qwen-image"
+        args_file = qwen_image_dir / "temp_args.json"
+        with open(args_file, "w", encoding="utf-8") as f:
+            json.dump(args, f, ensure_ascii=False, indent=2)
+        
+        # 直接导入并调用函数，而不是使用子进程
+        try:
+            # 添加当前路径到sys.path以确保模块可以被导入
+            import sys
+            current_dir = Path(__file__).parent
+            qwen_image_dir = current_dir.parent / "qwen-image"
+            if str(qwen_image_dir) not in sys.path:
+                sys.path.insert(0, str(qwen_image_dir))
+            
+            # 直接从qwen_image_scripts导入函数
+            from qwen_image_scripts import run_image_editing
+            result = run_image_editing(str(args_file))
+        except Exception as e:
+            print(f"执行图像编辑时出错: {e}")
+            import traceback
+            traceback.print_exc()
+            result = None
+
+        # 删除临时参数文件
+        if args_file.exists():
+            args_file.unlink()
+        
+        # 检查执行结果
+        if result is None:
+            error_msg = "编辑失败: 执行结果为空"
+            print(f"编辑失败: {error_msg}")
+            return None, error_msg  # 返回两个值，与outputs=[edit_output, edit_status]匹配
+            
+        # 检查result是否是路径列表（直接从函数返回）
+        if isinstance(result, list):
+            # 直接处理返回的路径列表，确保路径是有效的字符串
+            image_paths = []
+            for path in result:
+                path_str = str(path).strip()  # 确保路径转换为字符串并去除空白字符
+                # 更严格的路径验证，防止路径变成 'D:\\:' 这样的格式
+                if (path_str and 
+                    len(path_str) > 5 and  # 确保路径长度合理
+                    ':' in path_str and 
+                    '\\' in path_str and
+                    path_str.count(':') == 1 and  # 确保只有一个冒号
+                    not path_str.endswith(':') and  # 确保不以冒号结尾
+                    not path_str.startswith(':')):  # 确保不以冒号开头
+                    
+                    try:
+                        test_path = Path(path_str)
+                        # 检查路径是否有效且确实存在
+                        if (test_path.is_absolute() and 
+                            len(str(test_path.parent)) > 3 and 
+                            test_path.suffix.lower() in ['.png', '.jpg', '.jpeg', '.bmp', '.gif']):
+                            
+                            if os.path.exists(path_str) and os.path.isfile(path_str):
+                                image_paths.append(path_str)
+                    except Exception:
+                        continue  # 如果路径验证失败，跳过此路径
+            
+            if image_paths:
+                print(f"图像编辑成功，共生成 {len(image_paths)} 张图像")
+                # 返回图像路径列表给Gallery组件，以及状态消息
+                return image_paths, "编辑成功"  # Gallery可以直接接收路径列表
+            else:
+                error_msg = "编辑失败: 未生成任何有效图像"
+                print(error_msg)
+                return None, error_msg
+        else:
+            # 处理其他类型的结果，比如可能包含stdout属性的对象
+            stdout_content = ""
+            # 检查result是否是包含stdout的对象
+            if hasattr(result, 'stdout'):
+                stdout_content = result.stdout
+            elif isinstance(result, dict) and 'stdout' in result:
+                stdout_content = result['stdout']
+            elif isinstance(result, str):
+                stdout_content = result
+            else:
+                # 尝试转换为字符串
+                stdout_content = str(result) if result is not None else ""
+                
+            output_info = parse_script_output(stdout_content)
+            if "image_paths" in output_info and output_info["image_paths"]:
+                # 过滤有效的图像路径
+                valid_image_paths = []
+                for path in output_info["image_paths"]:
+                    path_str = str(path).strip()
+                    # 更严格的路径验证，防止路径变成 'D:\\:' 这样的格式
+                    if (path_str and 
+                        len(path_str) > 5 and  # 确保路径长度合理
+                        ':' in path_str and 
+                        '\\' in path_str and
+                        path_str.count(':') == 1 and  # 确保只有一个冒号
+                        not path_str.endswith(':') and  # 确保不以冒号结尾
+                        not path_str.startswith(':')):  # 确保不以冒号开头
+                        
+                        try:
+                            test_path = Path(path_str)
+                            # 检查路径格式是否有效
+                            if (test_path.is_absolute() and 
+                                len(str(test_path.parent)) > 3 and 
+                                test_path.suffix.lower() in ['.png', '.jpg', '.jpeg', '.bmp', '.gif']):
+                                
+                                if os.path.exists(path_str) and os.path.isfile(path_str):
+                                    valid_image_paths.append(path_str)
+                        except Exception:
+                            continue  # 如果路径验证失败，跳过此路径
+                
+                if valid_image_paths:
+                    # 返回验证后的有效路径列表给Gallery组件
+                    print(f"图像编辑成功，共生成 {len(valid_image_paths)} 张图像")
+                    return valid_image_paths, "编辑成功"  # 返回图像路径列表和状态
+                else:
+                    error_msg = f"编辑失败: 生成的路径无效或不存在"
+                    print(f"编辑失败: {error_msg}")
+                    return None, error_msg
+            else:
+                error_msg = f"编辑失败: {stdout_content}"
+                print(f"编辑失败: {error_msg}")
+                return None, error_msg
+            
+    except Exception as e:
+        import traceback
+        error_msg = f"编辑失败: {str(e)}"
+        print(f"编辑过程中出现异常: {error_msg}")
+        traceback.print_exc()
+        return None, error_msg, "编辑失败"
+
+# ==================== UI事件处理函数 ====================
+# 添加预处理器类别变化事件
+def update_preprocessor_choices(category):
+    """根据选择的类别更新预处理器选项"""
+    if category == "All":
+        # 返回所有预处理器
+        return gr.update(choices=CONTROLNET_PREPROCESSORS)
+    else:
+        # 只返回选定类别的预处理器
+        filtered_choices = [p for p in CONTROLNET_PREPROCESSORS if p[1].startswith(f"[{category}]")]
+        # 确保"None"选项始终存在
+        none_option = [("none", "None")]
+        filtered_choices = none_option + [p for p in filtered_choices if p[0] != "none"]
+        return gr.update(choices=filtered_choices)
+
+# 添加函数来处理控制图像上传事件，自动设置尺寸
+def on_control_image_upload(image_input):
+    """当控制图像上传时自动设置尺寸"""
+    if image_input is not None:
+        try:
+            from PIL import Image
+            # 处理不同类型的输入
+            if isinstance(image_input, str) and os.path.exists(image_input):  # 文件路径
+                image = Image.open(image_input)
+            elif isinstance(image_input, np.ndarray):  # numpy数组
+                image = Image.fromarray(image_input)
+            elif hasattr(image_input, 'save'):  # PIL Image对象
+                image = image_input
+            else:
+                return gr.update(), gr.update()
+            
+            width, height = image.size
+            
+            # 调整尺寸到64的倍数
+            target_width = ((width + 31) // 64) * 64
+            target_height = ((height + 31) // 64) * 64
+            
+            # 限制尺寸在合理范围内
+            target_width = max(256, min(2048, target_width))
+            target_height = max(256, min(2048, target_height))
+            
+            print(f"自动设置图像尺寸: {width}x{height} -> {target_width}x{target_height}")
+            return gr.update(value=target_width), gr.update(value=target_height)
+        except Exception as e:
+            print(f"自动设置图像尺寸时出错: {e}")
+            traceback.print_exc()
+            return gr.update(), gr.update()
+    return gr.update(), gr.update()
+
+def on_preprocess_params_change(image_path, preprocessor_type, preprocess_refresh):
+    """当预处理参数改变时触发"""
+    try:
+        print(f"预处理参数变更: image_path={image_path}, preprocessor_type={preprocessor_type}, preprocess_refresh={preprocess_refresh}")
+        # 只有在提供了图像且预处理器不是"none"时才进行预处理
+        if preprocess_refresh and image_path is not None and ((isinstance(image_path, str) and os.path.exists(image_path)) or isinstance(image_path, np.ndarray)) and preprocessor_type != "none":
+            processed_image = preprocess_control_image(image_path, preprocessor_type)
+            if processed_image:
+                temp_path = save_processed_image(processed_image)
+                if temp_path:
+                    print(f"预览图像已保存到: {temp_path}")
+                    return gr.update(visible=True, value=temp_path)
+                else:
+                    print("无法保存预览图像")
+            else:
+                print("预处理未返回有效图像")
+        else:
+            print("不满足自动预览条件")
+        return gr.update(visible=False)
+    except Exception as e:
+        print(f"自动预览处理失败: {e}")
+        traceback.print_exc()
+        return gr.update(visible=False)
+
+def on_preprocess_button_click(image_input, preprocessor_type):
+    """预处理按钮点击事件处理函数"""
+    # 处理预览更新
+    preview_update = gr.update(visible=False)
+    
+    # 检查输入是文件路径还是numpy数组
+    image_path = None
+    if isinstance(image_input, str):  # 文件路径
+        image_path = image_input
+    elif isinstance(image_input, np.ndarray):  # numpy数组
+        # 为numpy数组创建临时文件
+        temp_dir = qwen_image_dir / "temp"
+        temp_dir.mkdir(exist_ok=True)
+        image_path = temp_dir / f"control_image_temp_{int(time.time() * 1000)}.png"
+        saved_path = save_numpy_image(image_input, image_path)
+        if saved_path:
+            image_path = saved_path
+    
+    # 只有在提供了图像且预处理器不是"none"时才进行预处理
+    if image_path and os.path.exists(image_path) and preprocessor_type != "none":
+        processed_image = preprocess_control_image(image_path, preprocessor_type)
+        if processed_image is not None:
+            temp_path = save_processed_image(processed_image)
+            if temp_path and os.path.exists(temp_path):
+                preview_update = gr.update(visible=True, value=temp_path)
+            else:
+                print("无法保存预览图像")
+        else:
+            print("预处理未返回有效图像")
+    else:
+        print("不满足预览条件")
+    
+    return preview_update
+
+def open_output_directory():
+    """打开输出目录"""
+    try:
+        output_dir = Path(shared.data_path) / "outputs"
+        output_dir_str = str(output_dir)
+        
+        if os.path.exists(output_dir):
+            if sys.platform == "win32":
+                os.startfile(output_dir_str)
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", output_dir_str])
+            else:
+                subprocess.Popen(["xdg-open", output_dir_str])
+            return "已打开输出目录"
+        else:
+            return "输出目录不存在"
+    except Exception as e:
+        error_msg = f"打开输出目录时出错: {str(e)}"
+        print(error_msg)
+        traceback.print_exc()
+        return error_msg
+
+# ==================== 主UI创建函数 ====================
+def create_qwen_image_edit_ui():
+    """创建Qwen图像编辑UI模块"""
+    try:
+        print("开始创建Qwen Image Edit UI...")
+        if not QWEN_IMAGE_AVAILABLE:
+            print("Qwen Image 模块不可用")
+            with gr.Row():
+                gr.Markdown("""## Qwen Image 模型不可用
+                
+                请确保已安装所需的依赖项:
+                ```
+                pip install nunchaku diffusers>=0.36.0.dev0 transformers>=4.53.3 accelerate>=1.9.0
+                ```
+                """)
+            return {}
+        
+        with gr.Tabs():
+            with gr.TabItem("图像编辑"):
+                with gr.Row():
+                    with gr.Column():  # 左侧参数设置列
+                        edit_prompt = gr.TextArea(
+                            label="编辑指令",
+                            placeholder="输入您的编辑指令，描述想要进行的编辑操作..."
+                        )
+                        
+                        # 添加负面提示词输入框到编辑指令下方
+                        edit_negative_prompt = gr.Textbox(
+                            label="负面提示词 (Negative Prompt)",
+                            value="",
+                            max_lines=3,
+                            placeholder="输入不希望出现在图像中的内容，例如：丑陋、拼合、多余的肢体、畸形、变形、身体超出画面、水印、截断、对比度低、曝光不足、曝光过度、糟糕的艺术、面部扭曲、模糊、颗粒感",
+                            interactive=True,
+                            elem_classes=["negative_prompt"]
+                        )
+                        
+                        with gr.Row():
+                            edit_image1 = gr.Image(type="filepath", label="图像1", interactive=True, height=300)
+                            edit_image2 = gr.Image(type="filepath", label="图像2", interactive=True, height=300)
+                            edit_image3 = gr.Image(type="filepath", label="图像3", interactive=True, height=300)
+                        
+                        with gr.Row():
+                            edit_steps = gr.Slider(
+                                minimum=1, maximum=50, step=1, value=10,
+                                label="推理步数",
+                                min_width=80
+                            )
+                            
+                            edit_cfg = gr.Slider(
+                                minimum=1.0, maximum=20.0, step=0.1, value=1.0,
+                                label="CFG Scale",
+                                min_width=80
+                            )
+                            
+                            # 添加采样方法选择组件
+                            edit_scheduler = gr.Dropdown(
+                                choices=[
+                                    ("Euler", "euler"),
+                                    ("Euler Ancestral", "euler_ancestral"),
+                                    ("Heun", "heun"),
+                                    ("DPM++ 2M", "dpmpp_2m")
+                                ],
+                                value="euler",
+                                label="采样方法",
+                                min_width=120
+                            )
+                        
+                        # Nunchaku加速模型选项
+                        with gr.Accordion("Nunchaku 加速模型选项", open=False):
+                            with gr.Group():
+                                nunchaku_enable = gr.Checkbox(
+                                    label="启用 Nunchaku 加速模型",
+                                    value=False,
+                                    interactive=True
+                                )
+                                nunchaku_model = gr.Dropdown(
+                                    choices=qwenimage_edit_model_choices,
+                                    value="无",
+                                    label="Nunchaku 模型文件",
+                                    interactive=True
+                                )
+                        
+                        # SDNQ量化模型选项
+                        with gr.Accordion("Qwen-Image-Edit-2511-量化模型选项", open=False):
+                            with gr.Group():
+                                sdnq_enable = gr.Checkbox(label="启用SDNQ量化", value=False)
+                        
+                        # 添加推荐参数提示信息
+                        gr.Markdown("""
+                        **参数推荐：**
+                        - Nunchaku模型：CFG引导数建议设置为 **1**，步数建议设置为 **10**
+                        - SDNQ模型：CFG引导数建议设置为 **4**，步数建议设置为 **15**
+                        """)
+                        
+                        # LoRA模型选项
+                        with gr.Accordion("LoRA 模型选项", open=False):
+                            edit_lora_1 = gr.Dropdown(
+                                choices=qwenimage_lora_choices,
+                                value="无",
+                                label="LoRA模型1",
+                                interactive=True
+                            )
+                            edit_lora_2 = gr.Dropdown(
+                                choices=qwenimage_lora_choices,
+                                value="无",
+                                label="LoRA模型2",
+                                interactive=True
+                            )
+                            edit_lora_weight_1 = gr.Slider(
+                                minimum=0.0, maximum=2.0, step=0.1, value=1.0,
+                                label="LoRA权重1",
+                                min_width=80
+                            )
+                            edit_lora_weight_2 = gr.Slider(
+                                minimum=0.0, maximum=2.0, step=0.1, value=1.0,
+                                label="LoRA权重2",
+                                min_width=80
+                            )
+                            
+                            # 添加刷新LoRA模型列表的按钮
+                            lora_refresh_button = gr.Button("刷新LoRA模型列表")
+                        
+                        # 添加多角度可视化选择器
+                        if ANGLE_SELECTOR_AVAILABLE:
+                            with gr.Accordion("多角度LoRA可视化选择器", open=False):
+                                angle_display = create_angle_visualization_component(edit_prompt)
+                        else:
+                            with gr.Accordion("多角度LoRA可视化选择器", open=False):
+                                gr.Markdown("角度选择器模块未加载，请检查依赖。")
+                        
+                        edit_seed = gr.Slider(
+                            minimum=-1, maximum=2147483647, step=1, value=-1,
+                            label="随机种子",
+                            min_width=80
+                        )
+                        
+                        
+                        # 添加ControlNet相关组件 (参考WebUI中ControlNet的设计)
+                        with gr.Accordion("ControlNet 控制", open=False):
+                            with gr.Row(elem_classes=["cnet-image-row"], equal_height=True):
+                                with gr.Group(elem_classes=["cnet-input-image-group"]):
+                                    # 控制图像输入
+                                    control_image = gr.Image(
+                                        type="filepath",
+                                        label="控制图像",
+                                        interactive=True,
+                                        elem_classes=["cnet-image"]
+                                    )
+                                    
+                                with gr.Group(elem_classes=["cnet-generated-image-group"]):
+                                    # 预处理效果图预览
+                                    preprocess_preview = gr.Image(
+                                        label="预处理效果图预览",
+                                        interactive=False,
+                                        elem_classes=["cnet-image"],
+                                        visible=True
+                                    )
+                            
+                            # ControlNet参数设置
+                            controlnet_conditioning_scale = gr.Slider(
+                                minimum=0.0, maximum=20.0, step=0.1, value=1.0,
+                                label="ControlNet 强度",
+                                min_width=80
+                            )
+                            controlnet_start = gr.Slider(
+                                minimum=0.0, maximum=1.0, step=0.01, value=0.0,
+                                label="开始时间步",
+                                min_width=80
+                            )
+                            controlnet_end = gr.Slider(
+                                minimum=0.0, maximum=1.0, step=0.01, value=1.0,
+                                label="结束时间步",
+                                min_width=80
+                            )
+                            controlnet_preprocessor = gr.Dropdown(
+                                choices=CONTROLNET_PREPROCESSORS,
+                                value="none",
+                                label="ControlNet 预处理器",
+                                interactive=True
+                            )
+                            
+                            # 添加预处理器类别选择组件
+                            controlnet_preprocessor_category = gr.Dropdown(
+                                choices=["All", "Canny", "Depth", "Pose", "Lineart", "Softedge", "Inpaint"],
+                                value="All",
+                                label="预处理器类别",
+                                interactive=True
+                            )
+                            
+                            # 添加预处理器类别变化事件
+                            controlnet_preprocessor_category.change(
+                                fn=update_preprocessor_choices,
+                                inputs=[controlnet_preprocessor_category],
+                                outputs=[controlnet_preprocessor]
+                            )
+                            
+                            # 添加预处理按钮
+                            preprocess_button = gr.Button("💥 预处理", elem_classes=["control_net_preprocessor_btn"])
+                            
+                            # 添加预处理参数变化事件
+                            preprocess_refresh = gr.Checkbox(value=True, visible=False)  # 创建一个隐藏的复选框作为刷新标志
+                            control_image.change(
+                                fn=on_preprocess_params_change,
+                                inputs=[control_image, controlnet_preprocessor, preprocess_refresh],
+                                outputs=[preprocess_preview]
+                            )
+                            controlnet_preprocessor.change(
+                                fn=on_preprocess_params_change,
+                                inputs=[control_image, controlnet_preprocessor, preprocess_refresh],
+                                outputs=[preprocess_preview]
+                            )
+                            
+                            # 添加控制图像上传事件
+                            control_image.upload(
+                                fn=on_control_image_upload,
+                                inputs=[control_image],
+                                outputs=[]  # 暂时不需要输出
+                            )
+
+                            preprocess_button.click(
+                                fn=on_preprocess_button_click,
+                                inputs=[control_image, controlnet_preprocessor],
+                                outputs=[preprocess_preview]
+                            )
+                    
+                    # 右侧结果和输出列
+                    with gr.Column():
+                        
+                        # 添加输出图像组件
+                        edit_output = gr.Gallery(label="输出图像", interactive=False)
+                        
+                        # 添加状态显示组件
+                        edit_status = gr.Textbox(
+                            label="状态",
+                            value="",
+                            max_lines=1,
+                            interactive=False,
+                            elem_classes=["negative_prompt"]
+                        )
+                        
+                        # 添加编辑按钮到右侧
+                        edit_button = gr.Button("编辑图像")
+                        
+                        # 添加打开输出目录按钮
+                        open_output_dir_button = gr.Button("打开输出目录")
+                        
+                        # 添加队列功能区域
+                        with gr.Accordion("任务队列", open=False):
+                            with gr.Group():
+                                queue_status_text = gr.Textbox(label="队列状态", value="当前队列大小: 0", interactive=False)
+                                
+                                with gr.Row():
+                                    # 添加到队列按钮
+                                    add_to_queue_btn = gr.Button("添加到队列", variant="secondary")
+                                    process_queue_btn = gr.Button("执行队列任务", variant="primary")
+                                    clear_queue_btn = gr.Button("清空队列", variant="stop")
+                                
+                                # 队列操作状态
+                                queue_operation_status = gr.Textbox(label="队列操作状态", interactive=False)
+                                
+                                # 详细队列状态显示
+                                detailed_queue_status = gr.Textbox(label="详细任务列表", interactive=False, lines=5, max_lines=10)
+                        
+                        # 为按钮添加事件
+                        edit_button.click(
+                            fn=wrap_gradio_gpu_call(edit_images, extra_outputs=lambda: (gr.update(visible=True), "开始编辑...")),
+                            inputs=[
+                                edit_prompt,
+                                edit_negative_prompt,
+                                edit_image1,
+                                edit_image2,
+                                edit_image3,
+                                edit_steps,
+                                edit_cfg,
+                                edit_scheduler,
+                                edit_lora_1,
+                                edit_lora_2,
+                                edit_lora_weight_1,
+                                edit_lora_weight_2,
+                                edit_seed,
+                                # 添加 ControlNet 参数
+                                control_image,
+                                controlnet_conditioning_scale,
+                                controlnet_preprocessor,
+                                controlnet_start,
+                                controlnet_end,
+                                # 添加 Nunchaku 和 SDNQ 模型启用参数
+                                nunchaku_enable,
+                                nunchaku_model,
+                                sdnq_enable,
+                                # 移除了 text_encoder 量化参数
+                            ],
+                            outputs=[edit_output, edit_status]
+                        )
+                        
+                        # 添加到队列的事件绑定
+                        add_to_queue_btn.click(
+                            fn=lambda prompt, negative_prompt, image1, image2, image3, steps, cfg_scale, \
+                               scheduler, lora_model_1, lora_model_2, lora_weight_1, lora_weight_2, seed, \
+                               control_image, controlnet_conditioning_scale, controlnet_preprocessor, controlnet_start, controlnet_end, \
+                               nunchaku_enable, nunchaku_model, sdnq_enable: \
+                               add_to_queue('qwen_image_edit', 
+                                   prompt, negative_prompt, image1, image2, image3, steps, cfg_scale, 
+                                   scheduler, lora_model_1, lora_model_2, lora_weight_1, lora_weight_2, seed,
+                                   control_image, controlnet_conditioning_scale, controlnet_preprocessor, controlnet_start, controlnet_end,
+                                   nunchaku_enable, nunchaku_model, sdnq_enable),
+                            inputs=[
+                                edit_prompt,
+                                edit_negative_prompt,
+                                edit_image1,
+                                edit_image2,
+                                edit_image3,
+                                edit_steps,
+                                edit_cfg,
+                                edit_scheduler,
+                                edit_lora_1,
+                                edit_lora_2,
+                                edit_lora_weight_1,
+                                edit_lora_weight_2,
+                                edit_seed,
+                                # 添加 ControlNet 参数
+                                control_image,
+                                controlnet_conditioning_scale,
+                                controlnet_preprocessor,
+                                controlnet_start,
+                                controlnet_end,
+                                # 添加 Nunchaku 和 SDNQ 模型启用参数
+                                nunchaku_enable,
+                                nunchaku_model,
+                                sdnq_enable,
+                            ],
+                            outputs=[queue_operation_status]
+                        )
+                        
+                        # 更新队列状态
+                        def update_queue_status():
+                            return get_queue_status()
+                        
+                        def update_detailed_queue_status():
+                            return get_detailed_queue_status()
+                        
+                        # 添加按钮点击事件来更新队列状态
+                        add_to_queue_btn.click(
+                            fn=update_queue_status,
+                            inputs=[],
+                            outputs=[queue_status_text]
+                        )
+                        
+                        add_to_queue_btn.click(
+                            fn=update_detailed_queue_status,
+                            inputs=[],
+                            outputs=[detailed_queue_status]
+                        )                     
+                        
+                        process_queue_btn.click(
+                            fn=update_queue_status,
+                            inputs=[],
+                            outputs=[queue_status_text]
+                        )
+                        
+                        process_queue_btn.click(
+                            fn=update_detailed_queue_status,
+                            inputs=[],
+                            outputs=[detailed_queue_status]
+                        )
+                        
+                        # 清空队列按钮事件
+                        def clear_queue():
+                            global task_queue
+                            task_queue = queue.Queue()  # 重新创建空队列
+                            return "队列已清空"
+                        
+                        clear_queue_btn.click(
+                            fn=clear_queue,
+                            inputs=[],
+                            outputs=[queue_operation_status]
+                        )
+                        
+                        clear_queue_btn.click(
+                            fn=update_queue_status,
+                            inputs=[],
+                            outputs=[queue_status_text]
+                        )
+                        
+                        clear_queue_btn.click(
+                            fn=update_detailed_queue_status,
+                            inputs=[],
+                            outputs=[detailed_queue_status]
+                        )
+                        
+                        open_output_dir_button.click(
+                            fn=open_output_directory,
+                            inputs=[],
+                            outputs=[edit_status]
+                        )
+                        
+                        # 返回UI组件字典，以便在主程序中引用
+                        result = {
+                            "edit_prompt": edit_prompt,
+                            "edit_image1": edit_image1,
+                            "edit_image2": edit_image2,
+                            "edit_image3": edit_image3,
+                            "edit_steps": edit_steps,
+                            "edit_cfg": edit_cfg,
+                            "edit_negative_prompt": edit_negative_prompt,
+                            "edit_scheduler": edit_scheduler,
+                            "edit_lora_1": edit_lora_1,
+                            "edit_lora_2": edit_lora_2,
+                            "edit_lora_weight_1": edit_lora_weight_1,
+                            "edit_lora_weight_2": edit_lora_weight_2,
+                            "edit_seed": edit_seed,
+                            "nunchaku_enable": nunchaku_enable,
+                            "nunchaku_model": nunchaku_model,
+                            "sdnq_enable": sdnq_enable,
+                            "controlnet_conditioning_scale": controlnet_conditioning_scale,
+                            "controlnet_start": controlnet_start,
+                            "controlnet_end": controlnet_end,
+                            "controlnet_preprocessor": controlnet_preprocessor,
+                            "edit_button": edit_button,
+                            "edit_output": edit_output,
+                            "edit_status": edit_status,
+                        }
+        
+        # 添加刷新LoRA模型列表的函数
+        def refresh_lora_models():
+            """刷新LoRA模型列表"""
+            try:
+                lora_choices = get_lora_choices(qwenimage_lora_dir)
+                
+                # 返回更新后的选项
+                return [
+                    gr.update(choices=lora_choices),
+                    gr.update(choices=lora_choices)
+                ]
+            except Exception as e:
+                print(f"刷新LoRA模型列表时出错: {e}")
+                import traceback
+                traceback.print_exc()
+                return [
+                    gr.update(),
+                    gr.update()
+                ]
+        
+        # 为刷新按钮添加事件监听
+        try:
+            lora_refresh_button.click(
+                fn=refresh_lora_models,
+                inputs=[],
+                outputs=[edit_lora_1, edit_lora_2]
+            )
+        except AttributeError:
+            # 忽略在没有Gradio上下文时的错误
+            pass
+        
+        print("Qwen Image Edit UI 创建完成")
+        return result
+        
+    except Exception as e:
+        print(f"创建Qwen Image Edit UI时出错: {e}")
+        import traceback
+        traceback.print_exc()
+        # 返回空字典而不是None，避免破坏UI
+        return {}
+
+# ==================== 模块可用性变量 ====================
+QWEN_IMAGE_MODULE_AVAILABLE = QWEN_IMAGE_AVAILABLE
+
+# 添加全局任务队列
+task_queue = queue.Queue()
+
+# 添加到队列的函数
+def add_to_queue(task_type, *args):
+    """将任务添加到队列中"""
+    try:
+        task_data = {
+            'type': task_type,
+            'args': args
+        }
+        task_queue.put(task_data)
+        return f"已添加任务到队列，当前队列大小: {task_queue.qsize()}"
+    except Exception as e:
+        print(f"添加任务到队列时出错: {e}")
+        import traceback
+        traceback.print_exc()
+        return f"添加任务失败: {str(e)}"
+
+# 获取队列状态的函数
+def get_queue_status():
+    """获取队列状态"""
+    try:
+        size = task_queue.qsize()
+        return f"当前队列大小: {size}"
+    except Exception as e:
+        print(f"获取队列状态时出错: {e}")
+        import traceback
+        traceback.print_exc()
+        return "获取队列状态失败"
+
+# 获取详细队列状态的函数
+def get_detailed_queue_status():
+    """获取详细队列状态"""
+    try:
+        size = task_queue.qsize()
+        if size == 0:
+            return "队列为空"
+        
+        status = f"队列中有 {size} 个任务等待处理\n"
+        # 注意：由于队列中的任务是不可见的，这里只显示数量信息
+        return status
+    except Exception as e:
+        print(f"获取详细队列状态时出错: {e}")
+        import traceback
+        traceback.print_exc()
+        return "获取详细队列状态失败"

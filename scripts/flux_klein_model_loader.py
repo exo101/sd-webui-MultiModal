@@ -316,6 +316,8 @@ def _identify_model_type(model_name):
         size_info = "9B"
     elif '4b' in model_name_lower:
         size_info = "4B"
+    elif 'klein-4' in model_name_lower:  # 修正：识别 FLUX.2-klein-4B 格式
+        size_info = "4B"
     elif 'base' in model_name_lower:
         # 对于base模型，默认认为是4B
         size_info = "4B"
@@ -330,6 +332,8 @@ def _identify_model_type(model_name):
         variant_info = "Dev"
     elif 'schnell' in model_name_lower:
         variant_info = "Schnell"
+    elif 'klein-4' in model_name_lower:  # 修正：识别标准变体
+        variant_info = "Standard"
     else:
         variant_info = "Standard"
     
@@ -391,15 +395,16 @@ def _load_fp8_model(full_model_path, model_type, dtype):
         model_filename = os.path.basename(full_model_path)
         
         # 从文件名猜测基础模型名称
-        # 例如，从 "FLUX.2-klein-base-4b-fp8_V1.safetensors" 推断基础模型是 "FLUX_2-klein-base-4B"
+        # 例如，从 "FLUX.2-klein-base-4b-fp8_V1.safetensors" 推断基础模型是 "FLUX.2-klein-4B"
         base_model_name = model_filename.replace("-fp8", "").replace("_V1", "").replace(".safetensors", "")
         if "4b" in base_model_name.lower():
-            base_model_path_candidate = os.path.join("models", "FLUX.2-klein", base_model_name.replace("-4b", "-4B"))
+            # 修正：使用正确的目录名格式 FLUX.2-klein-4B
+            base_model_path_candidate = os.path.join("models", "FLUX.2-klein", "FLUX.2-klein-4B")
         elif "9b" in base_model_name.lower():
-            base_model_path_candidate = os.path.join("models", "FLUX.2-klein", base_model_name.replace("-9b", "-9B"))
+            base_model_path_candidate = os.path.join("models", "FLUX.2-klein", "FLUX.2-klein-9B")
         else:
             # 默认使用基础模型
-            base_model_path_candidate = os.path.join("models", "FLUX.2-klein", "FLUX_2-klein-base-4B")
+            base_model_path_candidate = os.path.join("models", "FLUX.2-klein", "FLUX.2-klein-4B")
         
         # 检查推断的基础模型路径是否存在
         if os.path.exists(base_model_path_candidate):
@@ -407,9 +412,10 @@ def _load_fp8_model(full_model_path, model_type, dtype):
         else:
             # 如果推断的路径不存在，尝试几种可能的路径格式
             possible_paths = [
-                os.path.join("models", "FLUX.2-klein", "FLUX_2-klein-base-4B"),
+                os.path.join("models", "FLUX.2-klein", "FLUX.2-klein-4B"),  # 修正：使用实际存在的目录名
                 os.path.join("models", "FLUX.2-klein", "FLUX.2-klein-base-4B"),
-                os.path.join("models", "FLUX.2-klein", "FLUX_2-klein-9B"),
+                os.path.join("models", "FLUX.2-klein", "FLUX_2-klein-base-4B"),
+                os.path.join("models", "FLUX.2-klein", "FLUX.2-klein-9B"),
                 os.path.join("models", "FLUX.2-klein", "FLUX_2-klein-9B")
             ]
             
@@ -446,43 +452,30 @@ def _load_fp8_model(full_model_path, model_type, dtype):
 def get_full_model_path(model_choice):
     """获取完整模型路径 - 支持动态识别的各种模型格式"""
     # 如果是None或空值，返回默认模型路径
-    if not model_choice:
-        return os.path.join("models", "FLUX.2-klein", "FLUX.2-klein-base-4B")
+    if not model_choice or model_choice == "无":
+        return os.path.join("models", "FLUX.2-klein", "FLUX.2-klein-4B")  # 修正：使用正确的默认路径
     
-    # 移除可能的后缀标签，如(BF16-4B-Base)等
-    clean_name = model_choice
-    # 移除各种可能的后缀格式
-    suffix_patterns = [
-        r'\s*\(BF16-\d+B-[^)]+\)$',  # 匹配 (BF16-4B-Base) 格式
-        r'\s*\(FP8\)$',              # 匹配 (FP8) 格式
-        r'\s*\(BF16-\d+B\)$',        # 匹配旧的 (BF16-4B) 格式
-    ]
+    # 如果已经是完整路径，直接返回
+    if os.path.isabs(model_choice) or model_choice.startswith("models"):
+        return model_choice
     
-    import re
-    for pattern in suffix_patterns:
-        clean_name = re.sub(pattern, '', clean_name)
+    # 构造完整路径
+    model_dir = os.path.join("models", "FLUX.2-klein")
     
-    # 特殊处理：标准化常见的模型名称格式
-    name_mapping = {
-        "FLUX_2-klein-base-4B": "FLUX.2-klein-base-4B",
-        "FLUX_2-klein-9B": "FLUX.2-klein-9B",
-        "FLUX_2-klein-base-9B": "FLUX.2-klein-base-9B",
-        "FLUX_2-klein-dev-4B": "FLUX.2-klein-dev-4B",
-        "FLUX_2-klein-schnell-4B": "FLUX.2-klein-schnell-4B"
-    }
+    # 检查是否为目录名
+    dir_path = os.path.join(model_dir, model_choice)
+    if os.path.isdir(dir_path):
+        return dir_path
     
-    if clean_name in name_mapping:
-        clean_name = name_mapping[clean_name]
+    # 检查是否为文件名
+    file_path = os.path.join(model_dir, model_choice)
+    if os.path.isfile(file_path):
+        return file_path
     
-    # 检查是否是相对路径格式 (目录/文件名)
-    if "/" in clean_name or "\\" in clean_name:
-        # 这是FP8模型的格式，直接构建路径
-        parts = clean_name.replace("\\", "/").split("/")
-        base_path = os.path.join("models", "FLUX.2-klein", *parts)
-        return base_path
-    else:
-        # 这是BF16基础模型，直接构建路径
-        return os.path.join("models", "FLUX.2-klein", clean_name)
+    # 如果都不存在，返回默认路径并记录警告
+    default_path = os.path.join(model_dir, "FLUX.2-klein-4B")
+    print(f"[WARNING] 无法找到模型 '{model_choice}'，使用默认路径: {default_path}")
+    return default_path
 
 
 def apply_lora(pipe, lora_model, lora_weight):
@@ -533,6 +526,59 @@ def list_lora_models():
                         lora_files.append(rel_path)
     
     return lora_files
+
+
+def validate_model_paths():
+    """验证FLUX.2-klein模型路径配置"""
+    model_base_dir = os.path.join("models", "FLUX.2-klein")
+    
+    print(f"[INFO] 检查模型目录: {model_base_dir}")
+    
+    if not os.path.exists(model_base_dir):
+        print(f"[ERROR] 模型基础目录不存在: {model_base_dir}")
+        return False
+    
+    # 检查预期的模型目录
+    expected_dirs = [
+        "FLUX.2-klein-4B",
+        "FLUX.2-klein-9B", 
+        "FLUX.2-klein-base-4B"
+    ]
+    
+    found_dirs = []
+    missing_dirs = []
+    
+    for dir_name in expected_dirs:
+        dir_path = os.path.join(model_base_dir, dir_name)
+        if os.path.exists(dir_path) and os.path.isdir(dir_path):
+            found_dirs.append(dir_name)
+            print(f"[INFO] 找到模型目录: {dir_name}")
+        else:
+            missing_dirs.append(dir_name)
+    
+    # 检查FP8模型文件
+    fp8_files = []
+    for item in os.listdir(model_base_dir):
+        item_path = os.path.join(model_base_dir, item)
+        if os.path.isfile(item_path) and item.endswith(('.safetensors', '.bin')) and 'fp8' in item.lower():
+            fp8_files.append(item)
+            print(f"[INFO] 找到FP8模型文件: {item}")
+    
+    if found_dirs:
+        print(f"[SUCCESS] 已找到 {len(found_dirs)} 个模型目录: {found_dirs}")
+    else:
+        print(f"[WARNING] 未找到任何预期的模型目录")
+    
+    if missing_dirs:
+        print(f"[WARNING] 缺少模型目录: {missing_dirs}")
+    
+    if fp8_files:
+        print(f"[INFO] 发现 {len(fp8_files)} 个FP8模型文件")
+    else:
+        print(f"[WARNING] 未发现FP8模型文件")
+    
+    return len(found_dirs) > 0 or len(fp8_files) > 0
+
 
 def load_flux_klein_pipeline(model_type):
     """加载FLUX.2-klein模型管道"""

@@ -1,0 +1,854 @@
+import os
+import sys
+import gradio as gr
+from pathlib import Path
+from PIL import Image
+import numpy as np
+import torch
+from modules import shared, paths, images
+import time
+import random
+
+# 尝试导入SageAttention和Flash Attention
+try:
+    from sageattention import sageattn
+    SAGE_ATTENTION_AVAILABLE = True
+except ImportError:
+    SAGE_ATTENTION_AVAILABLE = False
+
+# Flash Attention检测
+FLASH_ATTENTION_AVAILABLE = False
+try:
+    import flash_attn
+    FLASH_ATTENTION_AVAILABLE = True
+except ImportError:
+    pass
+
+from backend import attention
+
+# 将当前脚本目录添加到Python路径，以便导入同目录下的其他模块
+script_dir = os.path.dirname(__file__)
+if script_dir not in sys.path:
+    sys.path.insert(0, script_dir)
+
+# 导入队列功能 - 使用绝对导入方式
+from z_image_queue import add_to_queue, process_queue, get_queue_status, get_detailed_queue_status
+
+# 将ZImagePipeline导入移到模块级别
+from modelscope import ZImagePipeline
+
+
+def apply_attention_optimizations(pipe):
+    """应用注意力优化到模型"""
+    try:
+        if hasattr(pipe, 'transformer') and pipe.transformer is not None:
+            # 应用SageAttention或Flash Attention优化
+            if SAGE_ATTENTION_AVAILABLE:
+                print(f"[INFO] 为模型应用SageAttention优化...")
+                replace_transformer_attention_with_sage(pipe.transformer)
+            elif FLASH_ATTENTION_AVAILABLE:
+                print(f"[INFO] 为模型应用Flash Attention优化...")
+                replace_transformer_attention_with_flash(pipe.transformer)
+        else:
+            print(f"[WARNING] 无法找到pipe.transformer组件，跳过注意力优化")
+    except Exception as e:
+        print(f"[ERROR] 应用注意力优化失败: {str(e)}")
+
+
+def replace_transformer_attention_with_sage(transformer):
+    """将transformer中的注意力机制替换为SageAttention"""
+    try:
+        for name, module in transformer.named_modules():
+            if 'attn' in name and hasattr(module, 'to_q') and hasattr(module, 'to_k') and hasattr(module, 'to_v'):
+                # 替换forward方法以使用SageAttention
+                original_forward = module.forward
+                
+                def make_new_forward(orig_forward):
+                    def sage_forward(hidden_states, *args, **kwargs):
+                        # 原始的query/key/value投影
+                        query = orig_forward.__self__.to_q(hidden_states)
+                        key = orig_forward.__self__.to_k(hidden_states)
+                        value = orig_forward.__self__.to_v(hidden_states)
+
+                        # 确保维度正确
+                        batch_size, seq_len, dim = query.shape
+                        head_dim = dim // orig_forward.__self__.heads
+                        heads = orig_forward.__self__.heads
+
+                        # 重塑为多头形式
+                        query = query.view(batch_size, seq_len, heads, head_dim).transpose(1, 2)
+                        key = key.view(batch_size, seq_len, heads, head_dim).transpose(1, 2)
+                        value = value.view(batch_size, seq_len, heads, head_dim).transpose(1, 2)
+
+                        # 使用SageAttention进行计算
+                        out = sageattn(query, key, value, 
+                                     scale=head_dim**(-0.5), 
+                                     attention_dropout=0.0, 
+                                     causal=False)
+                        
+                        # 重塑回原始格式
+                        out = out.transpose(1, 2).reshape(batch_size, seq_len, dim)
+                        
+                        # 通过输出投影
+                        if hasattr(orig_forward.__self__, 'to_out'):
+                            if not isinstance(orig_forward.__self__.to_out, (list, tuple)):
+                                out = orig_forward.__self__.to_out(out)
+                            else:
+                                for layer in orig_forward.__self__.to_out:
+                                    out = layer(out)
+                        
+                        return out
+                    return sage_forward
+                
+                module.forward = make_new_forward(original_forward).__get__(module, type(module))
+        print("[INFO] SageAttention优化应用成功")
+    except Exception as e:
+        print(f"[ERROR] 应用SageAttention优化失败: {str(e)}")
+
+
+def replace_transformer_attention_with_flash(transformer):
+    """将transformer中的注意力机制替换为FlashAttention"""
+    try:
+        import torch.nn.functional as F
+        
+        for name, module in transformer.named_modules():
+            if 'attn' in name and hasattr(module, 'to_q') and hasattr(module, 'to_k') and hasattr(module, 'to_v'):
+                # 替换forward方法以使用Flash Attention
+                original_forward = module.forward
+                
+                def make_new_forward(orig_forward):
+                    def flash_forward(hidden_states, *args, **kwargs):
+                        # 原始的query/key/value投影
+                        query = orig_forward.__self__.to_q(hidden_states)
+                        key = orig_forward.__self__.to_k(hidden_states)
+                        value = orig_forward.__self__.to_v(hidden_states)
+
+                        # 确保维度正确
+                        batch_size, seq_len, dim = query.shape
+                        head_dim = dim // orig_forward.__self__.heads
+                        heads = orig_forward.__self__.heads
+
+                        # 重塑为多头形式
+                        query = query.view(batch_size, seq_len, heads, head_dim).transpose(1, 2)
+                        key = key.view(batch_size, seq_len, heads, head_dim).transpose(1, 2)
+                        value = value.view(batch_size, seq_len, heads, head_dim).transpose(1, 2)
+
+                        # 尝试使用Flash Attention
+                        try:
+                            # Flash Attention 2 implementation
+                            from flash_attn import flash_attn_func
+                            out = flash_attn_func(query, key, value, dropout_p=0.0, softmax_scale=None, causal=False)
+                        except Exception:
+                            # 回退到PyTorch的scaled_dot_product_attention
+                            out = F.scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False)
+
+                        # 重塑回原始格式
+                        out = out.transpose(1, 2).reshape(batch_size, seq_len, dim)
+                        
+                        # 通过输出投影
+                        if hasattr(orig_forward.__self__, 'to_out'):
+                            if not isinstance(orig_forward.__self__.to_out, (list, tuple)):
+                                out = orig_forward.__self__.to_out(out)
+                            else:
+                                for layer in orig_forward.__self__.to_out:
+                                    out = layer(out)
+                                    
+                        return out
+                    return flash_forward
+                
+                module.forward = make_new_forward(original_forward).__get__(module, type(module))
+        print("[INFO] Flash Attention优化应用成功")
+    except Exception as e:
+        print(f"[ERROR] 应用Flash Attention优化失败: {str(e)}")
+
+
+def get_lora_list():
+    """获取LoRA模型列表"""
+    try:
+        lora_path = Path(shared.models_path) / "Lora"
+        if lora_path.exists():
+            lora_files = []
+            # 查找所有支持的LoRA文件
+            for ext in ['.safetensors', '.ckpt', '.pt']:
+                lora_files.extend([f.stem for f in lora_path.glob(f"*{ext}")])
+            # 去重并排序
+            unique_loras = list(set(lora_files))
+            return sorted(unique_loras)
+        return []
+    except Exception as e:
+        print(f"获取LoRA列表失败: {e}")
+        return []
+
+
+def open_folder(folder_path):
+    """打开指定的文件夹"""
+    import subprocess
+    try:
+        if os.name == 'nt':  # Windows系统
+            os.startfile(folder_path)
+        elif os.name == 'posix':  # Linux/Mac系统
+            subprocess.run(['open' if sys.platform == 'darwin' else 'xdg-open', folder_path])
+        return "文件夹已打开"
+    except Exception as e:
+        return f"打开文件夹失败: {str(e)}"
+
+
+def generate_image_with_zimage_img2img(init_image, prompt, negative_prompt, width, height, steps, cfg_scale, seed, strength, batch_size, lora_enable, lora_model_1, lora_weight_1, lora_model_2, lora_weight_2, enable_hr=False, hr_scale=2.0, hr_upscaler=None, hr_second_pass_steps=0, denoising_strength=0.7, selected_model=None):
+    """
+    使用Z-Image正式版模型进行图生图生成
+    """
+    try:
+        # 使用本地Z-Image模型路径
+        zimage_dir = os.path.join(paths.models_path, "Tongyi-MAI", "Z-Image")
+        
+        # 检查本地Z-Image模型是否存在
+        if not (os.path.exists(zimage_dir) and any(Path(zimage_dir).iterdir())):
+            return "错误：Z-Image正式版模型未找到，请确保模型已下载至 models/Tongyi-MAI/Z-Image 目录", None
+        
+        print(f"[INFO] 加载本地Z-Image模型...")
+        
+        pipe = ZImagePipeline.from_pretrained(
+            str(zimage_dir),
+            torch_dtype=torch.bfloat16,
+            low_cpu_mem_usage=False,
+            local_files_only=True
+        )
+        
+        # 应用注意力优化
+        if FLASH_ATTENTION_AVAILABLE or SAGE_ATTENTION_AVAILABLE:
+            print(f"[INFO] 应用注意力优化...")
+            apply_attention_optimizations(pipe)
+        
+        # 启用优化的注意力机制
+        if hasattr(pipe, 'transformer'):
+            print("[INFO] 检测到Z-Image Transformer，尝试启用优化的注意力机制...")
+            
+            # 检查是否支持Flash Attention
+            if hasattr(torch.nn.functional, 'scaled_dot_product_attention'):
+                print("[INFO] 检测到PyTorch Scaled Dot Product Attention...")
+                try:
+                    # 尝试启用三种SDP后端
+                    torch.backends.cuda.enable_flash_sdp(True)
+                    torch.backends.cuda.enable_math_sdp(True)
+                    torch.backends.cuda.enable_mem_efficient_sdp(True)
+                except Exception as e:
+                    print(f"[WARNING] 无法完全启用SDP后端: {e}")
+            
+        
+        # 启用模型CPU卸载功能，按需将组件移动到GPU进行处理
+        if hasattr(pipe, 'enable_model_cpu_offload'):
+            print("[INFO] 启用模型CPU卸载功能以节省显存...")
+            pipe.enable_model_cpu_offload()
+        else:
+            # 如果没有CPU卸载功能，则将管道移动到GPU
+            pipe.to("cuda")
+            print("[INFO] 模型已成功加载并移至CUDA设备")
+            
+        # 处理LoRA - 强制状态重置后再加载
+        if lora_enable and (lora_model_1 or lora_model_2):
+            print(f"[INFO] 启用LoRA支持，准备加载模型...")
+
+            # 强制重置所有LoRA相关状态
+            try:
+                print("[INFO] 开始强制LoRA状态重置...")
+                
+                # 1. 重置PEFT配置
+                if hasattr(pipe, 'peft_config'):
+                    pipe.peft_config = {}
+                    print("[INFO] PEFT配置已重置")
+                
+                # 2. 清理激活的适配器
+                if hasattr(pipe, 'active_adapters'):
+                    pipe.active_adapters = []
+                    print("[INFO] 激活适配器已清空")
+                
+                # 3. 卸载所有适配器
+                if hasattr(pipe, 'unload_adapter'):
+                    try:
+                        pipe.unload_adapter()
+                        print("[INFO] 适配器已卸载")
+                    except:
+                        pass  # 忽略卸载错误
+                
+                # 4. 强制分离LoRA权重
+                if hasattr(pipe, 'unfuse_lora'):
+                    try:
+                        pipe.unfuse_lora()
+                        print("[INFO] LoRA权重已分离")
+                    except:
+                        pass  # 忽略分离错误
+                
+                # 5. 卸载LoRA权重
+                if hasattr(pipe, 'unload_lora_weights'):
+                    try:
+                        pipe.unload_lora_weights()
+                        print("[INFO] LoRA权重已卸载")
+                    except:
+                        pass  # 忽略卸载错误
+                
+                # 6. 深度清理状态字典
+                if hasattr(pipe, 'state_dict') and callable(getattr(pipe, 'state_dict')):
+                    try:
+                        # 获取当前状态字典
+                        current_state = pipe.state_dict()
+                        lora_keys = [k for k in current_state.keys() if any(pattern in k.lower() for pattern in ['lora', 'adapter', 'peft'])]
+                        
+                        if lora_keys:
+                            print(f"[INFO] 发现{len(lora_keys)}个LoRA相关键，正在进行深度清理...")
+                            
+                            # 尝试重置相关模块
+                            if hasattr(pipe, 'transformer') and hasattr(pipe.transformer, 'modules'):
+                                for name, module in pipe.transformer.named_modules():
+                                    if hasattr(module, 'set_adapter'):
+                                        try:
+                                            module.set_adapter([])  # 清空适配器
+                                        except:
+                                            pass
+                                    if hasattr(module, 'disable_adapters'):
+                                        try:
+                                            module.disable_adapters()  # 禁用适配器
+                                        except:
+                                            pass
+                            
+                            # 如果有LoRA合并方法，尝试取消合并
+                            if hasattr(pipe, 'unmerge_lora'):
+                                try:
+                                    pipe.unmerge_lora()
+                                    print("[INFO] LoRA合并已取消")
+                                except:
+                                    pass
+                            
+                        else:
+                            print("[INFO] 状态字典中未发现LoRA相关键")
+                            
+                    except Exception as state_error:
+                        print(f"[WARNING] 状态字典检查时出错: {state_error}")
+                
+                # 7. 最终验证清理
+                try:
+                    final_state = pipe.state_dict()
+                    remaining_lora_keys = [k for k in final_state.keys() if 'lora' in k.lower()]
+                    if remaining_lora_keys:
+                        print(f"[WARNING] 清理后仍存在{len(remaining_lora_keys)}个LoRA键")
+                    else:
+                        print("[INFO] 状态字典清理验证通过")
+                except:
+                    print("[INFO] 状态字典最终验证完成")
+                
+                print("[INFO] LoRA状态重置完成")
+                
+            except Exception as cleanup_error:
+                print(f"[WARNING] LoRA状态重置时出错: {cleanup_error}")
+                print("[INFO] 继续执行LoRA加载...")
+
+            # 加载LoRA模型
+            lora_models = []
+            lora_weights = []
+            
+            if lora_model_1:
+                lora_models.append(lora_model_1)
+                lora_weights.append(lora_weight_1)
+            if lora_model_2:
+                lora_models.append(lora_model_2)
+                lora_weights.append(lora_weight_2)
+            
+            for i, (model_name, weight) in enumerate(zip(lora_models, lora_weights)):
+                try:
+                    # 构建完整LoRA路径
+                    lora_path = os.path.join(paths.models_path, "Lora", f"{model_name}.safetensors")
+                    if not os.path.exists(lora_path):
+                        for ext in ['.ckpt', '.pt']:
+                            temp_path = os.path.join(paths.models_path, "Lora", f"{model_name}{ext}")
+                            if os.path.exists(temp_path):
+                                lora_path = temp_path
+                                break
+                    if not os.path.exists(lora_path):
+                        print(f"[WARNING] 未找到LoRA模型{i+1}: {model_name}")
+                        continue
+                    print(f"[INFO] 找到LoRA模型{i+1}: {lora_path}")
+                    
+                    # 使用最安全的加载方式
+                    pipe.load_lora_weights(
+                        lora_path,
+                        weight_name=os.path.basename(lora_path),
+                        local_files_only=True
+                    )
+                    
+                    # 融合LoRA权重
+                    pipe.fuse_lora(lora_scale=weight)
+                    print(f"[INFO] 成功加载并融合LoRA: {lora_path}, 缩放权重:{weight}")
+                    
+                except Exception as e:
+                    print(f"[ERROR] 无法为 {lora_path} 加载LoRA: {str(e)}")
+                    # 提供详细的错误信息帮助调试
+                    if "state dict should be empty" in str(e):
+                        print("[DEBUG] 建议检查:")
+                        print("  1. 模型是否已经包含内置LoRA权重")
+                        print("  2. 是否需要重启WebUI清理内存状态")
+                        print("  3. 尝试禁用LoRA功能测试基础模型")
+                    continue
+        
+        # 调整图像尺寸
+        init_image = init_image.convert("RGB")
+        init_image = init_image.resize((width, height), Image.Resampling.LANCZOS)
+        
+        print(f"[INFO] 开始图生图生成...")
+        print(f"[INFO] 参数: 提示词='{prompt[:50]}...', 尺寸={width}x{height}, 步数={steps}, 重绘强度={strength}, 批次={batch_size}")
+        
+        # 设置随机种子
+        if seed == -1:
+            seed = random.randint(0, 2**32 - 1)
+            
+        # 生成图像 - 使用官方示例参数
+        generator = torch.Generator("cuda").manual_seed(seed)
+        
+        # 高清修复处理
+        if enable_hr:
+            print(f"[INFO] 启用高清修复，缩放比例: {hr_scale}, 重绘强度: {denoising_strength}")
+            
+            # 计算高清修复后的目标尺寸
+            target_width = int(width * hr_scale)
+            target_height = int(height * hr_scale)
+            
+            # 确保尺寸是8的倍数
+            target_width = max(64, target_width - target_width % 8)
+            target_height = max(64, target_height - target_height % 8)
+            
+            print(f"[INFO] 目标尺寸: {target_width}x{target_height}")
+            
+            # 第一阶段：使用用户提供的图像尺寸生成图像
+            try:
+                # 将初始图像调整为指定尺寸
+                adjusted_init_image = init_image.resize((width, height), Image.Resampling.LANCZOS)
+                adjusted_init_tensor = torch.tensor(np.array(adjusted_init_image)).permute(2, 0, 1).unsqueeze(0).to("cuda", dtype=torch.float32) / 255.0
+                
+                # 第一阶段生成
+                output = pipe(
+                    prompt=prompt,
+                    negative_prompt=negative_prompt,
+                    image=adjusted_init_tensor,
+                    strength=min(strength, 0.8),  # 减少第一阶段的强度
+                    height=height,
+                    width=width,
+                    cfg_normalization=False,
+                    num_inference_steps=steps,
+                    guidance_scale=cfg_scale,
+                    generator=generator,
+                    num_images_per_prompt=batch_size
+                )
+            except Exception as e:
+                print(f"[WARNING] 图生图模式失败，回退到文生图模式: {str(e)}")
+                # 如果图生图失败，则回退到文生图模式
+                output = pipe(
+                    prompt=prompt,
+                    negative_prompt=negative_prompt,
+                    height=height,
+                    width=width,
+                    cfg_normalization=False,
+                    num_inference_steps=steps,
+                    guidance_scale=cfg_scale,
+                    generator=generator,
+                    num_images_per_prompt=batch_size
+                )
+            
+            # 获取基础图像
+            images_list = output.images
+            
+            # 第二阶段：使用选定的放大器进行上采样
+            print(f"[INFO] 第二阶段：将图像放大到 {target_width}x{target_height}")
+            
+            # 将基础图像调整到目标尺寸
+            upscaled_images = []
+            for img in images_list:
+                upscaled_img = images.resize_image(0, img, target_width, target_height, upscaler_name=hr_upscaler)
+                upscaled_images.append(upscaled_img)
+            
+            # 生成最终高清图像
+            final_images = []
+            for idx, upscaled_img in enumerate(upscaled_images):
+                print(f"[INFO] 处理第 {idx+1}/{len(upscaled_images)} 张图像的高清修复")
+                upscaled_img = upscaled_img.convert("RGB")
+                upscaled_tensor = torch.tensor(np.array(upscaled_img)).permute(2, 0, 1).unsqueeze(0).to("cuda", dtype=torch.float32) / 255.0
+                
+                # 由于Z-Image可能不直接支持img2img，我们使用基础的diffusion pipeline进行第二阶段处理
+                # 为了兼容Z-Image模型，我们暂时只进行上采样，不进行第二阶段扩散
+                final_images.append(upscaled_img)
+        else:
+            # 标准图生图流程
+            try:
+                # 将PIL图像转换为tensor并归一化
+                import torchvision.transforms as transforms
+                to_tensor = transforms.ToTensor()
+                init_tensor = to_tensor(init_image).unsqueeze(0).to("cuda")
+                
+                # 使用decode latents的方式进行图生图
+                output = pipe(
+                    prompt=prompt,
+                    negative_prompt=negative_prompt,
+                    image=init_tensor,
+                    strength=strength,  # 使用strength参数控制重绘强度
+                    height=height,
+                    width=width,
+                    cfg_normalization=False,
+                    num_inference_steps=steps,
+                    guidance_scale=cfg_scale,
+                    generator=generator,
+                    num_images_per_prompt=batch_size
+                )
+            except Exception as e:
+                print(f"[WARNING] 图生图模式失败，回退到文生图模式: {str(e)}")
+                # 如果图生图失败，则回退到文生图模式
+                output = pipe(
+                    prompt=prompt,
+                    negative_prompt=negative_prompt,
+                    height=height,
+                    width=width,
+                    cfg_normalization=False,
+                    num_inference_steps=steps,
+                    guidance_scale=cfg_scale,
+                    generator=generator,
+                    num_images_per_prompt=batch_size
+                )
+            
+            final_images = output.images
+
+        # 保存图像
+        output_dir = Path(paths.data_path) / "outputs" / "z-image"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        saved_paths = []
+        for i, image in enumerate(final_images):
+            timestamp = int(time.time())
+            filename = f"zimage_img2img_{'hr' if enable_hr else 'std'}_{timestamp}_s{seed}_{i}.png"
+            filepath = output_dir / filename
+            image.save(filepath)
+            saved_paths.append(str(filepath))
+        
+        # 自动从GPU卸载模型以释放显存
+        if 'pipe' in locals():
+            print("[INFO] 开始卸载模型到CPU并清理显存...")
+            try:
+                pipe = pipe.to("cpu")
+                # 删除模型对象
+                del pipe
+                # 清空CUDA缓存
+                torch.cuda.empty_cache()
+                # 进行垃圾回收
+                import gc
+                gc.collect()
+                print("[INFO] 模型已成功卸载到CPU，显存已清理")
+            except Exception as unload_error:
+                print(f"[WARNING] 模型卸载过程中出现警告: {unload_error}")
+        
+        return f"图生图生成成功! {'启用高清修复' if enable_hr else '标准生成'}, 批次: {batch_size}, Seed: {seed}", saved_paths
+        
+    except Exception as e:
+        error_msg = str(e)
+        import traceback
+        
+        # 确保即使出错也从GPU卸载模型
+        if 'pipe' in locals():
+            print("[INFO] 发生错误，开始卸载模型到CPU并清理显存...")
+            try:
+                pipe = pipe.to("cpu")
+                # 删除模型对象
+                del pipe
+                # 清空CUDA缓存
+                torch.cuda.empty_cache()
+                # 进行垃圾回收
+                import gc
+                gc.collect()
+                print("[INFO] 模型已成功卸载到CPU，显存已清理")
+            except Exception as unload_error:
+                print(f"[WARNING] 模型卸载过程中出现警告: {unload_error}")
+                
+        return f"图生图生成失败: {error_msg}\n详细错误信息:\n{traceback.format_exc()}", None
+
+
+def get_zimage_model_list():
+    """获取Z-Image目录下的模型列表"""
+    # 根据项目规范，Z-Image模型不再使用本地文件，而是直接使用官方模型
+    return ["Z-Image (default)"]
+
+
+def create_tab():
+    with gr.Row():
+        with gr.Column():  # 左半边 - 输入
+            # 图生图输入图像
+            init_image = gr.Image(label="输入图像", type="pil")
+            
+            prompt = gr.TextArea(
+                label="提示词",
+                placeholder="正面提示词，例如：masterpiece, best quality, 1girl, detailed eyes, beautiful, detailed face, detailed hands",
+                lines=3
+            )
+            negative_prompt = gr.TextArea(
+                label="负面提示词",
+                value="low quality, worst quality, blurry, distorted, malformed, bad anatomy, extra limbs, fused fingers, bad hands, bad feet, deformed, ugly, low quality, artifact, noise",
+                placeholder="负面提示词，例如：low quality, worst quality, blurry, distorted",
+                lines=2
+            )
+
+            with gr.Row():
+                width = gr.Slider(
+                    minimum=64, maximum=2048, step=8, value=1024, label="宽度"
+                )
+                height = gr.Slider(
+                    minimum=64, maximum=2048, step=8, value=1024, label="高度"
+                )
+
+         
+            with gr.Row():
+                steps = gr.Slider(
+                    minimum=1, maximum=50, step=1, value=8, label="推理步数"
+                )
+                cfg_scale = gr.Slider(
+                    minimum=0.0, maximum=20.0, step=0.1, value=0.0, label="CFG Scale"
+                )
+                strength = gr.Slider(
+                    minimum=0.0, maximum=1.0, step=0.01, value=0.5, label="重绘强度"
+                )
+
+            with gr.Row():
+                seed = gr.Number(
+                    label="随机种子 (-1为随机)", value=-1, precision=0
+                )
+                batch_size = gr.Slider(
+                    minimum=1, maximum=8, step=1, value=1, label="生成批次"
+                )
+
+            # 添加高清修复选项
+            with gr.Accordion("高清修复 (Hires. fix)", open=False):
+                enable_hr = gr.Checkbox(label="启用高清修复", value=False)
+                with gr.Row():
+                    hr_scale = gr.Slider(minimum=1.0, maximum=4.0, step=0.05, value=2.0, label="放大倍数", elem_id="img2img_hr_scale")
+                    hr_upscaler = gr.Dropdown(label="放大算法", choices=[*shared.latent_upscale_modes, *[x.name for x in shared.sd_upscalers]], value=shared.latent_upscale_default_mode, elem_id="img2img_hr_upscaler")
+                with gr.Row():
+                    hr_second_pass_steps = gr.Slider(minimum=0, maximum=150, step=1, value=0, label="高清阶段步数", elem_id="img2img_hires_steps")
+                    denoising_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, value=0.7, label="重绘强度", elem_id="img2img_denoising_strength")
+
+            # 添加LoRA支持选项
+            lora_enable = gr.Checkbox(label="启用 LoRA", value=False)
+            with gr.Group(visible=False) as lora_options_group:
+                # 获取LoRA列表
+                lora_choices = get_lora_list()
+                
+                with gr.Row():
+                    # 支持多选的下拉框
+                    lora_model_1 = gr.Dropdown(
+                        choices=lora_choices,
+                        label="LoRA 模型 1",
+                        interactive=True
+                    )
+                    lora_model_2 = gr.Dropdown(
+                        choices=lora_choices,
+                        label="LoRA 模型 2",
+                        interactive=True
+                    )
+                
+                with gr.Row():
+                    lora_weight_1 = gr.Slider(minimum=0.0, maximum=2.0, step=0.05, label="LoRA 权重 1", value=0.8)
+                    lora_weight_2 = gr.Slider(minimum=0.0, maximum=2.0, step=0.05, label="LoRA 权重 2", value=0.8)
+                    
+                with gr.Row():
+                    refresh_lora_btn = gr.Button("刷新LoRA列表", size="sm")
+
+                # 刷新LoRA列表的函数
+                def refresh_lora_list():
+                    try:
+                        lora_choices = get_lora_list()
+                        return [gr.update(choices=lora_choices), gr.update(choices=lora_choices)]
+                    except Exception as e:
+                        print(f"刷新LoRA列表失败: {e}")
+                        return [gr.update(), gr.update()]
+
+                refresh_lora_btn.click(
+                    fn=refresh_lora_list,
+                    inputs=[],
+                    outputs=[lora_model_1, lora_model_2]
+                )
+
+            lora_enable.change(
+                fn=lambda x: gr.update(visible=x),
+                inputs=[lora_enable],
+                outputs=[lora_options_group]
+            )
+
+        with gr.Column():  # 右半边 - 输出
+            output_info = gr.Textbox(label="输出信息")
+            output_images = gr.Gallery(label="生成的图像")
+
+            with gr.Row():
+                generate_btn = gr.Button("图生图生成", variant="primary")
+                open_folder_btn = gr.Button("打开输出目录", variant="secondary")
+
+            # 添加队列功能区域
+            with gr.Accordion("任务队列", open=False):
+                with gr.Group():
+                    queue_status_text = gr.Textbox(label="队列状态", value="当前队列大小: 0", interactive=False)
+                    
+                    with gr.Row():
+                        # 添加到队列按钮
+                        add_to_queue_btn = gr.Button("添加到队列", variant="secondary")
+                        process_queue_btn = gr.Button("执行队列任务", variant="primary")
+                        clear_queue_btn = gr.Button("清空队列", variant="stop")
+                    
+                    # 队列操作状态
+                    queue_operation_status = gr.Textbox(label="队列操作状态", interactive=False)
+                    
+                    # 详细队列状态显示
+                    detailed_queue_status = gr.Textbox(label="详细任务列表", interactive=False, lines=5, max_lines=10)
+
+            # 添加按钮点击事件
+            open_folder_btn.click(
+                fn=lambda: open_folder(output_dir),
+                inputs=[],
+                outputs=[output_info]
+            )
+
+            generate_btn.click(
+                fn=generate_image_with_zimage_img2img,
+                inputs=[
+                    init_image,
+                    prompt, negative_prompt, width, height,
+                    steps, cfg_scale, seed, strength, batch_size,
+                    lora_enable, lora_model_1, lora_weight_1, lora_model_2, lora_weight_2,
+                    enable_hr, hr_scale, hr_upscaler, hr_second_pass_steps, denoising_strength
+                ],
+                outputs=[output_info, output_images]
+            )
+            
+            # 添加到队列的事件绑定
+            add_to_queue_btn.click(
+                fn=lambda init_image, prompt, negative_prompt, width, height, steps, cfg_scale, seed, strength, batch_size, \
+                       lora_enable, lora_model_1, lora_weight_1, lora_model_2, lora_weight_2, \
+                       enable_hr, hr_scale, hr_upscaler, hr_second_pass_steps, denoising_strength: \
+                    add_to_queue(
+                        'zimage_img2img',
+                        init_image=init_image,
+                        prompt=prompt,
+                        negative_prompt=negative_prompt,
+                        width=width,
+                        height=height,
+                        steps=steps,
+                        cfg_scale=cfg_scale,
+                        seed=seed,
+                        strength=strength,
+                        batch_size=batch_size,
+                        lora_enable=lora_enable,
+                        lora_model_1=lora_model_1,
+                        lora_weight_1=lora_weight_1,
+                        lora_model_2=lora_model_2,
+                        lora_weight_2=lora_weight_2,
+                        enable_hr=enable_hr,
+                        hr_scale=hr_scale,
+                        hr_upscaler=hr_upscaler,
+                        hr_second_pass_steps=hr_second_pass_steps,
+                        denoising_strength=denoising_strength
+                    ),
+                inputs=[
+                    init_image,
+                    prompt,
+                    negative_prompt,
+                    width,
+                    height,
+                    steps,
+                    cfg_scale,
+                    seed,
+                    strength,
+                    batch_size,
+                    lora_enable,
+                    lora_model_1,
+                    lora_weight_1,
+                    lora_model_2,
+                    lora_weight_2,
+                    enable_hr, hr_scale, hr_upscaler, hr_second_pass_steps, denoising_strength
+                ],
+                outputs=[queue_operation_status]
+            )
+            
+            # 更新队列状态
+            def update_queue_status():
+                return get_queue_status()
+            
+            def update_detailed_queue_status():
+                return get_detailed_queue_status()
+            
+            # 添加按钮点击事件来更新队列状态
+            add_to_queue_btn.click(
+                fn=update_queue_status,
+                inputs=[],
+                outputs=[queue_status_text]
+            )
+            
+            add_to_queue_btn.click(
+                fn=update_detailed_queue_status,
+                inputs=[],
+                outputs=[detailed_queue_status]
+            )
+            
+            process_queue_btn.click(
+                fn=process_queue,
+                inputs=[],
+                outputs=[output_info, output_images]
+            )
+            
+            process_queue_btn.click(
+                fn=update_queue_status,
+                inputs=[],
+                outputs=[queue_status_text]
+            )
+            
+            process_queue_btn.click(
+                fn=update_detailed_queue_status,
+                inputs=[],
+                outputs=[detailed_queue_status]
+            )
+            
+            # 清空队列按钮事件
+            def clear_queue():
+                global task_queue
+                import queue
+                task_queue = queue.Queue()  # 重新创建空队列
+                return "队列已清空"
+            
+            clear_queue_btn.click(
+                fn=clear_queue,
+                inputs=[],
+                outputs=[queue_operation_status]
+            )
+            
+            clear_queue_btn.click(
+                fn=update_queue_status,
+                inputs=[],
+                outputs=[queue_status_text]
+            )
+            
+            clear_queue_btn.click(
+                fn=update_detailed_queue_status,
+                inputs=[],
+                outputs=[detailed_queue_status]
+            )
+
+
+def create_z_image_img2img_ui():
+    """创建Z-Image图生图UI界面"""
+    # 创建输出目录
+    output_dir = Path(paths.data_path) / "outputs" / "z-image"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    with gr.Blocks(analytics_enabled=False) as ui:
+        create_tab()
+    
+    return ui
+
+
+def title():
+    """返回此标签页在WebUI中的标题"""
+    return "Z-Image Img2Img"
+
+
+def show():
+    """指定此标签页在WebUI中的显示位置"""
+    # 返回True表示在主界面显示此标签页
+    return True

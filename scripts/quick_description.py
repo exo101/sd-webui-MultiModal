@@ -12,7 +12,7 @@ def create_quick_description(chat_message):
             "storyboard_description": "Analyze this image as a storyboard panel. Describe the composition, framing, camera angle, character positioning, and visual storytelling elements. Include details about panel transitions, gutters, and how this panel fits into a larger narrative sequence.",
             "video_description": "Based on this image, create a detailed description for a video that starts with this scene. Describe the initial setting, characters, mood, and potential movements or actions that could happen in the following scenes.",
             "text_video_description": "Create a detailed text-to-video generation prompt based on this image. Describe the complete scene including environment, characters, actions, camera movements, transitions, and visual effects that would make a compelling video.",
-            "art_critic": "Analyze this image like an art critic would with information about its composition, style, symbolism, the use of color, light, any artistic movement it might belong to, etc.",
+            "art_critic": "简单描述图像.",
             "product_listing": "Write a caption for this image as though it were a product listing."
         }
         return prompts.get(caption_type, "")
@@ -28,7 +28,7 @@ def create_quick_description(chat_message):
         [
             ("图生视频描述", "video_description"),
             ("文生视频描述文本", "text_video_description"),
-            ("艺术评论分析", "art_critic"),
+            ("简单描述", "art_critic"),
             ("产品列表描述", "product_listing")
         ],
         [

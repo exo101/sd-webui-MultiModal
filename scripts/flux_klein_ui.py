@@ -1,7 +1,12 @@
 import gradio as gr
 import torch
 import os
+import subprocess
+import platform
 import gc
+import logging
+import json
+import datetime
 import time  # 添加缺失的时间模块导入
 import random  # 添加缺失的随机模块导入
 import numpy as np
@@ -41,8 +46,8 @@ from scripts.flux_klein_queue_manager import (
 import scripts.flux_klein_model_loader as model_loader
 from scripts.flux_klein_model_loader import get_bf16_models, get_fp8_models, list_lora_models, _is_fp8_model, _is_sdnq_model, _identify_model_type, _scan_model_directory
 
-# 定义最大图像尺寸参数
-MAX_IMAGE_SIZE = 1024  # 最大边长
+# 创建logger实例
+logger = logging.getLogger(__name__)
 
 # 自定义关键词缓存
 CUSTOM_KEYWORDS_CACHE = []
@@ -862,7 +867,7 @@ def create_flux_klein_ui():
                 # 执行事件绑定设置
                 setup_events()
                 
-                # 打开输出目录事件
+                # 打开输出目录按钮事件
                 multi_open_outputs_btn.click(
                     fn=lambda: open_folder("outputs"),
                     inputs=[],
@@ -875,13 +880,22 @@ def create_flux_klein_ui():
             with gr.Row():
                 with gr.Column():
                     # 图像+蒙版输入区域（使用Gradio的ImageMask组件）
+                    # 按规范显式配置画笔工具
                     inpaint_image = gr.ImageMask(
                         label="上传图像并绘制蒙版区域",
                         sources=['upload'],
-                        interactive=True,
-                        type="pil",  # ImageMask组件只能使用pil类型，但我们将在后端处理大数据问题
-                        show_label=True
+                        type="pil",
+                        show_label=True,
+                        brush=gr.Brush(
+                            colors=["#FFFFFF", "#000000", "#FF0000", "#00FF00"],  # 白、黑、红、绿
+                            default_color="#FFFFFF",  # 白色默认，符合编辑语义
+                            default_size=25
+                        ),
+                        eraser=gr.Eraser(
+                            default_size=25
+                        )
                     )
+                    
                     
                     # 提示词输入区域
                     inpaint_prompt = gr.Textbox(label="提示词", lines=3, value="修复这个区域，画一只小狗")
@@ -1027,23 +1041,17 @@ def create_flux_klein_ui():
                     with gr.Row():
                         inpaint_btn = gr.Button("局部重绘", variant="primary")
                         inpaint_open_outputs_btn = gr.Button("打开输出目录", variant="secondary")
-            
-            # 局部重绘Tab的事件绑定
+                    
+                    # 局部重绘Tab的事件绑定
             if not FLUX_KLEIN_AVAILABLE:
                 # 如果模块不可用，禁用相关功能
                 inpaint_btn.variant = "secondary"
                 inpaint_btn.interactive = False
                 inpaint_result_status.value = f"⚠️ FLUX.2-klein模块不可用: {MODULE_IMPORT_ERROR}"
             else:
-                # 事件绑定 - 局部重绘部分
+                # 事件绑定 - 局部重绘部分（使用预处理函数）
                 inpaint_btn.click(
-                    fn=lambda image_with_mask, prompt, steps, guidance_scale, seed, bf16_choice, fp8_choice, sdnq_choice, batch_size, lora_enable, lora_model, lora_weight:
-                        inpaint_flux_klein(
-                            image_with_mask,  # 直接传递图像和蒙版，不需要压缩
-                            prompt, steps, guidance_scale, seed,
-                            get_selected_model(bf16_choice, fp8_choice, sdnq_choice),  # 使用合并的模型选择
-                            batch_size, lora_enable, lora_model, lora_weight
-                        ),
+                    fn=preprocess_inpaint_data,
                     inputs=[inpaint_image, inpaint_prompt, inpaint_steps, inpaint_guidance_scale, inpaint_seed, inpaint_bf16_model_choice, inpaint_fp8_model_choice, inpaint_sdnq_model_choice, inpaint_batch_size, inpaint_lora_enable, inpaint_lora_model, inpaint_lora_weight],
                     outputs=[inpaint_result_gallery, inpaint_result_status]
                 )
@@ -1428,36 +1436,78 @@ def create_flux_klein_ui():
     # 返回组件列表以便在其他地方使用（如果需要）
     return locals()  # 返回所有局部变量
 
-# ... 其余函数保持不变 ...
+def preprocess_inpaint_data(*args, **kwargs):
+    """预处理局部重绘数据的包装函数"""
+    try:
+        return inpainting(*args, **kwargs)
+    except Exception as e:
+        logger.error(f"局部重绘处理出错: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        # 返回错误信息和空图像列表
+        return [], f"❌ 处理失败: {str(e)}"
 
-def get_selected_model(bf16_choice, fp8_choice, sdnq_choice=None):
+# 局部重绘功能函数 - 修正蒙版处理逻辑
+def inpainting(image_with_mask, prompt, steps, guidance_scale, seed, bf16_model_choice, fp8_model_choice, sdnq_model_choice, batch_size, lora_enable, lora_model, lora_weight):
+    """
+    处理局部重绘任务
+    """
+    # 获取选中的模型
+    model_name = get_selected_model(bf16_model_choice, fp8_model_choice, sdnq_model_choice)
+    
+    logger = logging.getLogger(__name__)
+    
+    logger.info("=== 局部重绘数据预处理 ===")
+    logger.info(f"image_with_mask 类型: {type(image_with_mask)}")
+    logger.info(f"选中模型: {model_name}")
+    
+    if isinstance(image_with_mask, dict):
+        logger.info(f"字典键: {list(image_with_mask.keys())}")
+        if 'image' in image_with_mask:
+            img_data = image_with_mask['image']
+            logger.info(f"图像数据类型: {type(img_data)}")
+            if hasattr(img_data, 'shape'):
+                logger.info(f"图像形状: {img_data.shape}")
+            elif hasattr(img_data, 'size'):
+                logger.info(f"图像尺寸: {img_data.size}")
+        if 'mask' in image_with_mask:
+            mask_data = image_with_mask['mask']
+            logger.info(f"蒙版数据类型: {type(mask_data)}")
+            if hasattr(mask_data, 'shape'):
+                logger.info(f"蒙版形状: {mask_data.shape}")
+            elif hasattr(mask_data, 'size'):
+                logger.info(f"蒙版尺寸: {mask_data.size}")
+    else:
+        logger.info("image_with_mask 不是字典格式")
+    
+    # 调用实际的生成函数
+    return inpaint_flux_klein(
+        image_with_mask, prompt, steps, guidance_scale, seed,
+        get_selected_model(bf16_model_choice, fp8_model_choice, sdnq_model_choice),
+        batch_size, lora_enable, lora_model, lora_weight
+    )
+
+def get_selected_model(bf16_model_choice, fp8_model_choice, sdnq_model_choice=None):
     """
     根据BF16、FP8和SDNQ模型选择返回最终模型选择
     优先级：SDNQ > FP8 > BF16
     """
     # 首先检查SDNQ模型
-    if sdnq_choice is not None and sdnq_choice != "" and sdnq_choice != "无":
-        return sdnq_choice
+    if sdnq_model_choice is not None and sdnq_model_choice != "" and sdnq_model_choice != "无":
+        return sdnq_model_choice
     # 然后检查FP8模型
-    elif fp8_choice is not None and fp8_choice != "" and fp8_choice != "无":
-        return fp8_choice
+    elif fp8_model_choice is not None and fp8_model_choice != "" and fp8_model_choice != "无":
+        return fp8_model_choice
     # 最后使用BF16模型
-    elif bf16_choice is not None and bf16_choice != "无":
-        return bf16_choice
+    elif bf16_model_choice is not None and bf16_model_choice != "无":
+        return bf16_model_choice
+    # 如果都没有有效选择，返回默认模型
     else:
-        # 默认返回一个基础模型
-        bf16_models = get_bf16_models()
-        if bf16_models:
-            return bf16_models[0]
-        else:
-            return "FLUX_2-klein-base-4B"
+        return "FLUX_2-klein-base-4B"
 
 def open_folder(folder_path):
     """打开指定的文件夹"""
-    import os
-    import subprocess
-    import platform
-    
+  
     abs_path = os.path.abspath(folder_path)
     
     if platform.system() == "Windows":
@@ -1559,3 +1609,5 @@ def _scan_model_directory(model_dir, model_type_filter):
                 model_choices.append(f"{item} {model_type_info}")
     
     return model_choices
+
+

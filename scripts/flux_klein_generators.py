@@ -9,9 +9,17 @@ import uuid
 import sys
 import importlib
 
-# 设置日志
-logging.basicConfig(level=logging.INFO)
+# 增强日志配置 - 确保调试信息可见
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),  # 强制输出到标准输出
+        logging.FileHandler('flux_klein_debug.log', mode='w')  # 同时写入文件
+    ]
+)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)  # 确保记录DEBUG级别日志
 
 # 添加当前目录到系统路径以确保模块可以被找到
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -383,11 +391,21 @@ def inpaint_flux_klein(
         # 处理图像和蒙版数据
         if isinstance(image_with_mask, dict):
             # ImageMask组件返回字典格式，需要提取图像和蒙版
-            if 'image' not in image_with_mask or 'mask' not in image_with_mask:
-                return None, "Invalid image_with_mask format: missing image or mask"
+            logger.info(f"ImageMask data keys: {list(image_with_mask.keys())}")
+            logger.info(f"ImageMask data types: {[(k, type(v)) for k, v in image_with_mask.items()]}")
             
-            image = image_with_mask['image']
-            mask = image_with_mask['mask']
+            # 根据项目规范，从'background'提取原始图像，从'layers'[0]提取蒙版
+            if 'background' in image_with_mask and 'layers' in image_with_mask and len(image_with_mask['layers']) > 0:
+                image = image_with_mask['background']
+                mask = image_with_mask['layers'][0]
+                logger.info("Extracted image from 'background' and mask from 'layers'[0]")
+            elif 'image' in image_with_mask and 'mask' in image_with_mask:
+                image = image_with_mask['image']
+                mask = image_with_mask['mask']
+                logger.info("Extracted image from 'image' and mask from 'mask'")
+            else:
+                available_keys = list(image_with_mask.keys())
+                return None, f"Invalid image_with_mask format: missing required keys. Available keys: {available_keys}"
             
             # 确保图像和蒙版是PIL格式
             if isinstance(image, np.ndarray):
@@ -425,22 +443,87 @@ def inpaint_flux_klein(
         
         start_time = time.time()
         
-        # 使用Flux2 Klein的inpainting功能
-        # 将蒙版转换为黑白图像，白色表示需要重绘的区域
-        mask = mask.convert('L')  # 确保蒙版是灰度图
+        # 重新设计蒙版处理：采用更直接的编辑区域标记
+        # 确保图像为RGB模式
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+            logger.info(f"Converted image to RGB mode: {image.mode}")
+            
+        # 处理遮罩：确保为L模式（灰度）
+        if mask.mode != 'L':
+            mask = mask.convert('L')
+            logger.info(f"Converted mask to L mode: {mask.mode}")
         
-        # 对蒙版进行二值化处理，使白色区域更清晰
-        mask = mask.point(lambda x: 255 if x > 128 else 0, mode='1')
+        # 创建编辑引导图像：在蒙版区域添加强烈的视觉标记
+        image_for_pipeline = image.copy()
         
-        # 将蒙版转换回L模式
-        mask = mask.convert('L')
+        logger.info(f"Image size: {image.size}, Mask size: {mask.size}")
+        logger.info(f"Image mode: {image.mode}, Mask mode: {mask.mode}")
         
-        logger.info(f"Attempting inpainting with image size: {image.size}, mask size: {mask.size}")
+        # 统计蒙版信息 - 修正检测阈值
+        width, height = image.size
+        mask_pixels = mask.load()
         
+        # 使用更低的阈值检测蒙版区域，提高敏感度
+        white_pixel_count = 0
+        gray_pixel_count = 0
+        black_pixel_count = 0
+        
+        for x in range(width):
+            for y in range(height):
+                pixel_value = mask_pixels[x, y]
+                if pixel_value > 200:  # 更宽松的白色检测阈值
+                    white_pixel_count += 1
+                elif pixel_value > 100:  # 灰色区域
+                    gray_pixel_count += 1
+                else:  # 黑色区域
+                    black_pixel_count += 1
+        
+        total_pixels = width * height
+        mask_coverage = (white_pixel_count + gray_pixel_count) / total_pixels  # 包含灰色区域
+        
+        logger.info(f"Mask pixel distribution:")
+        logger.info(f"  White pixels (>200): {white_pixel_count}")
+        logger.info(f"  Gray pixels (100-200): {gray_pixel_count}")  
+        logger.info(f"  Black pixels (<100): {black_pixel_count}")
+        logger.info(f"  Total coverage: {mask_coverage*100:.2f}%")
+        
+        # 核心改进：在蒙版区域添加强烈的视觉标记
+        if mask_coverage > 0.001:  # 降低触发阈值到0.1%
+            image_pixels = image_for_pipeline.load()
+            
+            # 使用纯白色强烈标记所有非黑色区域（用户绘制的蒙版区域）
+            marked_pixels = 0
+            for x in range(width):
+                for y in range(height):
+                    if mask_pixels[x, y] > 100:  # 标记所有灰色和白色区域
+                        image_pixels[x, y] = (255, 255, 255)  # 纯白色标记
+                        marked_pixels += 1
+            
+            logger.info(f"Applied white marking to {marked_pixels} pixels ({marked_pixels/total_pixels*100:.2f}%)")
+            
+            # 构建强调编辑意图的提示词
+            if mask_coverage > 0.3:
+                edit_intensity = "dramatically"
+            elif mask_coverage > 0.1:
+                edit_intensity = "significantly"
+            else:
+                edit_intensity = "carefully"
+                
+            enhanced_prompt = f"{prompt} [EDITOR: {edit_intensity} modify the white-marked region while maintaining realistic appearance]"
+        else:
+            # 没有蒙版时使用原始图像和提示词
+            enhanced_prompt = prompt
+            logger.warning("⚠️ No significant mask detected - using text-to-image mode")
+            logger.info("蒙版检测建议：请确保使用黑色画笔绘制需要编辑的区域")
+        
+        logger.info(f"Final prompt for pipeline: {enhanced_prompt}")
+        logger.info(f"Processing image with effective mask coverage: {mask_coverage*100:.3f}%")
+        
+        # 使用Flux2KleinPipeline进行编辑
         result_images = pipe(
-            prompt=prompt,
-            image=image,
-            mask_image=mask,  # 传递蒙版图像
+            prompt=enhanced_prompt,
+            image=image_for_pipeline,
             num_inference_steps=steps,
             guidance_scale=guidance_scale,
             generator=generator,

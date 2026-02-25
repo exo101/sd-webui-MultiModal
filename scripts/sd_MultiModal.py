@@ -743,7 +743,7 @@ def MultiModal_tab():
                             gr.Markdown("图像清理模块不可用。请确保已安装litelama库。")
             
             # 添加 FLUX 系列标签页
-            with gr.TabItem("4.FLUX加速系列图像生成与编辑"):
+            with gr.TabItem("4.FLUX系列图像生成与编辑"):
                 with gr.Tabs():
                     with gr.TabItem("kontext图像编辑"):
                         try:
@@ -830,7 +830,7 @@ def MultiModal_tab():
             
             # 添加 Z-Image-Turbo 标签页（如果可用）
             if 'Z_IMAGE_MODULE_AVAILABLE' in globals() and Z_IMAGE_MODULE_AVAILABLE:
-                with gr.TabItem("6.Z-Image-Turbo图像生成（测试版）"):
+                with gr.TabItem("6.Z-Image-Turbo图像生成"):
                     try:
                         with gr.Tabs():
                             with gr.TabItem("文生图"):
@@ -908,5 +908,6 @@ modules_status = {
     'qwen_api': QWEN_API_AVAILABLE,
     'flux_krea': FLUX_KREA_AVAILABLE,
     'z_image': Z_IMAGE_MODULE_AVAILABLE,
+
 
 }

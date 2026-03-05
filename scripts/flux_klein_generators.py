@@ -8,6 +8,8 @@ import time
 import uuid
 import sys
 import importlib
+import safetensors.torch
+from collections import OrderedDict
 
 # 增强日志配置 - 确保调试信息可见
 logging.basicConfig(
@@ -66,23 +68,315 @@ except (ImportError, ModuleNotFoundError):
         apply_attention_optimizations = getattr(flux_klein_model_loader, 'apply_attention_optimizations')
 
 
-def apply_attention_optimizations(pipeline, model_type='original'):
+def _convert_non_diffusers_flux2_lora_to_diffusers_manual(original_state_dict):
     """
-    应用注意力优化，使用flash_attn或sageattention（如果可用）
-    该函数已被移至flux_klein_model_loader.py中实现，此处仅为兼容性保留
+    手动实现 FLUX.2 LoRA 格式转换（基于 diffusers 库的逻辑）
+    将 non-diffusers 格式转换为 diffusers 格式
     """
-    # 导入来自model_loader的实现
+    converted_state_dict = {}
+    
+    num_double_layers = 8
+    num_single_layers = 48
+    lora_keys = ("lora_A", "lora_B")
+    
     try:
-        from .flux_klein_model_loader import apply_attention_optimizations as loader_apply_optimizations
-        return loader_apply_optimizations(pipeline, model_type)
-    except (ImportError, ModuleNotFoundError):
+        # 转换 single transformer blocks
+        for sl in range(num_single_layers):
+            single_block_prefix = f"single_blocks.{sl}"
+            attn_prefix = f"single_transformer_blocks.{sl}.attn"
+            
+            for lora_key in lora_keys:
+                linear1_key = f"{single_block_prefix}.linear1.{lora_key}.weight"
+                linear2_key = f"{single_block_prefix}.linear2.{lora_key}.weight"
+                
+                if linear1_key in original_state_dict:
+                    converted_state_dict[f"{attn_prefix}.to_qkv_mlp_proj.{lora_key}.weight"] = \
+                        original_state_dict.pop(linear1_key)
+                
+                if linear2_key in original_state_dict:
+                    converted_state_dict[f"{attn_prefix}.to_out.{lora_key}.weight"] = \
+                        original_state_dict.pop(linear2_key)
+        
+        # 转换 double transformer blocks
+        for dl in range(num_double_layers):
+            transformer_block_prefix = f"transformer_blocks.{dl}"
+            
+            for lora_key in lora_keys:
+                # 处理 fused QKV
+                for attn_type in ["img_attn", "txt_attn"]:
+                    qkv_key = f"double_blocks.{dl}.{attn_type}.qkv.{lora_key}.weight"
+                    
+                    if qkv_key in original_state_dict:
+                        fused_qkv_weight = original_state_dict.pop(qkv_key)
+                        
+                        if lora_key == "lora_A":
+                            diff_attn_proj_keys = (
+                                ["to_q", "to_k", "to_v"]
+                                if attn_type == "img_attn"
+                                else ["add_q_proj", "add_k_proj", "add_v_proj"]
+                            )
+                            for proj_key in diff_attn_proj_keys:
+                                converted_state_dict[f"{transformer_block_prefix}.attn.{proj_key}.{lora_key}.weight"] = \
+                                    torch.cat([fused_qkv_weight])
+                        else:
+                            sample_q, sample_k, sample_v = torch.chunk(fused_qkv_weight, 3, dim=0)
+                            
+                            if attn_type == "img_attn":
+                                converted_state_dict[f"{transformer_block_prefix}.attn.to_q.{lora_key}.weight"] = \
+                                    torch.cat([sample_q])
+                                converted_state_dict[f"{transformer_block_prefix}.attn.to_k.{lora_key}.weight"] = \
+                                    torch.cat([sample_k])
+                                converted_state_dict[f"{transformer_block_prefix}.attn.to_v.{lora_key}.weight"] = \
+                                    torch.cat([sample_v])
+                            else:
+                                converted_state_dict[f"{transformer_block_prefix}.attn.add_q_proj.{lora_key}.weight"] = \
+                                    torch.cat([sample_q])
+                                converted_state_dict[f"{transformer_block_prefix}.attn.add_k_proj.{lora_key}.weight"] = \
+                                    torch.cat([sample_k])
+                                converted_state_dict[f"{transformer_block_prefix}.attn.add_v_proj.{lora_key}.weight"] = \
+                                    torch.cat([sample_v])
+                
+                # 处理投影层
+                proj_mappings = [
+                    (f"double_blocks.{dl}.img_attn.proj.{lora_key}.weight", 
+                     f"{transformer_block_prefix}.attn.to_out.0.{lora_key}.weight"),
+                    (f"double_blocks.{dl}.txt_attn.proj.{lora_key}.weight",
+                     f"{transformer_block_prefix}.attn.to_add_out.{lora_key}.weight"),
+                ]
+                
+                for orig_key, diff_key in proj_mappings:
+                    if orig_key in original_state_dict:
+                        converted_state_dict[diff_key] = original_state_dict.pop(orig_key)
+                
+                # 处理 MLP 层
+                mlp_mappings = [
+                    (f"double_blocks.{dl}.img_mlp.0.{lora_key}.weight", 
+                     f"{transformer_block_prefix}.ff.linear_in.{lora_key}.weight"),
+                    (f"double_blocks.{dl}.img_mlp.2.{lora_key}.weight",
+                     f"{transformer_block_prefix}.ff.linear_out.{lora_key}.weight"),
+                    (f"double_blocks.{dl}.txt_mlp.0.{lora_key}.weight",
+                     f"{transformer_block_prefix}.ff_context.linear_in.{lora_key}.weight"),
+                    (f"double_blocks.{dl}.txt_mlp.2.{lora_key}.weight",
+                     f"{transformer_block_prefix}.ff_context.linear_out.{lora_key}.weight"),
+                ]
+                
+                for orig_key, diff_key in mlp_mappings:
+                    if orig_key in original_state_dict:
+                        converted_state_dict[diff_key] = original_state_dict.pop(orig_key)
+        
+        # 添加 transformer. 前缀
+        final_state_dict = {}
+        for key, value in converted_state_dict.items():
+            final_state_dict[f"transformer.{key}"] = value
+        
+        return final_state_dict
+        
+    except Exception as e:
+        logger.error(f"Error during manual conversion: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        # 如果转换失败，返回原始状态字典（至少移除了 diffusion_model 前缀）
+        return {f"transformer.{k}": v for k, v in original_state_dict.items() if not k.startswith('diffusion_model.')}
+
+
+def convert_lora_state_dict_for_flux(state_dict):
+    """
+    转换 LoRA 状态字典以匹配 FLUX.2-klein 模型的期望格式
+    处理常见的键名不匹配问题
+    """
+    # 首先移除 diffusion_model 前缀
+    original_state_dict = {}
+    for key, value in state_dict.items():
+        new_key = key
+        if new_key.startswith('diffusion_model.'):
+            new_key = new_key.replace('diffusion_model.', '')
+        original_state_dict[new_key] = value
+    
+    # 使用完整转换函数
+    return _convert_non_diffusers_flux2_lora_to_diffusers_manual(original_state_dict)
+
+
+def load_lora_with_conversion(pipe, lora_path, weight_name, lora_scale=1.0):
+    """
+    加载 LoRA 权重并进行必要的键名转换
+    :param pipe: 模型管道
+    :param lora_path: LoRA 文件路径（可以是相对路径或绝对路径）
+    :param weight_name: 权重文件名
+    :param lora_scale: LoRA 缩放因子
+    :return: 是否成功加载
+    """
+    try:
+        # 将相对路径转换为绝对路径
+        if not os.path.isabs(lora_path):
+            # 如果不是绝对路径，尝试多种方式查找文件
+            found_path = None
+            
+            # 方法 1: 从当前工作目录开始向上搜索 Lora 目录
+            current_search_dir = os.getcwd()
+            while current_search_dir and os.path.dirname(current_search_dir) != current_search_dir:
+                possible_lora_dirs = [
+                    os.path.join(current_search_dir, 'models', 'Lora'),
+                    os.path.join(current_search_dir, 'Lora'),
+                ]
+                
+                for lora_dir in possible_lora_dirs:
+                    if os.path.isdir(lora_dir):
+                        logger.info(f"Searching for LoRA '{lora_path}' in directory: {lora_dir}")
+                        
+                        # 直接在 Lora 目录下查找
+                        direct_path = os.path.join(lora_dir, lora_path)
+                        if os.path.exists(direct_path):
+                            found_path = direct_path
+                            logger.info(f"Found LoRA at: {found_path}")
+                            break
+                        
+                        # 递归搜索所有子目录
+                        for root, dirs, files in os.walk(lora_dir):
+                            if lora_path in files:
+                                found_path = os.path.join(root, lora_path)
+                                logger.info(f"Found LoRA in subdirectory: {found_path}")
+                                break
+                        
+                        # 也尝试将 lora_path 作为子目录路径
+                        subdir_path = os.path.join(lora_dir, lora_path)
+                        if os.path.exists(subdir_path):
+                            found_path = subdir_path
+                            logger.info(f"Found LoRA with subdirectory path: {found_path}")
+                            break
+                
+                if found_path:
+                    break
+                    
+                # 向上一级目录继续搜索
+                parent_dir = os.path.dirname(current_search_dir)
+                if parent_dir == current_search_dir:
+                    break
+                current_search_dir = parent_dir
+            
+            # 方法 2: 如果还没找到，尝试相对于当前脚本目录
+            if not found_path:
+                possible_paths = [
+                    os.path.join(current_dir, '..', '..', '..', 'models', 'Lora', lora_path),
+                    os.path.join(current_dir, '..', '..', 'Lora', lora_path),
+                    os.path.join(os.getcwd(), lora_path),
+                ]
+                
+                for path in possible_paths:
+                    abs_path = os.path.abspath(path)
+                    logger.info(f"Checking alternative path: {abs_path}")
+                    if os.path.exists(abs_path):
+                        found_path = abs_path
+                        logger.info(f"Found LoRA at: {found_path}")
+                        break
+            
+            if found_path:
+                lora_path = found_path
+            else:
+                # 如果都没找到，记录所有尝试过的路径
+                logger.error(f"LoRA file not found. Searched in directory trees from:")
+                logger.error(f"  Base directory: {os.getcwd()}")
+                logger.error(f"  Script directory: {current_dir}")
+                logger.error(f"  Requested path: {lora_path}")
+        
+        # 最终检查文件是否存在
+        if not os.path.exists(lora_path):
+            logger.error(f"LoRA file not found: {lora_path}")
+            return False
+        
+        logger.info(f"Attempting to load LoRA from: {lora_path}")
+        
+        # 直接加载状态字典并手动应用权重
+        state_dict = safetensors.torch.load_file(lora_path)
+        logger.info(f"Loaded LoRA state dict with {len(state_dict)} keys")
+        
+        # 检查并记录键名格式
+        sample_keys = list(state_dict.keys())[:5]
+        logger.info(f"Sample LoRA keys: {sample_keys}")
+        
+        # 先移除 diffusion_model 前缀
+        original_state_dict = {}
+        for key, value in state_dict.items():
+            new_key = key
+            if new_key.startswith('diffusion_model.'):
+                new_key = new_key.replace('diffusion_model.', '')
+            original_state_dict[new_key] = value
+        
+        # 记录转换前的样本键名
+        converted_sample_keys = list(original_state_dict.keys())[:5]
+        logger.info(f"After removing prefix (sample): {converted_sample_keys}")
+        
+        # 使用完整转换函数
+        logger.info("Converting to diffusers format...")
+        converted_state_dict = _convert_non_diffusers_flux2_lora_to_diffusers_manual(original_state_dict.copy())
+        
+        # 记录转换后的样本键名
+        final_sample_keys = list(converted_state_dict.keys())[:5]
+        logger.info(f"Final converted keys (sample): {final_sample_keys}")
+        
+        # 尝试使用转换后的状态字典加载
         try:
-            import flux_klein_model_loader
-            return flux_klein_model_loader.apply_attention_optimizations(pipeline, model_type)
-        except ImportError:
-            importlib = __import__('importlib')
-            flux_klein_model_loader = importlib.import_module('flux_klein_model_loader')
-            return flux_klein_model_loader.apply_attention_optimizations(pipeline, model_type)
+            # 先卸载任何现有的 LoRA
+            try:
+                if hasattr(pipe, 'unload_lora_weights'):
+                    pipe.unload_lora_weights()
+            except Exception:
+                pass
+            
+            # 临时保存转换后的状态字典
+            import tempfile
+            temp_path = None
+            try:
+                # safetensors.torch.save 返回 bytes，需要手动写入文件
+                saved_bytes = safetensors.torch.save(converted_state_dict, metadata={"format": "pt"})
+                
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.safetensors') as tmp_file:
+                    temp_path = tmp_file.name
+                    tmp_file.write(saved_bytes)
+                
+                logger.info(f"Saved converted state dict to temporary file: {temp_path}")
+            except Exception as save_error:
+                logger.error(f"Failed to save temporary file: {save_error}")
+                if temp_path and os.path.exists(temp_path):
+                    try:
+                        os.unlink(temp_path)
+                    except Exception:
+                        pass
+                raise
+            
+            try:
+                # 从临时文件加载 - 使用英文临时文件名避免编码问题
+                pipe.load_lora_weights(
+                    os.path.dirname(temp_path),
+                    weight_name=os.path.basename(temp_path),
+                    local_files_only=True
+                )
+                logger.info(f"Successfully loaded LoRA with converted state dict (scale: {lora_scale})")
+                
+                # 融合 LoRA 权重
+                if hasattr(pipe, 'fuse_lora'):
+                    pipe.fuse_lora(lora_scale=lora_scale)
+                    logger.info(f"Fused LoRA weights with scale {lora_scale}")
+                
+                return True
+            finally:
+                # 清理临时文件
+                if temp_path and os.path.exists(temp_path):
+                    try:
+                        os.unlink(temp_path)
+                    except Exception:
+                        pass
+                    
+        except Exception as conversion_error:
+            logger.error(f"Conversion attempt also failed: {conversion_error}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return False
+            
+    except Exception as e:
+        logger.error(f"Failed to load LoRA weights: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return False
 
 
 def generate_flux_klein_image(
@@ -99,10 +393,10 @@ def generate_flux_klein_image(
     lora_weight: float = 1.0
 ):
     """
-    使用FLUX.2-klein模型生成图像
+    使用 FLUX.2-klein 模型生成图像
     """
     try:
-        # 确保尺寸是8的倍数
+        # 确保尺寸是 8 的倍数
         height = height - (height % 8)
         width = width - (width % 8)
         
@@ -125,28 +419,14 @@ def generate_flux_klein_image(
         if pipe is None:
             return None, f"Failed to load model from {model_path}"
         
-        # 应用注意力优化（从model_loader模块导入）
-        apply_attention_optimizations(pipe, model_path)
+        # 应用注意力优化
+        apply_attention_optimizations(pipe)
         
-        # 如果启用了LoRA，加载LoRA权重
+        # 如果启用了 LoRA，加载 LoRA 权重
         if lora_enable and lora_model and lora_model != "":
-            try:
-                # 构建完整的LoRA文件路径
-                lora_path = os.path.join("models", "Lora", lora_model)
-                if os.path.exists(lora_path):
-                    # 使用正确的参数加载LoRA权重
-                    pipe.load_lora_weights(
-                        lora_path, 
-                        weight_name=os.path.basename(lora_path),
-                        local_files_only=True
-                    )
-                    pipe.fuse_lora(lora_scale=lora_weight)
-                    logger.info(f"Applied LoRA weights from {lora_path} with scale {lora_weight}")
-                else:
-                    logger.warning(f"LoRA file not found: {lora_path}")
-            except Exception as e:
-                logger.error(f"Failed to load LoRA weights: {e}")
-                # 继续执行而不中断生成过程
+            success = load_lora_with_conversion(pipe, lora_model, os.path.basename(lora_model), lora_weight)
+            if not success:
+                logger.warning("LoRA loading failed, continuing without LoRA")
         
         # 生成图像
         generator = torch.Generator("cuda").manual_seed(seed) if seed != -1 else None
@@ -223,30 +503,16 @@ def multi_img_flux_klein(
         if img2 is not None:
             logger.info(f"img2: {type(img2)}")
         
-        # 应用注意力优化（从model_loader模块导入）
-        apply_attention_optimizations(pipe, model_path)
+        # 应用注意力优化
+        apply_attention_optimizations(pipe)
         
-        # 如果启用了LoRA，加载LoRA权重
+        # 如果启用了 LoRA，加载 LoRA 权重
         if lora_enable and lora_model and lora_model != "":
-            try:
-                # 构建完整的LoRA文件路径
-                lora_path = os.path.join("models", "Lora", lora_model)
-                if os.path.exists(lora_path):
-                    # 使用正确的参数加载LoRA权重
-                    pipe.load_lora_weights(
-                        lora_path, 
-                        weight_name=os.path.basename(lora_path),
-                        local_files_only=True
-                    )
-                    pipe.fuse_lora(lora_scale=lora_weight)
-                    logger.info(f"Applied LoRA weights from {lora_path} with scale {lora_weight}")
-                else:
-                    logger.warning(f"LoRA file not found: {lora_path}")
-            except Exception as e:
-                logger.error(f"Failed to load LoRA weights: {e}")
-                # 继续执行而不中断生成过程
+            success = load_lora_with_conversion(pipe, lora_model, os.path.basename(lora_model), lora_weight)
+            if not success:
+                logger.warning("LoRA loading failed, continuing without LoRA")
         
-        # 将输入转换为PIL图像
+        # 将输入转换为 PIL 图像
         condition_images = []
         
         if img1 is not None:
@@ -256,7 +522,7 @@ def multi_img_flux_klein(
                 if img1.dtype != np.uint8:
                     img1 = (img1 * 255).astype(np.uint8)
                 pil_img1 = Image.fromarray(img1, 'RGB')
-            elif hasattr(img1, 'convert'):  # 如果已经是PIL图像
+            elif hasattr(img1, 'convert'):  # 如果已经是 PIL 图像
                 pil_img1 = img1.convert('RGB')
             else:
                 return None, f"Unsupported img1 type: {type(img1)}"
@@ -266,7 +532,7 @@ def multi_img_flux_klein(
         else:
             return None, "First image is required"
         
-        # 如果提供了第二张图像，将其转换为PIL图像并添加到条件图像列表
+        # 如果提供了第二张图像，将其转换为 PIL 图像并添加到条件图像列表
         if img2 is not None:
             if isinstance(img2, str):  # 文件路径
                 pil_img2 = Image.open(img2).convert('RGB')
@@ -274,7 +540,7 @@ def multi_img_flux_klein(
                 if img2.dtype != np.uint8:
                     img2 = (img2 * 255).astype(np.uint8)
                 pil_img2 = Image.fromarray(img2, 'RGB')
-            elif hasattr(img2, 'convert'):  # 如果已经是PIL图像
+            elif hasattr(img2, 'convert'):  # 如果已经是 PIL 图像
                 pil_img2 = img2.convert('RGB')
             else:
                 return None, f"Unsupported img2 type: {type(img2)}"
@@ -297,7 +563,7 @@ def multi_img_flux_klein(
         
         start_time = time.time()
         
-        # 使用Flux2 Klein的图像条件生成功能
+        # 使用 Fluxe2 Klein 的图像条件生成功能
         # 传入图像列表作为条件
         logger.info("Attempting image-conditioned generation with FLUX_2-klein")
         result_images = pipe(
@@ -349,7 +615,7 @@ def inpaint_flux_klein(
     lora_weight: float = 1.0
 ):
     """
-    使用FLUX.2-klein模型对蒙版区域进行图像编辑
+    使用 FLUX.2-klein 模型对蒙版区域进行图像编辑
     """
     try:
         # 加载模型管道
@@ -368,46 +634,22 @@ def inpaint_flux_klein(
         # 应用注意力优化
         apply_attention_optimizations(pipe)
         
-        # 如果启用了LoRA，加载LoRA权重
+        # 如果启用了 LoRA，加载 LoRA 权重
         if lora_enable and lora_model and lora_model != "":
-            try:
-                # 构建完整的LoRA文件路径
-                lora_path = os.path.join("models", "Lora", lora_model)
-                if os.path.exists(lora_path):
-                    # 使用正确的参数加载LoRA权重
-                    pipe.load_lora_weights(
-                        lora_path, 
-                        weight_name=os.path.basename(lora_path),
-                        local_files_only=True
-                    )
-                    pipe.fuse_lora(lora_scale=lora_weight)
-                    logger.info(f"Applied LoRA weights from {lora_path} with scale {lora_weight}")
-                else:
-                    logger.warning(f"LoRA file not found: {lora_path}")
-            except Exception as e:
-                logger.error(f"Failed to load LoRA weights: {e}")
-                # 继续执行而不中断生成过程
+            success = load_lora_with_conversion(pipe, lora_model, os.path.basename(lora_model), lora_weight)
+            if not success:
+                logger.warning("LoRA loading failed, continuing without LoRA")
         
         # 处理图像和蒙版数据
         if isinstance(image_with_mask, dict):
-            # ImageMask组件返回字典格式，需要提取图像和蒙版
-            logger.info(f"ImageMask data keys: {list(image_with_mask.keys())}")
-            logger.info(f"ImageMask data types: {[(k, type(v)) for k, v in image_with_mask.items()]}")
+            # ImageMask 组件返回字典格式，需要提取图像和蒙版
+            if 'image' not in image_with_mask or 'mask' not in image_with_mask:
+                return None, "Invalid image_with_mask format: missing image or mask"
             
-            # 根据项目规范，从'background'提取原始图像，从'layers'[0]提取蒙版
-            if 'background' in image_with_mask and 'layers' in image_with_mask and len(image_with_mask['layers']) > 0:
-                image = image_with_mask['background']
-                mask = image_with_mask['layers'][0]
-                logger.info("Extracted image from 'background' and mask from 'layers'[0]")
-            elif 'image' in image_with_mask and 'mask' in image_with_mask:
-                image = image_with_mask['image']
-                mask = image_with_mask['mask']
-                logger.info("Extracted image from 'image' and mask from 'mask'")
-            else:
-                available_keys = list(image_with_mask.keys())
-                return None, f"Invalid image_with_mask format: missing required keys. Available keys: {available_keys}"
+            image = image_with_mask['image']
+            mask = image_with_mask['mask']
             
-            # 确保图像和蒙版是PIL格式
+            # 确保图像和蒙版是 PIL 格式
             if isinstance(image, np.ndarray):
                 image = Image.fromarray(image.astype(np.uint8))
             elif not isinstance(image, Image.Image):
@@ -443,87 +685,22 @@ def inpaint_flux_klein(
         
         start_time = time.time()
         
-        # 重新设计蒙版处理：采用更直接的编辑区域标记
-        # 确保图像为RGB模式
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-            logger.info(f"Converted image to RGB mode: {image.mode}")
-            
-        # 处理遮罩：确保为L模式（灰度）
-        if mask.mode != 'L':
-            mask = mask.convert('L')
-            logger.info(f"Converted mask to L mode: {mask.mode}")
+        # 使用 Flux2 Klein 的 inpainting 功能
+        # 将蒙版转换为黑白图像，白色表示需要重绘的区域
+        mask = mask.convert('L')  # 确保蒙版是灰度图
         
-        # 创建编辑引导图像：在蒙版区域添加强烈的视觉标记
-        image_for_pipeline = image.copy()
+        # 对蒙版进行二值化处理，使白色区域更清晰
+        mask = mask.point(lambda x: 255 if x > 128 else 0, mode='1')
         
-        logger.info(f"Image size: {image.size}, Mask size: {mask.size}")
-        logger.info(f"Image mode: {image.mode}, Mask mode: {mask.mode}")
+        # 将蒙版转换回 L 模式
+        mask = mask.convert('L')
         
-        # 统计蒙版信息 - 修正检测阈值
-        width, height = image.size
-        mask_pixels = mask.load()
+        logger.info(f"Attempting inpainting with image size: {image.size}, mask size: {mask.size}")
         
-        # 使用更低的阈值检测蒙版区域，提高敏感度
-        white_pixel_count = 0
-        gray_pixel_count = 0
-        black_pixel_count = 0
-        
-        for x in range(width):
-            for y in range(height):
-                pixel_value = mask_pixels[x, y]
-                if pixel_value > 200:  # 更宽松的白色检测阈值
-                    white_pixel_count += 1
-                elif pixel_value > 100:  # 灰色区域
-                    gray_pixel_count += 1
-                else:  # 黑色区域
-                    black_pixel_count += 1
-        
-        total_pixels = width * height
-        mask_coverage = (white_pixel_count + gray_pixel_count) / total_pixels  # 包含灰色区域
-        
-        logger.info(f"Mask pixel distribution:")
-        logger.info(f"  White pixels (>200): {white_pixel_count}")
-        logger.info(f"  Gray pixels (100-200): {gray_pixel_count}")  
-        logger.info(f"  Black pixels (<100): {black_pixel_count}")
-        logger.info(f"  Total coverage: {mask_coverage*100:.2f}%")
-        
-        # 核心改进：在蒙版区域添加强烈的视觉标记
-        if mask_coverage > 0.001:  # 降低触发阈值到0.1%
-            image_pixels = image_for_pipeline.load()
-            
-            # 使用纯白色强烈标记所有非黑色区域（用户绘制的蒙版区域）
-            marked_pixels = 0
-            for x in range(width):
-                for y in range(height):
-                    if mask_pixels[x, y] > 100:  # 标记所有灰色和白色区域
-                        image_pixels[x, y] = (255, 255, 255)  # 纯白色标记
-                        marked_pixels += 1
-            
-            logger.info(f"Applied white marking to {marked_pixels} pixels ({marked_pixels/total_pixels*100:.2f}%)")
-            
-            # 构建强调编辑意图的提示词
-            if mask_coverage > 0.3:
-                edit_intensity = "dramatically"
-            elif mask_coverage > 0.1:
-                edit_intensity = "significantly"
-            else:
-                edit_intensity = "carefully"
-                
-            enhanced_prompt = f"{prompt} [EDITOR: {edit_intensity} modify the white-marked region while maintaining realistic appearance]"
-        else:
-            # 没有蒙版时使用原始图像和提示词
-            enhanced_prompt = prompt
-            logger.warning("⚠️ No significant mask detected - using text-to-image mode")
-            logger.info("蒙版检测建议：请确保使用黑色画笔绘制需要编辑的区域")
-        
-        logger.info(f"Final prompt for pipeline: {enhanced_prompt}")
-        logger.info(f"Processing image with effective mask coverage: {mask_coverage*100:.3f}%")
-        
-        # 使用Flux2KleinPipeline进行编辑
         result_images = pipe(
-            prompt=enhanced_prompt,
-            image=image_for_pipeline,
+            prompt=prompt,
+            image=image,
+            mask_image=mask,  # 传递蒙版图像
             num_inference_steps=steps,
             guidance_scale=guidance_scale,
             generator=generator,
@@ -574,7 +751,7 @@ def extend_flux_klein(
     extend_bottom: int = 64
 ):
     """
-    使用FLUX.2-klein模型扩展图像
+    使用 FLUX.2-klein 模型扩展图像
     """
     try:
         # 加载模型管道
@@ -594,25 +771,11 @@ def extend_flux_klein(
         # 应用注意力优化
         apply_attention_optimizations(pipe)
         
-        # 如果启用了LoRA，加载LoRA权重
+        # 如果启用了 LoRA，加载 LoRA 权重
         if lora_enable and lora_model and lora_model != "":
-            try:
-                # 构建完整的LoRA文件路径
-                lora_path = os.path.join("models", "Lora", lora_model)
-                if os.path.exists(lora_path):
-                    # 使用正确的参数加载LoRA权重
-                    pipe.load_lora_weights(
-                        lora_path, 
-                        weight_name=os.path.basename(lora_path),
-                        local_files_only=True
-                    )
-                    pipe.fuse_lora(lora_scale=lora_weight)
-                    logger.info(f"Applied LoRA weights from {lora_path} with scale {lora_weight}")
-                else:
-                    logger.warning(f"LoRA file not found: {lora_path}")
-            except Exception as e:
-                logger.error(f"Failed to load LoRA weights: {e}")
-                # 继续执行而不中断生成过程
+            success = load_lora_with_conversion(pipe, lora_model, os.path.basename(lora_model), lora_weight)
+            if not success:
+                logger.warning("LoRA loading failed, continuing without LoRA")
         
         # 处理输入图像
         if isinstance(image, np.ndarray):

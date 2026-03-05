@@ -569,9 +569,10 @@ def generate_edit_series(
         seeds_used.append(current_seed)
         
         for j, edit_prompt in enumerate(edits_to_generate):
-            final_prompt = f"image editing variation {j+1}: {edit_prompt}, high quality, detailed, maintain original subject identity, professional photo"
-            print(f"图像 {i+1} 第 {j+1} 个变体，使用的提示词: {final_prompt}")
-            print(f"使用的种子: {current_seed}")
+            # 直接使用用户的编辑指令，不添加任何额外关键词
+            final_prompt = edit_prompt
+            print(f"图像 {i+1} 第 {j+1} 个变体，使用的提示词：{final_prompt}")
+            print(f"使用的种子：{current_seed}")
             
             try:
                 # 在CPU上创建生成器，避免设备不一致问题
@@ -749,11 +750,12 @@ def generate_dual_context_image(
             current_seed = seed
         
         if edit.strip():
-            final_prompt = f"image editing: {edit.strip()}, high quality, detailed, maintain original subject identity, professional photo"
+            # 直接使用用户的编辑指令，不添加任何额外关键词
+            final_prompt = edit.strip()
         else:
-            final_prompt = f"image editing, high quality, detailed, maintain original subject identity, professional photo"
+            final_prompt = ""
         
-        final_prompt = final_prompt[:200]
+        # 不再截断提示词长度，让用户完全控制
         
         print(f"图像编辑 第 {i+1} 个变体，使用的提示词: {final_prompt}")
         print(f"使用的种子: {current_seed}")

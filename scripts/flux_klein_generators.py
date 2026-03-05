@@ -552,6 +552,15 @@ def multi_img_flux_klein(
 
         logger.info(f"Final condition_images count: {len(condition_images)}")
         
+        # 获取第一张图像的尺寸作为生成尺寸
+        if condition_images:
+            width, height = condition_images[0].size
+            logger.info(f"Using image dimensions: {width}x{height}")
+        else:
+            # 如果没有图像，使用默认尺寸
+            width, height = 1024, 768
+            logger.warning(f"No input images found, using default dimensions: {width}x{height}")
+        
         # 设置随机种子
         if seed != -1:
             torch.manual_seed(seed)
@@ -564,7 +573,7 @@ def multi_img_flux_klein(
         start_time = time.time()
         
         # 使用 Fluxe2 Klein 的图像条件生成功能
-        # 传入图像列表作为条件
+        # 传入图像列表作为条件，并指定输出尺寸为原始图像尺寸
         logger.info("Attempting image-conditioned generation with FLUX_2-klein")
         result_images = pipe(
             prompt=prompt,
@@ -572,7 +581,9 @@ def multi_img_flux_klein(
             num_inference_steps=steps,
             guidance_scale=guidance_scale,
             generator=generator,
-            num_images_per_prompt=batch_size
+            num_images_per_prompt=batch_size,
+            width=width,
+            height=height
         ).images
         
         end_time = time.time()
@@ -697,6 +708,9 @@ def inpaint_flux_klein(
         
         logger.info(f"Attempting inpainting with image size: {image.size}, mask size: {mask.size}")
         
+        # 使用原始图像尺寸进行生成
+        width, height = image.size
+        
         result_images = pipe(
             prompt=prompt,
             image=image,
@@ -704,7 +718,9 @@ def inpaint_flux_klein(
             num_inference_steps=steps,
             guidance_scale=guidance_scale,
             generator=generator,
-            num_images_per_prompt=batch_size
+            num_images_per_prompt=batch_size,
+            width=width,
+            height=height
         ).images
         
         end_time = time.time()
@@ -816,13 +832,18 @@ def extend_flux_klein(
         start_time = time.time()
         
         # 使用扩展后的图像进行生成
+        width, height = extended_image.size
+        logger.info(f"Using extended image dimensions: {width}x{height}")
+        
         result_images = pipe(
             prompt=prompt,
             image=extended_image,
             num_inference_steps=steps,
             guidance_scale=guidance_scale,
             generator=generator,
-            num_images_per_prompt=batch_size
+            num_images_per_prompt=batch_size,
+            width=width,
+            height=height
         ).images
         end_time = time.time()
         

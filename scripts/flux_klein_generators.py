@@ -552,14 +552,13 @@ def multi_img_flux_klein(
 
         logger.info(f"Final condition_images count: {len(condition_images)}")
         
-        # 获取第一张图像的尺寸作为生成尺寸
-        if condition_images:
-            width, height = condition_images[0].size
-            logger.info(f"Using image dimensions: {width}x{height}")
+        # 获取输入图像的尺寸 - 根据规范必须保持输入输出尺寸一致性
+        if condition_images and len(condition_images) > 0:
+            input_width, input_height = condition_images[0].size
+            logger.info(f"Input image size: {input_width}x{input_height}")
         else:
-            # 如果没有图像，使用默认尺寸
-            width, height = 1024, 768
-            logger.warning(f"No input images found, using default dimensions: {width}x{height}")
+            logger.warning("No input images provided, using default size")
+            input_width, input_height = 1024, 768
         
         # 设置随机种子
         if seed != -1:
@@ -573,17 +572,17 @@ def multi_img_flux_klein(
         start_time = time.time()
         
         # 使用 Fluxe2 Klein 的图像条件生成功能
-        # 传入图像列表作为条件，并指定输出尺寸为原始图像尺寸
+        # 传入图像列表作为条件，并显式传递尺寸参数以保持输入输出一致性
         logger.info("Attempting image-conditioned generation with FLUX_2-klein")
         result_images = pipe(
             prompt=prompt,
             image=condition_images,  # 传入条件图像列表
             num_inference_steps=steps,
             guidance_scale=guidance_scale,
+            width=input_width,  # 显式传递宽度参数
+            height=input_height,  # 显式传递高度参数
             generator=generator,
-            num_images_per_prompt=batch_size,
-            width=width,
-            height=height
+            num_images_per_prompt=batch_size
         ).images
         
         end_time = time.time()
@@ -685,6 +684,10 @@ def inpaint_flux_klein(
             # 调整蒙版尺寸以匹配图像
             mask = mask.resize(image.size, Image.Resampling.LANCZOS)
         
+        # 获取输入图像的尺寸 - 根据规范必须保持输入输出尺寸一致性
+        input_width, input_height = image.size
+        logger.info(f"Input image size for inpainting: {input_width}x{input_height}")
+        
         # 设置随机种子
         if seed != -1:
             torch.manual_seed(seed)
@@ -708,19 +711,16 @@ def inpaint_flux_klein(
         
         logger.info(f"Attempting inpainting with image size: {image.size}, mask size: {mask.size}")
         
-        # 使用原始图像尺寸进行生成
-        width, height = image.size
-        
         result_images = pipe(
             prompt=prompt,
             image=image,
             mask_image=mask,  # 传递蒙版图像
             num_inference_steps=steps,
             guidance_scale=guidance_scale,
+            width=input_width,  # 显式传递宽度参数以保持输入输出一致性
+            height=input_height,  # 显式传递高度参数以保持输入输出一致性
             generator=generator,
-            num_images_per_prompt=batch_size,
-            width=width,
-            height=height
+            num_images_per_prompt=batch_size
         ).images
         
         end_time = time.time()
@@ -831,19 +831,17 @@ def extend_flux_klein(
         
         start_time = time.time()
         
-        # 使用扩展后的图像进行生成
-        width, height = extended_image.size
-        logger.info(f"Using extended image dimensions: {width}x{height}")
-        
+        # 使用扩展后的图像进行生成，并显式传递新尺寸参数
+        logger.info(f"Generating extended image with size: {new_width}x{new_height}")
         result_images = pipe(
             prompt=prompt,
             image=extended_image,
             num_inference_steps=steps,
             guidance_scale=guidance_scale,
+            width=new_width,  # 显式传递扩展后的宽度
+            height=new_height,  # 显式传递扩展后的高度
             generator=generator,
-            num_images_per_prompt=batch_size,
-            width=width,
-            height=height
+            num_images_per_prompt=batch_size
         ).images
         end_time = time.time()
         

@@ -331,36 +331,46 @@ class ChatProcessor:
     """聊天处理类"""
     @staticmethod
     def process_model_task(model_name, message, upload_method, script_path, chat_history,
-                          input_data, batch_save_path=None, model_type="vision"):
+                          input_data, batch_save_path=None, model_type="vision", last_image_path=None):
         """处理模型任务"""
         if not model_name:
             chat_history.append(("模型", "模型不能为空"))
             return chat_history
 
         if model_type == "vision":
-            if not input_data:
-                chat_history.append(("错误", "未选择图片文件"))
-                return chat_history
-                
-            if upload_method == "single":
-                input_path = input_data if isinstance(input_data, str) else input_data.name
-                output = ModelProcessor.process_image(model_name, input_path, script_path, message)
-                user_message = f"{model_name}:{message} ![]({input_path})"
+            # 视觉模型支持两种模式：有图片时处理图片，无图片时纯聊天
+            if input_data:
+                # 有新上传图片时处理图片
+                if upload_method == "single":
+                    input_path = input_data if isinstance(input_data, str) else input_data.name
+                    output = ModelProcessor.process_image(model_name, input_path, script_path, message)
+                    user_message = f"{model_name}:{message} ![]({input_path})"
+                    chat_history.append((user_message, output))
+                    # 更新最后使用的图片路径
+                    last_image_path = input_path
+                    
+                elif upload_method == "batch" and os.path.isdir(batch_save_path):
+                    results = []
+                    for file_path in [f.name for f in input_data]:
+                        result = ModelProcessor.process_image(model_name, file_path, script_path, message, 
+                                                            True, batch_save_path)
+                        results.append(result)
+                    chat_history.append((f"{model_name}:批量任务", "\n".join(results)))
+            elif last_image_path:
+                # 没有新图片但之前有图片，使用上次的图片继续对话
+                output = ModelProcessor.process_image(model_name, last_image_path, script_path, message)
+                user_message = f"{model_name}:{message} (继续使用上次图片)"
                 chat_history.append((user_message, output))
-                
-            elif upload_method == "batch" and os.path.isdir(batch_save_path):
-                results = []
-                for file_path in [f.name for f in input_data]:
-                    result = ModelProcessor.process_image(model_name, file_path, script_path, message, 
-                                                        True, batch_save_path)
-                    results.append(result)
-                chat_history.append((f"{model_name}:批量任务", "\n".join(results)))
+            else:
+                # 完全没有图片，作为纯文本对话处理
+                output = ModelProcessor.process_text(model_name, script_path, message)
+                chat_history.append((message, output))
         else:
             # 处理语言模型对话
             output = ModelProcessor.process_text(model_name, script_path, message)
             chat_history.append((message, output))
             
-        return chat_history
+        return chat_history, last_image_path
 
     @staticmethod
     def extract_prompt(chat_history):
@@ -389,9 +399,9 @@ class ChatProcessor:
 
 # 定义支持的视觉模型
 vision_model_names = [
-    "qwen3.5:4b",
+    "qwen3.5:4b",  
     "qwen3-vl:8b",
-    "qwen3-vl:4b",    
+    "qwen3-vl:4b",  
     "qwen3-vl:2b",
     "huihui/qwen3-vl-abliterated:8b",
     "huihui/qwen3-vl-abliterated:4b",
@@ -409,25 +419,30 @@ language_model_names = [
 image_format = [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"]
 
 def chat(message, chat_history, vision_model, language_model, model_type, upload_method, batch_save_path,
-         image_input, multi_images_input):
+         image_input, multi_images_input, last_image_path):
     # 添加处理状态反馈
     if "[处理中，请稍候" in message:
         # 这是一个快捷描述按钮的点击，不需要特殊处理
         pass
     elif "stable diffusion" in message.lower() or "sd prompt" in message.lower():
         # 添加处理提示到聊天历史
-        chat_history.append(("用户", f"[处理中] 正在生成Stable Diffusion提示词，请稍候..."))
+        chat_history.append(("用户", f"[处理中] 正在生成 Stable Diffusion 提示词，请稍候..."))
     
     script_path = ollama_api_script_path
     model_name = vision_model if model_type == "vision" else language_model
     input_data = image_input if upload_method == "single" else multi_images_input
     
-    chat_history = ChatProcessor.process_model_task(
+    chat_history, updated_image_path = ChatProcessor.process_model_task(
         model_name, message, upload_method, script_path, chat_history,
-        input_data, batch_save_path, model_type
+        input_data, batch_save_path, model_type, last_image_path
     )
     
-    return "", chat_history, image_input
+    # 如果有新上传的图片，更新 last_image_path，否则保持原值
+    if input_data and upload_method == "single":
+        new_image_path = input_data if isinstance(input_data, str) else input_data.name
+        return "", chat_history, gr.update(value=new_image_path), new_image_path
+    else:
+        return "", chat_history, gr.update(), last_image_path
 
 def MultiModal_tab():
     with gr.Blocks(analytics_enabled=False) as ui:
@@ -484,17 +499,17 @@ def MultiModal_tab():
                                 value="vision",
                                 label="模型类型",
                                 interactive=True,
-                                info="只有图像识别模型才可以与图片进行交互和批量操作"
+                                info="视觉模型支持图片识别和纯文本聊天，语言模型仅支持文本对话"
                             )
                             
-                            gr.Markdown("📌 **模型选择建议**：8GB显存选择1.7B或3B模型获得更快响应速度，16GB显存可选择latest或7B模型")
+                            gr.Markdown("📌 **模型选择建议**：8GB 显存选择 2B,，12GB-16GB 显存可选择 4B-9B 模型")
                             
                             vision_model = gr.Dropdown(
                                 label="视觉模型",
                                 choices=vision_model_names,
                                 value=vision_model_names[0] if vision_model_names else None,
                                 interactive=True,
-                                info="选择视觉模型",
+                                info="选择视觉模型（支持图片识别 + 文本聊天）",
                                 scale=2,
                                 elem_classes="larger-text",
                                 container=True
@@ -580,7 +595,7 @@ def MultiModal_tab():
                         )
                         chat_message = gr.Textbox(
                             show_label=False,
-                            placeholder="输入消息或上传图片",
+                            placeholder="输入消息或上传图片（支持多轮对话，可上传一次图片后连续提问）",
                             container=True,
                             scale=1,
                             min_width=300,
@@ -626,12 +641,15 @@ def MultiModal_tab():
                             
                             # 将快捷描述按钮点击事件绑定到聊天输入框
 
+                # 添加一个隐藏的状态组件来保存最后使用的图片路径
+                last_image_path_state = gr.State(value=None)
+
                 chat_inputs = [
                     chat_message, chat_history, vision_model, language_model,
                     model_type, upload_method, batch_save_path,
-                    image_input, multi_images_input
+                    image_input, multi_images_input, last_image_path_state
                 ]
-                chat_outputs = [chat_message, chat_history, image_input]
+                chat_outputs = [chat_message, chat_history, image_input, last_image_path_state]
 
                 chat_message.submit(chat, inputs=chat_inputs, outputs=chat_outputs)
                 submit_button.click(chat, inputs=chat_inputs, outputs=chat_outputs)
@@ -911,5 +929,3 @@ modules_status = {
 
 
 }
-
-

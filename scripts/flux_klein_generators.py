@@ -10,6 +10,7 @@ import sys
 import importlib
 import safetensors.torch
 from collections import OrderedDict
+import gc  # 添加垃圾回收模块
 
 # 增强日志配置 - 确保调试信息可见
 logging.basicConfig(
@@ -379,6 +380,83 @@ def load_lora_with_conversion(pipe, lora_path, weight_name, lora_scale=1.0):
         return False
 
 
+def cleanup_pipeline(pipe):
+    """
+    清理和释放模型管道资源
+    :param pipe: 需要清理的模型管道对象
+    """
+    try:
+        if pipe is not None:
+            logger.info("Starting pipeline cleanup...")
+            
+            # 1. 卸载 LoRA 权重（如果存在）
+            try:
+                if hasattr(pipe, 'unload_lora_weights'):
+                    pipe.unload_lora_weights()
+                    logger.info("Unloaded LoRA weights")
+            except Exception as e:
+                logger.warning(f"Failed to unload LoRA weights: {e}")
+            
+            # 2. 将模型组件移至 CPU
+            try:
+                if hasattr(pipe, 'transformer') and pipe.transformer is not None:
+                    pipe.transformer.to('cpu')
+                    logger.info("Moved transformer to CPU")
+            except Exception as e:
+                logger.warning(f"Failed to move transformer to CPU: {e}")
+            
+            try:
+                if hasattr(pipe, 'text_encoder') and pipe.text_encoder is not None:
+                    pipe.text_encoder.to('cpu')
+                    logger.info("Moved text encoder to CPU")
+            except Exception as e:
+                logger.warning(f"Failed to move text encoder to CPU: {e}")
+            
+            try:
+                if hasattr(pipe, 'vae') and pipe.vae is not None:
+                    pipe.vae.to('cpu')
+                    logger.info("Moved VAE to CPU")
+            except Exception as e:
+                logger.warning(f"Failed to move VAE to CPU: {e}")
+            
+            # 3. 删除管道引用
+            try:
+                del pipe
+                logger.info("Deleted pipeline reference")
+            except Exception as e:
+                logger.warning(f"Failed to delete pipeline: {e}")
+        
+        # 4. 清空 CUDA 缓存
+        try:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                logger.info("Emptied CUDA cache")
+        except Exception as e:
+            logger.warning(f"Failed to empty CUDA cache: {e}")
+        
+        # 5. 重置 CUDA 种子
+        try:
+            if torch.cuda.is_available():
+                torch.cuda.reset_peak_memory_stats()
+                logger.info("Reset CUDA memory stats")
+        except Exception as e:
+            logger.warning(f"Failed to reset CUDA memory stats: {e}")
+        
+        # 6. 执行垃圾回收
+        try:
+            gc.collect()
+            logger.info("Executed garbage collection")
+        except Exception as e:
+            logger.warning(f"Failed to execute garbage collection: {e}")
+        
+        logger.info("Pipeline cleanup completed")
+        
+    except Exception as e:
+        logger.error(f"Error during pipeline cleanup: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+
+
 def generate_flux_klein_image(
     prompt: str,
     steps: int = 4,
@@ -395,6 +473,7 @@ def generate_flux_klein_image(
     """
     使用 FLUX.2-klein 模型生成图像
     """
+    pipe = None
     try:
         # 确保尺寸是 8 的倍数
         height = height - (height % 8)
@@ -464,6 +543,9 @@ def generate_flux_klein_image(
         error_msg = f"Error generating image: {str(e)}"
         logger.error(error_msg)
         return None, error_msg
+    finally:
+        # 确保资源被释放
+        cleanup_pipeline(pipe)
 
 
 def multi_img_flux_klein(
@@ -482,6 +564,7 @@ def multi_img_flux_klein(
     """
     基于两张图像生成新图像，使用图像编辑功能
     """
+    pipe = None
     try:
         # 加载模型管道
         pipe = load_flux_klein_pipeline(model_path)
@@ -610,6 +693,9 @@ def multi_img_flux_klein(
         import traceback
         logger.error(traceback.format_exc())
         return None, error_msg
+    finally:
+        # 确保资源被释放
+        cleanup_pipeline(pipe)
 
 
 def inpaint_flux_klein(
@@ -625,8 +711,9 @@ def inpaint_flux_klein(
     lora_weight: float = 1.0
 ):
     """
-    使用 FLUX.2-klein 模型对蒙版区域进行图像编辑
+    使用 FLUX.2-klein模型进行局部重绘
     """
+    pipe = None
     try:
         # 加载模型管道
         pipe = load_flux_klein_pipeline(model_path)
@@ -748,6 +835,9 @@ def inpaint_flux_klein(
         import traceback
         logger.error(traceback.format_exc())
         return None, error_msg
+    finally:
+        # 确保资源被释放
+        cleanup_pipeline(pipe)
 
 
 def extend_flux_klein(
@@ -769,6 +859,7 @@ def extend_flux_klein(
     """
     使用 FLUX.2-klein 模型扩展图像
     """
+    pipe = None
     try:
         # 加载模型管道
         pipe = load_flux_klein_pipeline(model_path)
@@ -868,3 +959,84 @@ def extend_flux_klein(
         import traceback
         logger.error(traceback.format_exc())
         return None, error_msg
+    finally:
+        # 确保资源被释放
+        cleanup_pipeline(pipe)
+
+
+def cleanup_pipeline(pipe):
+    """
+    清理和释放模型管道资源
+    :param pipe: 需要清理的模型管道对象
+    """
+    try:
+        if pipe is not None:
+            logger.info("Starting pipeline cleanup...")
+            
+            # 1. 卸载 LoRA 权重（如果存在）
+            try:
+                if hasattr(pipe, 'unload_lora_weights'):
+                    pipe.unload_lora_weights()
+                    logger.info("Unloaded LoRA weights")
+            except Exception as e:
+                logger.warning(f"Failed to unload LoRA weights: {e}")
+            
+            # 2. 将模型组件移至 CPU
+            try:
+                if hasattr(pipe, 'transformer') and pipe.transformer is not None:
+                    pipe.transformer.to('cpu')
+                    logger.info("Moved transformer to CPU")
+            except Exception as e:
+                logger.warning(f"Failed to move transformer to CPU: {e}")
+            
+            try:
+                if hasattr(pipe, 'text_encoder') and pipe.text_encoder is not None:
+                    pipe.text_encoder.to('cpu')
+                    logger.info("Moved text encoder to CPU")
+            except Exception as e:
+                logger.warning(f"Failed to move text encoder to CPU: {e}")
+            
+            try:
+                if hasattr(pipe, 'vae') and pipe.vae is not None:
+                    pipe.vae.to('cpu')
+                    logger.info("Moved VAE to CPU")
+            except Exception as e:
+                logger.warning(f"Failed to move VAE to CPU: {e}")
+            
+            # 3. 删除管道引用
+            try:
+                del pipe
+                logger.info("Deleted pipeline reference")
+            except Exception as e:
+                logger.warning(f"Failed to delete pipeline: {e}")
+        
+        # 4. 清空 CUDA 缓存
+        try:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                logger.info("Emptied CUDA cache")
+        except Exception as e:
+            logger.warning(f"Failed to empty CUDA cache: {e}")
+        
+        # 5. 重置 CUDA 种子
+        try:
+            if torch.cuda.is_available():
+                torch.cuda.reset_peak_memory_stats()
+                logger.info("Reset CUDA memory stats")
+        except Exception as e:
+            logger.warning(f"Failed to reset CUDA memory stats: {e}")
+        
+        # 6. 执行垃圾回收
+        try:
+            gc.collect()
+            logger.info("Executed garbage collection")
+        except Exception as e:
+            logger.warning(f"Failed to execute garbage collection: {e}")
+        
+        logger.info("Pipeline cleanup completed")
+        
+    except Exception as e:
+        logger.error(f"Error during pipeline cleanup: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+

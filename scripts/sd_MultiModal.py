@@ -910,6 +910,7 @@ def on_app_started(*args, **kwargs):
     print("- Z-Image-Turbo图像生成")
     print("- Qwen图像生成与编辑")
     print("- Qwen系列api调用")
+    print("- Qwen系列图像识别与语言交互")
     print()
     print("使用须知：使用此插件者请合法使用AI。")
     print("=" * 60)
@@ -929,3 +930,4 @@ modules_status = {
 
 
 }
+

@@ -64,6 +64,121 @@ from preprocessor import preprocess_control_image
 from lora_handler import load_lora_model
 
 
+def cleanup_pipeline(pipeline, transformer=None):
+    """
+    清理和释放模型管道资源
+    :param pipeline: 需要清理的模型管道对象
+    :param transformer: 需要清理的 transformer 对象
+    """
+    try:
+        if pipeline is not None:
+            print("Starting pipeline cleanup...")
+            
+            # 1. 卸载 LoRA 权重（如果存在）
+            try:
+                if hasattr(pipeline, 'unload_lora_weights'):
+                    pipeline.unload_lora_weights()
+                    print("Unloaded LoRA weights")
+            except Exception as e:
+                print(f"Failed to unload LoRA weights: {e}")
+            
+            # 2. 将模型组件移至 CPU（跳过 meta tensor）
+            try:
+                if hasattr(pipeline, 'transformer') and pipeline.transformer is not None:
+                    # 检查是否在 meta device 上
+                    if not any(p.device.type == 'meta' for p in pipeline.transformer.parameters()):
+                        pipeline.transformer.to('cpu')
+                        print("Moved transformer to CPU")
+                    else:
+                        print("Transformer is on meta device, skipping move to CPU")
+            except Exception as e:
+                print(f"Failed to move transformer to CPU: {e}")
+            
+            try:
+                if hasattr(pipeline, 'text_encoder') and pipeline.text_encoder is not None:
+                    # 检查是否在 meta device 上
+                    has_data = True
+                    try:
+                        # 尝试访问一个参数来检查是否有实际数据
+                        next(pipeline.text_encoder.parameters())
+                    except StopIteration:
+                        has_data = False
+                    
+                    if has_data and not any(p.device.type == 'meta' for p in pipeline.text_encoder.parameters()):
+                        pipeline.text_encoder.to('cpu')
+                        print("Moved text encoder to CPU")
+                    else:
+                        print("Text encoder is on meta device or empty, skipping move to CPU")
+            except Exception as e:
+                print(f"Failed to move text encoder to CPU: {e}")
+            
+            try:
+                if hasattr(pipeline, 'vae') and pipeline.vae is not None:
+                    # 检查是否在 meta device 上
+                    has_data = True
+                    try:
+                        # 尝试访问一个参数来检查是否有实际数据
+                        next(pipeline.vae.parameters())
+                    except StopIteration:
+                        has_data = False
+                    
+                    if has_data and not any(p.device.type == 'meta' for p in pipeline.vae.parameters()):
+                        pipeline.vae.to('cpu')
+                        print("Moved VAE to CPU")
+                    else:
+                        print("VAE is on meta device or empty, skipping move to CPU")
+            except Exception as e:
+                print(f"Failed to move VAE to CPU: {e}")
+            
+            # 3. 删除管道引用
+            try:
+                del pipeline
+                print("Deleted pipeline reference")
+            except Exception as e:
+                print(f"Failed to delete pipeline: {e}")
+        
+        # 清理 transformer
+        if transformer is not None:
+            try:
+                # 检查是否在 meta device 上
+                if not any(p.device.type == 'meta' for p in transformer.parameters()):
+                    transformer.to('cpu')
+                del transformer
+                print("Cleaned up transformer")
+            except Exception as e:
+                print(f"Failed to cleanup transformer: {e}")
+        
+        # 4. 清空 CUDA 缓存
+        try:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                print("Emptied CUDA cache")
+        except Exception as e:
+            print(f"Failed to empty CUDA cache: {e}")
+        
+        # 5. 重置 CUDA 种子
+        try:
+            if torch.cuda.is_available():
+                torch.cuda.reset_peak_memory_stats()
+                print("Reset CUDA memory stats")
+        except Exception as e:
+            print(f"Failed to reset CUDA memory stats: {e}")
+        
+        # 6. 执行垃圾回收
+        try:
+            gc.collect()
+            print("Executed garbage collection")
+        except Exception as e:
+            print(f"Failed to execute garbage collection: {e}")
+        
+        print("Pipeline cleanup completed")
+        
+    except Exception as e:
+        print(f"Error during pipeline cleanup: {e}")
+        import traceback
+        traceback.print_exc()
+
+
 def run_image_editing(args_file):
     """运行图像编辑功能"""
     try:
@@ -927,8 +1042,10 @@ def run_image_editing(args_file):
         return []  # 发生错误时返回空列表
 
     finally:
-        # 清理资源（如有需要）
-        pass
+        # 清理资源
+        if 'pipeline' in locals():
+            cleanup_pipeline(pipeline, transformer if 'transformer' in locals() else None)
+
 
 def apply_attention_optimizations(pipe, is_quantized_model=False):
     """应用注意力优化到模型"""

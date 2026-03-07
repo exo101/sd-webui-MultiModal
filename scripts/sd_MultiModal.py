@@ -389,9 +389,9 @@ class ChatProcessor:
 
 # 定义支持的视觉模型
 vision_model_names = [
+    "qwen3.5:4b",
     "qwen3-vl:8b",
-    "qwen3-vl:4b",
-    "qwen2.5vl:3b",    
+    "qwen3-vl:4b",    
     "qwen3-vl:2b",
     "huihui/qwen3-vl-abliterated:8b",
     "huihui/qwen3-vl-abliterated:4b",
@@ -911,3 +911,4 @@ modules_status = {
 
 
 }
+

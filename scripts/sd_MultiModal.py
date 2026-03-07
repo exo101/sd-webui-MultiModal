@@ -401,7 +401,7 @@ vision_model_names = [
 # 定义支持的语言模型
 language_model_names = [
     "qwen3:latest",
-    "qwen3:1.7b",
+    "qwen3.5:4b",
     "deepseek-r1:8b",
 ]
 
@@ -911,4 +911,5 @@ modules_status = {
 
 
 }
+
 

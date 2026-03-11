@@ -383,49 +383,51 @@ def load_lora_with_conversion(pipe, lora_path, weight_name, lora_scale=1.0):
 
 def cleanup_pipeline(pipe):
     """
-    清理和释放模型管道资源
-    :param pipe: 需要清理的模型管道对象
+    清理模型管道以释放显存
+    :param pipe: 要清理的管道对象
     """
+    if pipe is None:
+        return
+    
     try:
-        if pipe is not None:
-            logger.info("Starting pipeline cleanup...")
-            
-            # 1. 卸载 LoRA 权重（如果存在）
-            try:
-                if hasattr(pipe, 'unload_lora_weights'):
-                    pipe.unload_lora_weights()
-                    logger.info("Unloaded LoRA weights")
-            except Exception as e:
-                logger.warning(f"Failed to unload LoRA weights: {e}")
-            
-            # 2. 将模型组件移至 CPU
-            try:
-                if hasattr(pipe, 'transformer') and pipe.transformer is not None:
-                    pipe.transformer.to('cpu')
-                    logger.info("Moved transformer to CPU")
-            except Exception as e:
-                logger.warning(f"Failed to move transformer to CPU: {e}")
-            
-            try:
-                if hasattr(pipe, 'text_encoder') and pipe.text_encoder is not None:
-                    pipe.text_encoder.to('cpu')
-                    logger.info("Moved text encoder to CPU")
-            except Exception as e:
-                logger.warning(f"Failed to move text encoder to CPU: {e}")
-            
-            try:
-                if hasattr(pipe, 'vae') and pipe.vae is not None:
-                    pipe.vae.to('cpu')
-                    logger.info("Moved VAE to CPU")
-            except Exception as e:
-                logger.warning(f"Failed to move VAE to CPU: {e}")
-            
-            # 3. 删除管道引用
-            try:
-                del pipe
-                logger.info("Deleted pipeline reference")
-            except Exception as e:
-                logger.warning(f"Failed to delete pipeline: {e}")
+        logger.info("Starting pipeline cleanup...")
+        
+        # 1. 卸载 LoRA（如果已加载）
+        try:
+            if hasattr(pipe, 'unload_lora_weights'):
+                pipe.unload_lora_weights()
+                logger.info("Unloaded LoRA weights")
+        except Exception as e:
+            logger.warning(f"Failed to unload LoRA: {e}")
+        
+        # 2. 将模型组件移至 CPU
+        try:
+            if hasattr(pipe, 'transformer') and pipe.transformer is not None:
+                pipe.transformer.to('cpu')
+                logger.info("Moved transformer to CPU")
+        except Exception as e:
+            logger.warning(f"Failed to move transformer to CPU: {e}")
+        
+        try:
+            if hasattr(pipe, 'text_encoder') and pipe.text_encoder is not None:
+                pipe.text_encoder.to('cpu')
+                logger.info("Moved text encoder to CPU")
+        except Exception as e:
+            logger.warning(f"Failed to move text encoder to CPU: {e}")
+        
+        try:
+            if hasattr(pipe, 'vae') and pipe.vae is not None:
+                pipe.vae.to('cpu')
+                logger.info("Moved VAE to CPU")
+        except Exception as e:
+            logger.warning(f"Failed to move VAE to CPU: {e}")
+        
+        # 3. 删除管道引用
+        try:
+            del pipe
+            logger.info("Deleted pipeline reference")
+        except Exception as e:
+            logger.warning(f"Failed to delete pipeline: {e}")
         
         # 4. 清空 CUDA 缓存
         try:
@@ -449,13 +451,9 @@ def cleanup_pipeline(pipe):
             logger.info("Executed garbage collection")
         except Exception as e:
             logger.warning(f"Failed to execute garbage collection: {e}")
-        
-        logger.info("Pipeline cleanup completed")
-        
+            
     except Exception as e:
         logger.error(f"Error during pipeline cleanup: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
 
 
 def generate_flux_klein_image(
@@ -543,10 +541,11 @@ def generate_flux_klein_image(
     except Exception as e:
         error_msg = f"Error generating image: {str(e)}"
         logger.error(error_msg)
-        return None, error_msg
-    finally:
-        # 确保资源被释放
+        import traceback
+        logger.error(traceback.format_exc())
+        # 发生错误时清理资源
         cleanup_pipeline(pipe)
+        return None, error_msg
 
 
 def multi_img_flux_klein(
@@ -694,9 +693,6 @@ def multi_img_flux_klein(
         import traceback
         logger.error(traceback.format_exc())
         return None, error_msg
-    finally:
-        # 确保资源被释放
-        cleanup_pipeline(pipe)
 
 
 def inpaint_flux_klein(
@@ -924,9 +920,6 @@ def inpaint_flux_klein(
         import traceback
         logger.error(traceback.format_exc())
         return None, error_msg
-    finally:
-        # 确保资源被释放
-        cleanup_pipeline(pipe)
 
 
 def extend_flux_klein(
@@ -1047,6 +1040,8 @@ def extend_flux_klein(
         logger.error(error_msg)
         import traceback
         logger.error(traceback.format_exc())
+        # 发生错误时清理资源
+        cleanup_pipeline(pipe)
         return None, error_msg
     finally:
         # 确保资源被释放

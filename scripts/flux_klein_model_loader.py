@@ -669,22 +669,21 @@ def validate_model_paths():
 
 
 def load_flux_klein_pipeline(model_type):
-    """加载FLUX.2-klein模型管道"""
+    """加载 FLUX.2-klein 模型管道（带缓存机制）"""
     global pipe, FLUX_KLEIN_LOADED
     
-    # 首先卸载现有模型释放显存
-    if pipe is not None:
-        try:
-            # 尝试卸载模型到CPU
-            pipe = pipe.to("cpu")
-        except:
-            pass  # 如果出错则忽略，继续清理
-        pipe = None  # 删除引用
-        # 强制垃圾回收
-        import gc
-        gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+    # 检查是否已加载相同模型，避免重复加载
+    if pipe is not None and FLUX_KLEIN_LOADED:
+        # 获取当前已加载模型的类型
+        current_model_type = getattr(pipe, '_model_type', None)
+        
+        # 如果模型类型匹配，直接返回缓存的管道
+        if current_model_type == model_type:
+            logger.info(f"Using cached pipeline for model: {model_type}")
+            return pipe
+        else:
+            # 模型类型不匹配，需要卸载并重新加载
+            logger.info(f"Model type changed from {current_model_type} to {model_type}, reloading...")
     
     try:
         # 获取完整的模型路径
@@ -804,7 +803,7 @@ def load_flux_klein_pipeline(model_type):
                 # 即使移动到GPU失败，也继续执行，因为可以在CPU上运行
                 pipe = pipe.to("cpu")
         
-        # 启用切片注意力和VAE切片以进一步节省显存
+        # 启用切片注意力和 VAE 切片以进一步节省显存
         if hasattr(pipe, 'enable_attention_slicing'):
             try:
                 pipe.enable_attention_slicing()
@@ -821,7 +820,11 @@ def load_flux_klein_pipeline(model_type):
             except Exception:
                 pass
         
+        # 保存已加载模型的类型，用于缓存判断
+        pipe._model_type = model_type
         FLUX_KLEIN_LOADED = True
+        
+        logger.info(f"Successfully loaded and cached pipeline for model: {model_type}")
         return pipe
     except Exception as e:
         import traceback

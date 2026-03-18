@@ -109,6 +109,13 @@ def import_modules():
             create_z_image_deploy_ui = None
             Z_IMAGE_DEPLOY_MODULE_AVAILABLE = False
 
+        # 添加美学提升模块导入
+        try:
+            from aesthetic_enhancement_ui import create_aesthetic_enhancement_ui, QWEN_MODULE_AVAILABLE as AESTHETIC_QWEN_AVAILABLE
+        except ImportError:
+            create_aesthetic_enhancement_ui = None
+            AESTHETIC_QWEN_AVAILABLE = False
+
         # 返回命名空间对象
         import types
         namespace = types.SimpleNamespace()
@@ -176,12 +183,13 @@ def import_modules():
 
         # 添加美学提升模块到命名空间
         try: 
-            from aesthetic_enhancement_ui import create_aesthetic_enhancement_ui
+            from aesthetic_enhancement_ui import create_aesthetic_enhancement_ui, QWEN_MODULE_AVAILABLE as AESTHETIC_QWEN_AVAILABLE
         except ImportError: 
             create_aesthetic_enhancement_ui = None
+            AESTHETIC_QWEN_AVAILABLE = False
       
         namespace.create_aesthetic_enhancement_ui = create_aesthetic_enhancement_ui
-      
+        namespace.AESTHETIC_QWEN_AVAILABLE = AESTHETIC_QWEN_AVAILABLE
         return namespace
         
     return _import_and_register_modules()
@@ -241,6 +249,7 @@ FLUX_KLEIN_AVAILABLE = imported_modules.FLUX_KLEIN_AVAILABLE
 
 # 添加美学提升模块变量赋值
 create_aesthetic_enhancement_ui = imported_modules.create_aesthetic_enhancement_ui
+AESTHETIC_QWEN_AVAILABLE = imported_modules.AESTHETIC_QWEN_AVAILABLE
 
 current_dir = os.path.abspath(os.getcwd())
 python_interpreter = sys.executable

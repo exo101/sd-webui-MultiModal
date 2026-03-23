@@ -66,6 +66,9 @@ AI交流群qq：1054090769 整合包与模型在群公告
 | `sd-webui-forge-aki`|`models`|`Stable-diffusion`| 传统flux.XL.1.5模型目录 |
 | `sd-webui-forge-aki`|`models`|`Tongyi-MAl`| Z-Image模型目录 |
 | `sd-webui-forge-aki`|`models`|`vae`| 图像编解码模型 |
+| `sd-webui-forge-aki`|`models`|`whisper-tiny`| 语音识别模型 |
+| `sd-webui-forge-aki`|`models`|`qwen3-tts`| 语音合成模型 |
+| `sd-webui-forge-aki`|`models`|`LatentSync`| 唇形同步视频模型 |
 
 ## ps插件
 | ps目录 | 插件目录 | 子目录 |说明 |

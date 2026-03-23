@@ -250,7 +250,8 @@ https://www.bilibili.com/video/BV1gEzCBqEpA/?spm_id_from=333.1387.homepage.video
 
 
 ### 分镜助手
-<img width="1828" height="947" alt="QQ20260324-050828" src="https://github.com/user-attachments/assets/bca6724d-c134-4827-b36b-eade43458f70" />
+
+<img width="1839" height="919" alt="QQ20260324-052541" src="https://github.com/user-attachments/assets/60d342fa-794e-4c45-bc3c-080a0129fadb" />
 
 
 

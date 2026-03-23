@@ -5,13 +5,13 @@ from modules import shared, paths, images
 import subprocess
 import torch
 from pathlib import Path
-from modelscope import ZImagePipeline
 from PIL import Image
 import numpy as np
 import time
 import random
 import json
 import safetensors.torch
+
 from diffusers import DiffusionPipeline
 
 # 导入发送到分镜功能
@@ -39,16 +39,24 @@ except ImportError:
 
 from backend import attention
 
-# 将当前脚本目录添加到Python路径，以便导入同目录下的其他模块
+# Z-Image Deploy 模块可用性检测
+try:
+    from modelscope import ZImagePipeline
+    Z_IMAGE_MODULE_AVAILABLE = True
+except ImportError:
+    Z_IMAGE_MODULE_AVAILABLE = False
+    print("⚠️ ModelScope ZImagePipeline 未安装，Z-Image（正式版）功能不可用")
+
+# 将当前脚本目录添加到 Python 路径，以便导入同目录下的其他模块
 script_dir = os.path.dirname(__file__)
 if script_dir not in sys.path:
     sys.path.insert(0, script_dir)
 
-# 导入图生图和队列功能 - 使用绝对导入方式
+# 导入图生图 UI 功能
 try:
-    from z_image_img2img import create_z_image_img2img_ui, generate_image_with_zimage_img2img
+    from z_image_img2img_ui import create_z_image_img2img_ui
 except ImportError as e:
-    print(f"无法导入 z_image_img2img 模块: {e}")
+    print(f"无法导入 z_image_img2img_ui 模块：{e}")
     # 提供一个占位函数以防止完全崩溃
     def create_z_image_img2img_ui():
         with gr.Group():
@@ -855,44 +863,10 @@ def create_z_image_deploy_ui():
                                 inputs=[output_gallery],
                                 outputs=[send_status]
                             )
-                        
-                        process_queue_btn.click(
-                            fn=lambda: process_queue(generate_image_with_zimage, generate_image_with_zimage_img2img),
-                            inputs=[],
-                            outputs=[output_status, output_gallery]
-                        )
-                        
-                        process_queue_btn.click(
-                            fn=update_queue_status,
-                            inputs=[],
-                            outputs=[queue_status_text]
-                        )
-                        
-                        process_queue_btn.click(
-                            fn=update_detailed_queue_status,
-                            inputs=[],
-                            outputs=[detailed_queue_status]
-                        )
-                        
-                        # 清空队列按钮事件
-                        clear_queue_btn.click(
-                            fn=clear_queue,
-                            inputs=[],
-                            outputs=[queue_operation_status]
-                        )
-                        
-                        clear_queue_btn.click(
-                            fn=update_queue_status,
-                            inputs=[],
-                            outputs=[queue_status_text]
-                        )
-                        
-                        clear_queue_btn.click(
-                            fn=update_detailed_queue_status,
-                            inputs=[],
-                            outputs=[detailed_queue_status]
-                        )
             
             # 图生图选项卡
             with gr.TabItem("图生图 (Image-to-Image)"):
                 img2img_interface = create_z_image_img2img_ui()
+        
+        return ui
+

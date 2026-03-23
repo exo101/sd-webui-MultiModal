@@ -18,6 +18,8 @@
 - 🧹 **图像清理**: 提供图像清理和修复功能
 - 🌟 **FLUX.2 图像编辑**: 集成 FLUX.2-klein 进行上下文感知的图像编辑
 - 🌟 **Qwen-Image复杂文本渲染和qwen-image-edit-2509精确图像编辑
+- 美学提升模块，智能分析构图，灯光，分镜
+- 分镜助手，建立角色设定与剧本，分镜排版整理
 
 ## 各项目配置显存要求
 - FLUX.2-klein-4B 显存 10GB
@@ -75,6 +77,11 @@ AI交流群qq：1054090769 整合包与模型在群公告
 |---------------------|--------|-----------|-----------|
 | `Adobe Photoshop 2024`|`Plug-ins`|`sd-ppp_PS`| ps插件目录 |
 | `Adobe Photoshop 2024`|`Plug-ins`|`Auto.Photoshop.SD.plugin_v1.4.1`| ps插件目录  |
+
+### 更新内容
+- qwen3.5模型
+- qwen3TTS 语音合成音色控制模型
+- 分镜助手
 
 ### 更新内容
 
@@ -228,6 +235,25 @@ https://www.bilibili.com/video/BV1gEzCBqEpA/?spm_id_from=333.1387.homepage.video
 ### qwen-image-edit-2509 ControlNet
   - 编辑模型自带ControlNet只需加载预处理器就可以控制图像，保持人物一致性，变化姿态，转换场景构图，编辑文字是个强大的多功能模型
   - 编辑模型可以同时使用自身的微调lora模型和qwen-image lora模型，可保持人物不变的情况下载改变风格
+    
+ ### Z-Image-Turbo图像生成
+ - 集成文生图，图生图，高清放大
+ - nunchaku模型，fp8模型，lora，bf16模型
+   <img width="1765" height="827" alt="QQ20260324-045223" src="https://github.com/user-attachments/assets/183fb311-2527-48cf-9631-0d2601c65b3a" />
+
+### Z-Image-base
+- lora，bf16模型
+- 集成文生图，图生图，高清放大
+<img width="1760" height="922" alt="QQ20260324-051624" src="https://github.com/user-attachments/assets/ee43c366-8c98-4827-8911-01ace3802580" />
+
+  
+### 美学提升
+<img width="1792" height="978" alt="QQ20260324-045658" src="https://github.com/user-attachments/assets/92870dc5-1b75-4b60-8f0c-ecb654a3c13d" />
+
+
+### 分镜助手
+<img width="1792" height="978" alt="QQ20260324-045658" src="https://github.com/user-attachments/assets/5c002bd5-4557-4d7d-9d1a-9b63fdf90927" />
+
 
 
 

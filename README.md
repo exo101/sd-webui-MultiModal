@@ -142,7 +142,6 @@ AI交流群qq：1054090769 整合包与模型在群公告
   16g选择8b或4b，12g选择4b或2b
  <img width="1105" height="390" alt="QQ20251101-185455" src="https://github.com/user-attachments/assets/d431810c-ba48-473a-99c8-a8ea90d408d0" />
 <img width="1851" height="953" alt="3" src="https://github.com/user-attachments/assets/aaaedc60-8b8a-4d13-85e1-64599e71d5b1" />
-<img width="1829" height="965" alt="2" src="https://github.com/user-attachments/assets/606bfe39-5b26-4c4a-a400-6aa496a75cb4" />
 <img width="1816" height="789" alt="13" src="https://github.com/user-attachments/assets/16ff1933-5ff9-46c4-b533-90fca5e15c44" />
 
 #### 快捷描述功能

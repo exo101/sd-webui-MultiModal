@@ -837,8 +837,14 @@ def create_flux_klein_ui():
                     with gr.Row():
                         multi_btn = gr.Button("生成结果", variant="primary")
                         multi_open_outputs_btn = gr.Button("打开输出目录", variant="secondary")
+                    
+                    # 发送到分镜按钮
+                    if STORYBOARD_AVAILABLE:
+                        with gr.Row():
+                            multi_send_to_storyboard_btn = gr.Button("📤 发送到分镜", variant="secondary")
+                            multi_send_status = gr.Textbox(label="发送状态", interactive=False, lines=1)
 
-            # 图像编辑Tab的事件绑定
+            # 图像编辑 Tab 的事件绑定
             if not FLUX_KLEIN_AVAILABLE:
                 # 如果模块不可用，禁用相关功能
                 multi_btn.variant = "secondary"
@@ -928,6 +934,44 @@ def create_flux_klein_ui():
                     inputs=[],
                     outputs=[]
                 )
+
+                # 发送到分镜功能
+                if STORYBOARD_AVAILABLE:
+                    def send_multi_gallery_to_storyboard(images):
+                        """将双图像编辑画廊中的图片发送到分镜助手"""
+                        if not images or len(images) == 0:
+                            return "❌ 没有可发送的图片"
+                        
+                        messages = []
+                        last_index = -1
+                        last_target_page = 1
+                        
+                        for img_path in images:
+                            if isinstance(img_path, dict) and 'name' in img_path:
+                                img_path = img_path['name']
+                            
+                            result = send_to_storyboard(img_path)
+                            success = result.get('success', False)
+                            message = result.get('message', '')
+                            index = result.get('index', -1)
+                            last_target_page = result.get('target_page', 1)
+                            
+                            if success:
+                                messages.append(f"✅ {message}")
+                                last_index = index
+                            else:
+                                messages.append(f"❌ {message}")
+                        
+                        if last_index >= 0:
+                            return f"已处理 {len(images)} 张图片，最后添加到分镜 #{last_index + 1}（第 {last_target_page} 页）"
+                        else:
+                            return "处理失败，请查看控制台日志"
+                    
+                    multi_send_to_storyboard_btn.click(
+                        fn=send_multi_gallery_to_storyboard,
+                        inputs=[multi_result_gallery],
+                        outputs=[multi_send_status]
+                    )
 
         # 局部重绘Tab
         with gr.TabItem("局部编辑"):
@@ -1097,7 +1141,13 @@ def create_flux_klein_ui():
                         inpaint_btn = gr.Button("局部重绘", variant="primary")
                         inpaint_open_outputs_btn = gr.Button("打开输出目录", variant="secondary")
                     
-                    # 局部重绘Tab的事件绑定
+                    # 发送到分镜按钮
+                    if STORYBOARD_AVAILABLE:
+                        with gr.Row():
+                            inpaint_send_to_storyboard_btn = gr.Button("📤 发送到分镜", variant="secondary")
+                            inpaint_send_status = gr.Textbox(label="发送状态", interactive=False, lines=1)
+                    
+                    # 局部重绘 Tab 的事件绑定
             if not FLUX_KLEIN_AVAILABLE:
                 # 如果模块不可用，禁用相关功能
                 inpaint_btn.variant = "secondary"
@@ -1182,6 +1232,44 @@ def create_flux_klein_ui():
                     inputs=[],
                     outputs=[]
                 )
+                
+                # 发送到分镜功能
+                if STORYBOARD_AVAILABLE:
+                    def send_inpaint_gallery_to_storyboard(images):
+                        """将局部编辑画廊中的图片发送到分镜助手"""
+                        if not images or len(images) == 0:
+                            return "❌ 没有可发送的图片"
+                        
+                        messages = []
+                        last_index = -1
+                        last_target_page = 1
+                        
+                        for img_path in images:
+                            if isinstance(img_path, dict) and 'name' in img_path:
+                                img_path = img_path['name']
+                            
+                            result = send_to_storyboard(img_path)
+                            success = result.get('success', False)
+                            message = result.get('message', '')
+                            index = result.get('index', -1)
+                            last_target_page = result.get('target_page', 1)
+                            
+                            if success:
+                                messages.append(f"✅ {message}")
+                                last_index = index
+                            else:
+                                messages.append(f"❌ {message}")
+                        
+                        if last_index >= 0:
+                            return f"已处理 {len(images)} 张图片，最后添加到分镜 #{last_index + 1}（第 {last_target_page} 页）"
+                        else:
+                            return "处理失败，请查看控制台日志"
+                    
+                    inpaint_send_to_storyboard_btn.click(
+                        fn=send_inpaint_gallery_to_storyboard,
+                        inputs=[inpaint_result_gallery],
+                        outputs=[inpaint_send_status]
+                    )
 
         # 图像扩展Tab
         with gr.TabItem("图像扩展"):
@@ -1391,7 +1479,49 @@ def create_flux_klein_ui():
                         extend_gen_btn = gr.Button("生成图像", variant="primary")
                         extend_open_outputs_btn = gr.Button("打开输出目录")
                     
-                    # 图像扩展Tab的事件绑定
+                    # 发送到分镜按钮
+                    if STORYBOARD_AVAILABLE:
+                        with gr.Row():
+                            extend_send_to_storyboard_btn = gr.Button("📤 发送到分镜", variant="secondary")
+                            extend_send_status = gr.Textbox(label="发送状态", interactive=False, lines=1)
+                        
+                        def send_extend_gallery_to_storyboard(images):
+                            """将扩图画廊中的图片发送到分镜助手"""
+                            if not images or len(images) == 0:
+                                return "❌ 没有可发送的图片"
+                            
+                            messages = []
+                            last_index = -1
+                            last_target_page = 1
+                            
+                            for img_path in images:
+                                if isinstance(img_path, dict) and 'name' in img_path:
+                                    img_path = img_path['name']
+                                
+                                result = send_to_storyboard(img_path)
+                                success = result.get('success', False)
+                                message = result.get('message', '')
+                                index = result.get('index', -1)
+                                last_target_page = result.get('target_page', 1)
+                                
+                                if success:
+                                    messages.append(f"✅ {message}")
+                                    last_index = index
+                                else:
+                                    messages.append(f"❌ {message}")
+                            
+                            if last_index >= 0:
+                                return f"已处理 {len(images)} 张图片，最后添加到分镜 #{last_index + 1}（第 {last_target_page} 页）"
+                            else:
+                                return "处理失败，请查看控制台日志"
+                            
+                            extend_send_to_storyboard_btn.click(
+                                fn=send_extend_gallery_to_storyboard,
+                                inputs=[extend_result_gallery],
+                                outputs=[extend_send_status]
+                            )
+                        
+                        # 图像扩展 Tab 的事件绑定
                     if not FLUX_KLEIN_AVAILABLE:
                         # 如果模块不可用，禁用相关功能
                         extend_gen_btn.variant = "secondary"

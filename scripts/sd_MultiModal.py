@@ -208,7 +208,7 @@ def MultiModal_tab():
                     announcement_ui["markdown_content"]
             
             # 添加 FLUX 系列标签页
-            with gr.TabItem("4.FLUX系列图像生成与编辑"):
+            with gr.TabItem("2.FLUX系列图像生成与编辑"):
                 with gr.Tabs():
                     with gr.TabItem("kontext图像编辑"):
                         try:
@@ -259,7 +259,7 @@ def MultiModal_tab():
                             traceback.print_exc()
             # 添加 Qwen Image 标签页（如果可用）
             if 'QWEN_IMAGE_MODULE_AVAILABLE' in globals() and QWEN_IMAGE_MODULE_AVAILABLE:
-                with gr.TabItem("5.Qwen Image图像生成与编辑"):
+                with gr.TabItem("3.Qwen Image图像生成与编辑"):
                     try:
                         with gr.Tabs():
                             with gr.TabItem("文生图"):
@@ -295,7 +295,7 @@ def MultiModal_tab():
             
             # 添加 Z-Image-Turbo 标签页（如果可用）
             if 'Z_IMAGE_MODULE_AVAILABLE' in globals() and Z_IMAGE_MODULE_AVAILABLE:
-                with gr.TabItem("6.Z-Image-Turbo图像生成"):
+                with gr.TabItem("4.Z-Image-Turbo图像生成"):
                     try:
                         with gr.Tabs():
                             with gr.TabItem("文生图"):
@@ -315,7 +315,7 @@ def MultiModal_tab():
             
             # 添加 Z-Image 正式版标签页（作为第7个标签页）
             if 'Z_IMAGE_DEPLOY_MODULE_AVAILABLE' in globals() and Z_IMAGE_DEPLOY_MODULE_AVAILABLE:
-                with gr.TabItem("7.Z-Image（base）"):
+                with gr.TabItem("5.Z-Image（base）"):
                     try:
                         with gr.Tabs():
                             with gr.TabItem("文生图"):
@@ -338,7 +338,7 @@ def MultiModal_tab():
                     gr.Markdown("Z-Image（正式版）模块当前不可用，可能是因为缺少模型文件或依赖项。")
             
             # 添加第 8 个标签页：美学提升模块
-            with gr.TabItem("8.美学提升"):
+            with gr.TabItem("6.美学提升"):
                 try:
                     if create_aesthetic_enhancement_ui is not None:
                         # 创建美学提升 UI 组件
@@ -354,7 +354,7 @@ def MultiModal_tab():
                     traceback.print_exc()
             
             # 添加第 9 个标签页：分镜助手（集成所有功能的工作流管理）
-            with gr.TabItem("9.分镜助手"):
+            with gr.TabItem("7.分镜助手"):
                 try:
                     if create_storyboard_assistant_module is not None:
                         # 创建分镜助手 UI 组件（不需要传递参数）

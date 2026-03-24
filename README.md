@@ -1,5 +1,9 @@
 # Stable Diffusion WebUI Forge 多模态集成插件
 
+ 启动器扩展界面更新sd-webui-MultiModal插件
+<img width="1276" height="570" alt="QQ20260324-191808" src="https://github.com/user-attachments/assets/29b214cd-9c3f-4cab-a53a-032cdcca1b72" />
+
+
 ## 系统要求
 
 - NVIDIA RTX显卡可用范围

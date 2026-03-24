@@ -9,12 +9,13 @@ import io
 # ==================== 发送到分镜功能 ====================
 # 这个函数可以被其他图像生成模块调用，用于将生成的图片发送到分镜助手
 
-def send_to_storyboard(image_path, description=""):
+def send_to_storyboard(image_path=None, description="", audio_path=None):
     """
-    将生成的图片发送到分镜助手
+    将生成的图片/音频发送到分镜助手
     
     Args:
-        image_path: 图片路径、PIL Image 对象、或包含路径的元组/字典
+        image_path: 图片路径、PIL Image 对象、或包含路径的元组/字典（可选）
+        audio_path: 音频文件路径（可选）
         description: 分镜描述（可选）
     
     Returns:
@@ -114,12 +115,39 @@ def send_to_storyboard(image_path, description=""):
                 traceback.print_exc()
                 return None
         
-        # 处理图片
-        processed_path = process_image_for_storyboard(image_path)
-        if not processed_path:
+        # 处理音频函数
+        def process_audio_for_storyboard(audio_path):
+            """将音频复制到分镜临时目录"""
+            try:
+                if audio_path is None or not os.path.exists(audio_path):
+                    return None
+                
+                # 复制到临时目录
+                output_dir = data_dir / "temp_audios"
+                output_dir.mkdir(exist_ok=True)
+                
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                output_path = output_dir / f"storyboard_audio_{timestamp}.wav"
+                
+                import shutil
+                shutil.copy2(audio_path, output_path)
+                return str(output_path)
+            
+            except Exception as e:
+                print(f"⚠️ 处理音频失败：{e}")
+                import traceback
+                traceback.print_exc()
+                return None
+        
+        # 处理图片和音频
+        processed_image_path = process_image_for_storyboard(image_path) if image_path else None
+        processed_audio_path = process_audio_for_storyboard(audio_path) if audio_path else None
+        
+        # 如果既没有图片也没有音频，则报错
+        if not processed_image_path and not processed_audio_path:
             return {
                 'success': False,
-                'message': "❌ 图片处理失败",
+                'message': "❌ 至少需要提供图片或音频",
                 'index': -1,
                 'total_count': 0,
                 'target_page': 1
@@ -135,7 +163,8 @@ def send_to_storyboard(image_path, description=""):
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         new_storyboard = {
             "id": new_index,
-            "image_path": processed_path,
+            "image_path": processed_image_path,
+            "audio_path": processed_audio_path,  # 新增音频路径
             "aspect_ratio": "16:9 (宽屏)",
             "description": description if description else "",
             "timestamp": timestamp
@@ -223,6 +252,28 @@ def create_storyboard_assistant_module():
     
     script_file = data_dir / "script.json"
     storyboard_file = data_dir / "storyboard.json"
+    
+    # 自定义 CSS 样式 - 紧凑音频播放器
+    custom_css = """
+    .storyboard-audio-compact {
+        margin-top: 3px !important;
+        margin-bottom: 3px !important;
+        padding: 0 !important;
+    }
+    .storyboard-audio-compact .audio-component {
+        height: 28px !important;
+        min-height: 28px !important;
+        max-height: 28px !important;
+    }
+    .storyboard-audio-compact audio {
+        height: 24px !important;
+        max-height: 24px !important;
+    }
+    .storyboard-audio-compact .wrap {
+        min-height: 24px !important;
+        max-height: 24px !important;
+    }
+    """
     
     # 图片压缩函数
     def compress_image(image_path, max_size=1024, quality=85):
@@ -385,7 +436,7 @@ def create_storyboard_assistant_module():
         "4:3 (标准)", "3:4 (竖版)", "21:9 (超宽屏)"
     ]
     
-    with gr.Blocks() as ui:
+    with gr.Blocks(css=custom_css) as ui:
         gr.Markdown("""
         # 🎬 分镜助手 - 专业版
         
@@ -563,6 +614,19 @@ def create_storyboard_assistant_module():
                             type="filepath"
                         )
                         
+                        # 音频播放器 - 新增（紧凑布局）
+                        cell_audio = gr.Audio(
+                            label=None,  # 隐藏标签
+                            type="filepath",
+                            value=None,  # 初始值设为 None，避免加载不存在文件
+                            visible=True,
+                            show_download_button=False,  # 隐藏下载按钮以节省空间
+                            container=False,  # 不使用容器边框
+                            scale=0.2,  # 进一步减小高度比例
+                            elem_classes=["storyboard-audio-compact"],  # 自定义样式类
+                            min_width=0  # 最小宽度设为 0
+                        )
+                        
                         cell_annotation = gr.Textbox(
                             placeholder=f"注释...",
                             lines=2,
@@ -578,10 +642,11 @@ def create_storyboard_assistant_module():
                                 size="xs",
                                 variant="stop"
                             )
-                    return cell_img, cell_annotation, cell_delete, cell_label
+                    return cell_img, cell_audio, cell_annotation, cell_delete, cell_label
 
                 # 初始化存储列表（每页 9 个宫格，3×3 布局）
                 gallery_cells = []
+                cell_audios = []  # 新增音频组件列表
                 cell_annotations = []
                 cell_delete_btns = []
                 cell_labels = []  # 存储 HTML 标签组件
@@ -591,8 +656,9 @@ def create_storyboard_assistant_module():
                     with gr.Row():
                         for col_idx in range(3):
                             cell_index = row_idx * 3 + col_idx + 1
-                            img, ann, del_btn, label_html = create_storyboard_cell(cell_index)
+                            img, audio, ann, del_btn, label_html = create_storyboard_cell(cell_index)
                             gallery_cells.append(img)
+                            cell_audios.append(audio)  # 新增
                             cell_annotations.append(ann)
                             cell_delete_btns.append(del_btn)
                             cell_labels.append(label_html)
@@ -753,7 +819,17 @@ def create_storyboard_assistant_module():
                         f.write("-" * 50 + "\n")
                         for char_name, char_data in characters.items():
                             char_content = char_data.get("content", "").strip()
-                            img_path = char_data.get("image_path", "")
+                            img_path = char_data.get("image_path")
+                            if img_path and os.path.exists(img_path):
+                                try:
+                                    # 复制图片到导出目录
+                                    import shutil
+                                    img_filename = os.path.basename(img_path)
+                                    new_img_path = images_dir / img_filename
+                                    shutil.copy2(img_path, new_img_path)
+                                    print(f"✅ 已复制角色 {char_name} 的配图：{new_img_path}")
+                                except Exception as e:
+                                    print(f"⚠️ 复制角色 {char_name} 的配图失败：{e}")
                             
                             f.write(f"\n【{char_name}】\n")
                             if img_path:
@@ -1031,6 +1107,7 @@ def create_storyboard_assistant_module():
             storyboard_data[cell_index] = {
                 "id": cell_index,
                 "image_path": img_path,
+                "audio_path": storyboard_data[cell_index].get("audio_path") if cell_index < len(storyboard_data) else None,  # 保留原有音频
                 "aspect_ratio": "16:9 (宽屏)",
                 "description": storyboard_data[cell_index].get("description", "") if cell_index < len(storyboard_data) else "",
                 "timestamp": timestamp
@@ -1039,6 +1116,33 @@ def create_storyboard_assistant_module():
             save_data(storyboard_file, storyboard_data)
             
             return f"✅ 已更新分镜 #{cell_index + 1}", *refresh_gallery()
+        
+        # 新增：处理音频上传
+        def handle_audio_upload(audio_path, cell_index):
+            """处理宫格音频上传"""
+            if not audio_path:
+                return f"❌ 未选择音频", *refresh_gallery()
+            
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            storyboard_data = load_data(storyboard_file)
+            
+            # 确保列表足够长
+            while len(storyboard_data) <= cell_index:
+                storyboard_data.append({})
+            
+            # 更新指定宫格
+            storyboard_data[cell_index] = {
+                "id": cell_index,
+                "image_path": storyboard_data[cell_index].get("image_path") if cell_index < len(storyboard_data) else None,  # 保留原有图片
+                "audio_path": audio_path,
+                "aspect_ratio": "16:9 (宽屏)",
+                "description": storyboard_data[cell_index].get("description", "") if cell_index < len(storyboard_data) else "",
+                "timestamp": timestamp
+            }
+            
+            save_data(storyboard_file, storyboard_data)
+            
+            return f"✅ 已更新分镜 #{cell_index + 1} 的音频", *refresh_gallery()
         
         def delete_cell(cell_index):
             """删除指定宫格的分镜"""
@@ -1049,6 +1153,7 @@ def create_storyboard_assistant_module():
                 storyboard_data[cell_index] = {
                     "id": cell_index,
                     "image_path": None,
+                    "audio_path": None,  # 新增：清空音频
                     "aspect_ratio": "",
                     "description": "",
                     "timestamp": ""
@@ -1095,8 +1200,9 @@ def create_storyboard_assistant_module():
             start_idx = (current_page - 1) * STORYBOARDS_PER_PAGE
             end_idx = start_idx + STORYBOARDS_PER_PAGE
             
-            # 分别返回 9 个图片和 9 个注释（共 18 个值）
+            # 分别返回 9 个图片、9 个音频和 9 个注释（共 27 个值）
             images = []
+            audios = []  # 新增音频列表
             annotations = []
             
             for i in range(STORYBOARDS_PER_PAGE):
@@ -1104,17 +1210,26 @@ def create_storyboard_assistant_module():
                 if global_index < len(storyboard_data):
                     item = storyboard_data[global_index]
                     img_path = item.get("image_path")
+                    audio_path = item.get("audio_path")  # 新增：获取音频路径
                     annotation = item.get("description", "")[:50]  # 摘要
                     
-                    if img_path and os.path.exists(img_path):
+                    # 严格验证路径：必须是字符串且文件存在
+                    if isinstance(img_path, str) and os.path.isfile(img_path):
                         images.append(img_path)
                         annotations.append(annotation)
                     else:
                         images.append(None)
                         annotations.append("")
+                    
+                    # 处理音频 - 同样严格验证
+                    if isinstance(audio_path, str) and os.path.isfile(audio_path):
+                        audios.append(audio_path)
+                    else:
+                        audios.append(None)
                 else:
                     images.append(None)
                     annotations.append("")
+                    audios.append(None)
             
             # 生成当前页各宫格的标签（显示全局索引）
             labels = []
@@ -1122,8 +1237,8 @@ def create_storyboard_assistant_module():
                 global_index = start_idx + i + 1  # 从 1 开始计数
                 labels.append(f'<div style="text-align: center; font-weight: bold; margin-bottom: 5px;">#{global_index}</div>')
             
-            # 返回 27 个独立的值（9 个图片 + 9 个注释 + 9 个标签）+ 页码信息
-            return (*images, *annotations, *labels, current_page, total_pages)
+            # 返回 36 个独立的值（9 个图片 + 9 个音频 + 9 个注释 + 9 个标签）+ 页码信息
+            return (*images, *audios, *annotations, *labels, current_page, total_pages)
         
         def get_cell_labels(current_page):
             """生成当前页各宫格的标签（显示全局索引）"""
@@ -1150,6 +1265,7 @@ def create_storyboard_assistant_module():
             storyboard_data.append({
                 "id": new_index,
                 "image_path": None,
+                "audio_path": None,  # 新增：音频路径
                 "aspect_ratio": "16:9 (宽屏)",
                 "description": "",
                 "timestamp": timestamp
@@ -1160,9 +1276,11 @@ def create_storyboard_assistant_module():
             # 计算应该在哪一页显示
             total_count = len(storyboard_data)
             total_pages = max(1, (total_count + STORYBOARDS_PER_PAGE - 1) // STORYBOARDS_PER_PAGE)
+            current_page = total_pages  # 显示在最后一页
             
-            # 返回消息和刷新画廊
-            return f"✅ 已添加分镜 #{new_index + 1}", *refresh_gallery(total_pages)
+            # 返回消息和刷新画廊（36 个值）+ 页码信息
+            refresh_result = refresh_gallery(current_page)
+            return (f"✅ 已添加新分镜 #{new_index + 1}", *refresh_result)
         
         def storyboard_prev_page_action(current_page):
             """分镜墙上一页操作"""
@@ -1172,8 +1290,8 @@ def create_storyboard_assistant_module():
             new_page = max(1, current_page - 1)
             new_page = min(new_page, total_pages)
             
-            # 返回刷新后的画廊数据和页码信息
-            return (*refresh_gallery(new_page), new_page, total_pages)
+            # 返回刷新后的画廊数据和页码信息（包含状态栏）
+            return ("✅ 已切换到第 {} 页".format(new_page), *refresh_gallery(new_page))
         
         def storyboard_next_page_action(current_page):
             """分镜墙下一页操作"""
@@ -1182,13 +1300,8 @@ def create_storyboard_assistant_module():
             total_pages = max(1, (total_count + STORYBOARDS_PER_PAGE - 1) // STORYBOARDS_PER_PAGE)
             new_page = min(total_pages, current_page + 1)
             
-            # 返回刷新后的画廊数据和页码信息
-            return (*refresh_gallery(new_page), new_page, total_pages)
-        
-        def clear_all():
-            """清空全部分镜"""
-            save_data(storyboard_file, [])
-            return "✅ 已清空全部分镜", True
+            # 返回刷新后的画廊数据和页码信息（包含状态栏）
+            return ("✅ 已切换到第 {} 页".format(new_page), *refresh_gallery(new_page))
         
         def export_all():
             """导出全部分镜数据和图片到 TXT 文档"""
@@ -1398,7 +1511,7 @@ def create_storyboard_assistant_module():
         # 添加新分镜按钮
         add_storyboard_btn.click(
             fn=add_new_storyboard,
-            outputs=[status_bar] + gallery_cells + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
+            outputs=[status_bar] + gallery_cells + cell_audios + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
         )
         
         export_all_btn.click(
@@ -1410,21 +1523,19 @@ def create_storyboard_assistant_module():
         storyboard_prev_page_btn.click(
             fn=storyboard_prev_page_action,
             inputs=[storyboard_current_page_num],
-            outputs=gallery_cells + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
+            outputs=[status_bar] + gallery_cells + cell_audios + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
         )
         
         storyboard_next_page_btn.click(
             fn=storyboard_next_page_action,
             inputs=[storyboard_current_page_num],
-            outputs=gallery_cells + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
+            outputs=[status_bar] + gallery_cells + cell_audios + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
         )
         
+        # 清空全部按钮
         clear_all_btn.click(
-            fn=clear_all,
-            outputs=[status_bar, storyboard_current_page_num]
-        ).then(
-            fn=lambda: refresh_gallery(1),
-            outputs=gallery_cells + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
+            fn=lambda: ("✅ 已清空全部分镜", *refresh_gallery(1)),
+            outputs=[status_bar] + gallery_cells + cell_audios + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
         )
         
         # --- 分镜管理事件 (宫格级别) ---
@@ -1479,7 +1590,7 @@ def create_storyboard_assistant_module():
             btn.click(
                 fn=lambda current_page, idx=i: delete_single_cell_with_page(current_page, idx),
                 inputs=[storyboard_current_page_num],
-                outputs=[status_bar] + gallery_cells + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
+                outputs=[status_bar] + gallery_cells + cell_audios + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
             )
         
         # 定义图片上传的通用处理函数（移到循环外）
@@ -1521,7 +1632,48 @@ def create_storyboard_assistant_module():
             img_component.upload(
                 fn=lambda file, current_page, idx=i: on_image_upload_with_page(file, current_page, idx),
                 inputs=[img_component, storyboard_current_page_num],
-                outputs=[status_bar] + gallery_cells + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
+                outputs=[status_bar] + gallery_cells + cell_audios + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
+            )
+        
+        # 新增：为每个宫格的音频组件绑定事件（上传）
+        def on_audio_upload_with_page(file, current_page, cell_idx):
+            """处理音频上传（带页码信息）"""
+            if not file:
+                return (f"✅ 分镜 #{cell_idx + 1} 音频已清空", *refresh_gallery(current_page))
+            
+            # 获取文件路径
+            file_path = file if isinstance(file, str) else file.name
+            
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            storyboard_data = load_data(storyboard_file)
+            
+            # 计算全局索引（当前页的偏移量 + 单元格索引）
+            global_index = (current_page - 1) * STORYBOARDS_PER_PAGE + cell_idx
+            
+            # 确保列表足够长
+            while len(storyboard_data) <= global_index:
+                storyboard_data.append({})
+            
+            # 更新指定宫格（保留原有图片）
+            storyboard_data[global_index] = {
+                "id": global_index,
+                "image_path": storyboard_data[global_index].get("image_path") if global_index < len(storyboard_data) else None,
+                "audio_path": file_path,
+                "aspect_ratio": "16:9 (宽屏)",
+                "description": storyboard_data[global_index].get("description", "") if global_index < len(storyboard_data) else "",
+                "timestamp": timestamp
+            }
+            
+            save_data(storyboard_file, storyboard_data)
+            
+            return (f"✅ 已更新分镜 #{global_index + 1} 的音频", *refresh_gallery(current_page))
+        
+        for i, audio_component in enumerate(cell_audios):
+            # 使用 lambda 包装，将 idx=i 作为固定参数传递
+            audio_component.upload(
+                fn=lambda file, current_page, idx=i: on_audio_upload_with_page(file, current_page, idx),
+                inputs=[audio_component, storyboard_current_page_num],
+                outputs=[status_bar] + gallery_cells + cell_audios + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
             )
         
         # 为每个宫格的注释文本框绑定事件（失去焦点时自动保存）
@@ -1560,18 +1712,15 @@ def create_storyboard_assistant_module():
         
         # 清空全部按钮
         clear_all_btn.click(
-            fn=clear_all,
-            outputs=[status_bar, storyboard_current_page_num]
-        ).then(
-            fn=lambda: refresh_gallery(1),
-            outputs=gallery_cells + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
+            fn=lambda: ("✅ 已清空全部分镜", *refresh_gallery(1)),
+            outputs=[status_bar] + gallery_cells + cell_audios + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
         )
         
         # 初始化加载
         ui.load(fn=refresh_story_list, outputs=[story_selector])
         ui.load(
             fn=lambda: refresh_gallery(1),
-            outputs=gallery_cells + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
+            outputs=gallery_cells + cell_audios + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
         )
         ui.load(
             fn=lambda: (gr.update(choices=[], value=""), 1, 0),

@@ -667,6 +667,76 @@ def create_storyboard_assistant_module():
                 with gr.Row():
                     clear_all_btn = gr.Button("🗑️ 清空全部", variant="stop", size="md")
                 
+                # 音频管理面板 - 新增
+                with gr.Accordion("🎵 音频文件管理", open=False):
+                    gr.Markdown("""
+                    **使用说明：**
+                    - 在下方输入框中输入要移动的音频所在的分镜编号（如：1, 2, 3）
+                    - 使用"上移"、"下移"按钮调整音频位置
+                    - 或使用"删除"按钮移除音频
+                    """)
+                    
+                    with gr.Row():
+                        audio_move_source_index = gr.Number(
+                            label="源分镜编号",
+                            value=1,
+                            precision=0,
+                            info="要移动的音频所在的分镜编号（从 1 开始）"
+                        )
+                        audio_move_target_index = gr.Number(
+                            label="目标分镜编号",
+                            value=1,
+                            precision=0,
+                            info="要移动到的目标分镜编号（从 1 开始）"
+                        )
+                    
+                    with gr.Row():
+                        audio_move_up_btn = gr.Button("⬆️ 上移一格", variant="secondary")
+                        audio_move_down_btn = gr.Button("⬇️ 下移一格", variant="secondary")
+                        audio_move_to_btn = gr.Button("🔄 移动到指定位置", variant="primary")
+                        audio_delete_btn = gr.Button("🗑️ 删除音频", variant="stop")
+                    
+                    audio_manager_status = gr.Textbox(
+                        label="操作状态",
+                        interactive=False,
+                        info="显示音频管理操作的结果"
+                    )
+                
+                # 分镜格管理面板 - 新增
+                with gr.Accordion("📊 分镜格移动管理", open=False):
+                    gr.Markdown("""
+                    **使用说明：**
+                    - 输入要移动的分镜编号（包含图片、音频、注释）
+                    - 使用"上移"、"下移"按钮调整分镜位置
+                    - 或移动到指定位置，其他分镜会自动填补或让位
+                    """)
+                    
+                    with gr.Row():
+                        storyboard_move_source_index = gr.Number(
+                            label="源分镜编号",
+                            value=1,
+                            precision=0,
+                            info="要移动的分镜编号（从 1 开始）"
+                        )
+                        storyboard_move_target_index = gr.Number(
+                            label="目标分镜编号",
+                            value=1,
+                            precision=0,
+                            info="要移动到的目标分镜编号（从 1 开始）"
+                        )
+                    
+                    with gr.Row():
+                        storyboard_move_up_btn = gr.Button("⬆️ 上移一格", variant="secondary")
+                        storyboard_move_down_btn = gr.Button("⬇️ 下移一格", variant="secondary")
+                        storyboard_move_to_btn = gr.Button("🔄 移动到指定位置", variant="primary")
+                        storyboard_delete_btn = gr.Button("🗑️ 删除分镜", variant="stop")
+                    
+                    storyboard_manager_status = gr.Textbox(
+                        label="操作状态",
+                        interactive=False,
+                        info="显示分镜格管理操作的结果"
+                    )
+                
                 # 状态栏
                 status_bar = gr.Textbox(
                     label="操作状态",
@@ -1353,6 +1423,289 @@ def create_storyboard_assistant_module():
             except Exception as e:
                 return f"❌ 导出失败：{e}"
         
+        # ========== 音频管理功能 ==========
+        
+        def move_audio_up(source_index):
+            """将指定分镜的音频上移一格"""
+            try:
+                storyboard_data = load_data(storyboard_file)
+                
+                if source_index < 1 or source_index > len(storyboard_data):
+                    return f"❌ 无效的分镜编号：{source_index}", *refresh_gallery(storyboard_current_page_num.value if 'storyboard_current_page_num' in locals() else 1)
+                
+                if source_index == 1:
+                    return "⚠️ 已经是第一个位置，无法上移", *refresh_gallery(1)
+                
+                # 交换源位置和目标位置的音频
+                target_index = source_index - 1
+                source_audio = storyboard_data[source_index - 1].get("audio_path")
+                target_audio = storyboard_data[target_index - 1].get("audio_path")
+                
+                # 交换音频路径
+                storyboard_data[source_index - 1]["audio_path"] = target_audio
+                storyboard_data[target_index - 1]["audio_path"] = source_audio
+                
+                save_data(storyboard_file, storyboard_data)
+                
+                return f"✅ 已将分镜 #{source_index} 的音频上移到 #{target_index}", *refresh_gallery(1)
+            except Exception as e:
+                return f"❌ 移动失败：{e}", *refresh_gallery(1)
+        
+        def move_audio_down(source_index):
+            """将指定分镜的音频下移一格"""
+            try:
+                storyboard_data = load_data(storyboard_file)
+                
+                if source_index < 1 or source_index > len(storyboard_data):
+                    return f"❌ 无效的分镜编号：{source_index}", *refresh_gallery(1)
+                
+                if source_index == len(storyboard_data):
+                    return "⚠️ 已经是最后一个位置，无法下移", *refresh_gallery(1)
+                
+                # 交换源位置和目标位置的音频
+                target_index = source_index + 1
+                source_audio = storyboard_data[source_index - 1].get("audio_path")
+                target_audio = storyboard_data[target_index - 1].get("audio_path")
+                
+                # 交换音频路径
+                storyboard_data[source_index - 1]["audio_path"] = target_audio
+                storyboard_data[target_index - 1]["audio_path"] = source_audio
+                
+                save_data(storyboard_file, storyboard_data)
+                
+                return f"✅ 已将分镜 #{source_index} 的音频下移到 #{target_index}", *refresh_gallery(1)
+            except Exception as e:
+                return f"❌ 移动失败：{e}", *refresh_gallery(1)
+        
+        def move_audio_to_position(source_index, target_index):
+            """将音频从源位置移动到目标位置"""
+            try:
+                if source_index == target_index:
+                    return "⚠️ 源位置和目标位置相同", *refresh_gallery(1)
+                
+                storyboard_data = load_data(storyboard_file)
+                
+                if source_index < 1 or source_index > len(storyboard_data):
+                    return f"❌ 无效的源分镜编号：{source_index}", *refresh_gallery(1)
+                
+                if target_index < 1 or target_index > len(storyboard_data):
+                    return f"❌ 无效的目标分镜编号：{target_index}", *refresh_gallery(1)
+                
+                # 提取要移动的音频
+                audio_to_move = storyboard_data[source_index - 1].get("audio_path")
+                
+                if not audio_to_move:
+                    return f"⚠️ 分镜 #{source_index} 没有音频", *refresh_gallery(1)
+                
+                # 删除源位置的音频
+                storyboard_data[source_index - 1]["audio_path"] = None
+                
+                # 在目标位置插入音频（其他音频依次后移）
+                if target_index > source_index:
+                    # 向下移动：中间项上移
+                    for i in range(source_index, target_index):
+                        storyboard_data[i - 1]["audio_path"] = storyboard_data[i].get("audio_path")
+                else:
+                    # 向上移动：中间项下移
+                    for i in range(target_index, source_index):
+                        storyboard_data[i - 1]["audio_path"] = storyboard_data[i - 2].get("audio_path") if i > 1 else None
+                
+                # 设置目标位置的音频
+                storyboard_data[target_index - 1]["audio_path"] = audio_to_move
+                
+                save_data(storyboard_file, storyboard_data)
+                
+                return f"✅ 已将音频从分镜 #{source_index} 移动到 #{target_index}", *refresh_gallery(1)
+            except Exception as e:
+                return f"❌ 移动失败：{e}", *refresh_gallery(1)
+        
+        def delete_audio_from_cell(cell_index):
+            """删除指定分镜的音频"""
+            try:
+                storyboard_data = load_data(storyboard_file)
+                
+                if cell_index < 1 or cell_index > len(storyboard_data):
+                    return f"❌ 无效的分镜编号：{cell_index}", *refresh_gallery(1)
+                
+                old_audio = storyboard_data[cell_index - 1].get("audio_path")
+                
+                # 删除音频文件
+                if old_audio and os.path.exists(old_audio):
+                    try:
+                        os.remove(old_audio)
+                    except Exception as e:
+                        print(f"⚠️ 删除音频文件失败：{e}")
+                
+                # 清空数据
+                storyboard_data[cell_index - 1]["audio_path"] = None
+                save_data(storyboard_file, storyboard_data)
+                
+                return f"✅ 已删除分镜 #{cell_index} 的音频", *refresh_gallery(1)
+            except Exception as e:
+                return f"❌ 删除失败：{e}", *refresh_gallery(1)
+        
+        # ========== 分镜格管理功能 ==========
+        
+        def move_storyboard_up(source_index):
+            """将整个分镜格上移一格"""
+            try:
+                storyboard_data = load_data(storyboard_file)
+                
+                if source_index < 1 or source_index > len(storyboard_data):
+                    return f"❌ 无效的分镜编号：{source_index}", *refresh_gallery(1)
+                
+                if source_index == 1:
+                    return "⚠️ 已经是第一个位置，无法上移", *refresh_gallery(1)
+                
+                # 获取要移动的分镜数据
+                target_index = source_index - 1
+                storyboard_to_move = storyboard_data[source_index - 1].copy()
+                
+                # 删除源位置的分镜
+                del storyboard_data[source_index - 1]
+                
+                # 在目标位置插入
+                storyboard_data.insert(target_index - 1, storyboard_to_move)
+                
+                # 重新编号所有分镜的 ID
+                for i, item in enumerate(storyboard_data):
+                    item["id"] = i
+                
+                save_data(storyboard_file, storyboard_data)
+                
+                return f"✅ 已将分镜 #{source_index} 上移到 #{target_index}", *refresh_gallery(1)
+            except Exception as e:
+                return f"❌ 移动失败：{e}", *refresh_gallery(1)
+        
+        def move_storyboard_down(source_index):
+            """将整个分镜格下移一格"""
+            try:
+                storyboard_data = load_data(storyboard_file)
+                
+                if source_index < 1 or source_index > len(storyboard_data):
+                    return f"❌ 无效的分镜编号：{source_index}", *refresh_gallery(1)
+                
+                if source_index == len(storyboard_data):
+                    return "⚠️ 已经是最后一个位置，无法下移", *refresh_gallery(1)
+                
+                # 获取要移动的分镜数据
+                target_index = source_index + 1
+                storyboard_to_move = storyboard_data[source_index - 1].copy()
+                
+                # 删除源位置的分镜（注意：删除后索引变化）
+                del storyboard_data[source_index - 1]
+                
+                # 在目标位置插入（因为已经删除了一个，所以 target_index 要减 1）
+                storyboard_data.insert(target_index - 1, storyboard_to_move)
+                
+                # 重新编号所有分镜的 ID
+                for i, item in enumerate(storyboard_data):
+                    item["id"] = i
+                
+                save_data(storyboard_file, storyboard_data)
+                
+                return f"✅ 已将分镜 #{source_index} 下移到 #{target_index}", *refresh_gallery(1)
+            except Exception as e:
+                return f"❌ 移动失败：{e}", *refresh_gallery(1)
+        
+        def move_storyboard_to_position(source_index, target_index):
+            """将整个分镜格移动到指定位置"""
+            try:
+                if source_index == target_index:
+                    return "⚠️ 源位置和目标位置相同", *refresh_gallery(1)
+                
+                storyboard_data = load_data(storyboard_file)
+                
+                if source_index < 1 or source_index > len(storyboard_data):
+                    return f"❌ 无效的源分镜编号：{source_index}", *refresh_gallery(1)
+                
+                if target_index < 1 or target_index > len(storyboard_data):
+                    return f"❌ 无效的目标分镜编号：{target_index}", *refresh_gallery(1)
+                
+                # 获取要移动的分镜数据（包含图片、音频、注释等所有信息）
+                storyboard_to_move = storyboard_data[source_index - 1].copy()
+                
+                # 删除源位置的分镜
+                del storyboard_data[source_index - 1]
+                
+                # 调整目标索引（因为删除了一个元素）
+                adjusted_target = target_index - 1 if target_index > source_index else target_index - 1
+                
+                # 在目标位置插入
+                storyboard_data.insert(adjusted_target, storyboard_to_move)
+                
+                # 重新编号所有分镜的 ID
+                for i, item in enumerate(storyboard_data):
+                    item["id"] = i
+                
+                save_data(storyboard_file, storyboard_data)
+                
+                return f"✅ 已将分镜 #{source_index} 移动到 #{target_index}", *refresh_gallery(1)
+            except Exception as e:
+                return f"❌ 移动失败：{e}", *refresh_gallery(1)
+        
+        def delete_storyboard_cell(cell_index):
+            """删除整个分镜格"""
+            try:
+                storyboard_data = load_data(storyboard_file)
+                
+                if cell_index < 1 or cell_index > len(storyboard_data):
+                    return f"❌ 无效的分镜编号：{cell_index}", *refresh_gallery(1)
+                
+                # 获取要删除的分镜数据
+                deleted_item = storyboard_data[cell_index - 1]
+                
+                # 删除图片文件
+                img_path = deleted_item.get("image_path")
+                if img_path and os.path.exists(img_path):
+                    try:
+                        os.remove(img_path)
+                    except Exception as e:
+                        print(f"⚠️ 删除图片文件失败：{e}")
+                
+                # 删除音频文件
+                audio_path = deleted_item.get("audio_path")
+                if audio_path and os.path.exists(audio_path):
+                    try:
+                        os.remove(audio_path)
+                    except Exception as e:
+                        print(f"⚠️ 删除音频文件失败：{e}")
+                
+                # 从列表中删除
+                del storyboard_data[cell_index - 1]
+                
+                # 重新编号所有分镜的 ID
+                for i, item in enumerate(storyboard_data):
+                    item["id"] = i
+                
+                save_data(storyboard_file, storyboard_data)
+                
+                return f"✅ 已删除分镜 #{cell_index}", *refresh_gallery(1)
+            except Exception as e:
+                return f"❌ 删除失败：{e}", *refresh_gallery(1)
+        
+        def delete_single_cell_with_page(current_page, cell_idx):
+            """删除指定宫格的分镜（带页码信息）"""
+            storyboard_data = load_data(storyboard_file)
+            global_index = (current_page - 1) * STORYBOARDS_PER_PAGE + cell_idx
+            
+            if global_index < len(storyboard_data):
+                # 清空该宫格数据
+                storyboard_data[global_index] = {
+                    "id": global_index,
+                    "image_path": None,
+                    "audio_path": None,
+                    "aspect_ratio": "",
+                    "description": "",
+                    "timestamp": ""
+                }
+                
+                save_data(storyboard_file, storyboard_data)
+                # refresh_gallery 已经返回了 current_page 和 total_pages，不需要额外添加
+                return (f"✅ 已删除分镜 #{global_index + 1}", *refresh_gallery(current_page))
+            else:
+                return (f"⚠️ 该位置没有分镜", *refresh_gallery(current_page))
+        
         # ========== 事件绑定 ==========
         
         # --- 剧本管理事件 ---
@@ -1361,6 +1714,63 @@ def create_storyboard_assistant_module():
             inputs=[story_selector],
             outputs=[story_title_input, story_genre, full_script_editor]
         ).then(
+            fn=refresh_character_list,
+            inputs=[story_selector],
+            outputs=[char_selector, page_indicator, storyboard_total_pages_num]
+        )
+        new_story_btn.click(
+            fn=create_new_story,
+            inputs=[],
+            outputs=[story_selector, story_title_input, story_genre, full_script_editor]
+        )
+        save_script_btn.click(
+            fn=save_story,
+            inputs=[story_title_input, story_genre, full_script_editor, story_selector],
+            outputs=[script_status, story_selector]
+        )
+        delete_story_btn.click(
+            fn=delete_story,
+            inputs=[story_selector],
+            outputs=[script_status, story_selector]
+        )
+        export_script_btn.click(
+            fn=export_script,
+            inputs=[story_selector],
+            outputs=[script_status]
+        )
+        
+        # --- 角色管理事件 ---
+        char_selector.change(
+            fn=load_character,
+            inputs=[char_selector, story_selector],
+            outputs=[character_editor, character_image]
+        )
+        new_char_btn.click(
+            fn=create_new_character,
+            inputs=[],
+            outputs=[char_selector]
+        )
+        save_char_btn.click(
+            fn=save_character,
+            inputs=[character_editor, char_selector, story_selector, character_image],
+            outputs=[script_status, char_selector, character_image]
+        )
+        delete_char_btn.click(
+            fn=delete_character,
+            inputs=[char_selector, story_selector],
+            outputs=[script_status, char_selector, character_image]
+        )
+        delete_char_img_btn.click(
+            fn=delete_character_image,
+            inputs=[story_selector, char_selector],
+            outputs=[script_status, character_image]
+        )
+        prev_page_btn.click(
+            fn=refresh_character_list,
+            inputs=[story_selector, page_indicator],
+            outputs=[char_selector, page_indicator, storyboard_total_pages_num]
+        )
+        next_page_btn.click(
             fn=refresh_character_list,
             inputs=[story_selector, page_indicator],
             outputs=[char_selector, page_indicator, page_indicator]
@@ -1538,51 +1948,55 @@ def create_storyboard_assistant_module():
             outputs=[status_bar] + gallery_cells + cell_audios + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
         )
         
-        # --- 分镜管理事件 (宫格级别) ---
+        # 音频管理功能事件绑定
+        audio_move_up_btn.click(
+            fn=lambda source_index: move_audio_up(int(source_index)),
+            inputs=[audio_move_source_index],
+            outputs=[audio_manager_status] + gallery_cells + cell_audios + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
+        )
         
-        # 定义删除单个宫格的通用处理函数（移到循环外）
-        def delete_single_cell_with_page(current_page, cell_idx):
-            """删除指定宫格的分镜（带页码信息）"""
-            storyboard_data = load_data(storyboard_file)
-            global_index = (current_page - 1) * STORYBOARDS_PER_PAGE + cell_idx
-            
-            if global_index < len(storyboard_data):
-                # 清空该宫格数据
-                storyboard_data[global_index] = {
-                    "id": global_index,
-                    "image_path": None,
-                    "aspect_ratio": "",
-                    "description": "",
-                    "timestamp": ""
-                }
-                
-                save_data(storyboard_file, storyboard_data)
-                # refresh_gallery 已经返回了 current_page 和 total_pages，不需要额外添加
-                return (f"✅ 已删除分镜 #{global_index + 1}", *refresh_gallery(current_page))
-            else:
-                return (f"⚠️ 该位置没有分镜", *refresh_gallery(current_page))
+        audio_move_down_btn.click(
+            fn=lambda source_index: move_audio_down(int(source_index)),
+            inputs=[audio_move_source_index],
+            outputs=[audio_manager_status] + gallery_cells + cell_audios + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
+        )
         
-        # 定义删除单个宫格的通用处理函数（移到循环外）
-        def delete_single_cell_with_page(current_page, cell_idx):
-            """删除指定宫格的分镜（带页码信息）"""
-            storyboard_data = load_data(storyboard_file)
-            global_index = (current_page - 1) * STORYBOARDS_PER_PAGE + cell_idx
-            
-            if global_index < len(storyboard_data):
-                # 清空该宫格数据
-                storyboard_data[global_index] = {
-                    "id": global_index,
-                    "image_path": None,
-                    "aspect_ratio": "",
-                    "description": "",
-                    "timestamp": ""
-                }
-                
-                save_data(storyboard_file, storyboard_data)
-                # refresh_gallery 已经返回了 current_page 和 total_pages，不需要额外添加
-                return (f"✅ 已删除分镜 #{global_index + 1}", *refresh_gallery(current_page))
-            else:
-                return (f"⚠️ 该位置没有分镜", *refresh_gallery(current_page))
+        audio_move_to_btn.click(
+            fn=lambda source_index, target_index: move_audio_to_position(int(source_index), int(target_index)),
+            inputs=[audio_move_source_index, audio_move_target_index],
+            outputs=[audio_manager_status] + gallery_cells + cell_audios + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
+        )
+        
+        audio_delete_btn.click(
+            fn=lambda cell_index: delete_audio_from_cell(int(cell_index)),
+            inputs=[audio_move_source_index],
+            outputs=[audio_manager_status] + gallery_cells + cell_audios + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
+        )
+        
+        # 分镜格管理功能事件绑定
+        storyboard_move_up_btn.click(
+            fn=lambda source_index: move_storyboard_up(int(source_index)),
+            inputs=[storyboard_move_source_index],
+            outputs=[storyboard_manager_status] + gallery_cells + cell_audios + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
+        )
+        
+        storyboard_move_down_btn.click(
+            fn=lambda source_index: move_storyboard_down(int(source_index)),
+            inputs=[storyboard_move_source_index],
+            outputs=[storyboard_manager_status] + gallery_cells + cell_audios + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
+        )
+        
+        storyboard_move_to_btn.click(
+            fn=lambda source_index, target_index: move_storyboard_to_position(int(source_index), int(target_index)),
+            inputs=[storyboard_move_source_index, storyboard_move_target_index],
+            outputs=[storyboard_manager_status] + gallery_cells + cell_audios + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
+        )
+        
+        storyboard_delete_btn.click(
+            fn=lambda cell_index: delete_storyboard_cell(int(cell_index)),
+            inputs=[storyboard_move_source_index],
+            outputs=[storyboard_manager_status] + gallery_cells + cell_audios + cell_annotations + cell_labels + [storyboard_current_page_num, storyboard_total_pages_num]
+        )
         
         # 为每个宫格的删除按钮绑定事件 - 使用新的页码组件 storyboard_current_page_num
         for i, btn in enumerate(cell_delete_btns):
